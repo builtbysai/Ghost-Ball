@@ -18,6 +18,14 @@ for (const ch of CHALLENGES) {
     for (let k = -40; k <= 40; k++) angles.add(+(base + k * 0.004).toFixed(4));
   }
   const sorted = [...angles].sort((x, y) => x - y);
+  if (ch.objective.require === 'MASSE') {
+    // massé: steep cue, side offset, low speeds; search elevation x offset x speed x angle fan
+    mloop: for (const masse of [0.9, 1.1, 1.3]) for (const a of [0.15, 0.25, 0.35, 0.5, -0.15, -0.25, -0.35, -0.5]) for (const v of [2, 2.8, 3.6, 4.6, 6]) for (const ang of sorted) {
+      if (tryShot(ch, { angle: ang, speed: v, a, b: 0, masse }).solved) { best = { angle: ang, speed: v, a, b: 0, masse }; break mloop; }
+    }
+    console.log(best ? `${ch.id} ${ch.name}: solution ${JSON.stringify(best)}` : `${ch.id} ${ch.name}: NO SOLUTION FOUND`);
+    continue;
+  }
   const jumps = ch.objective.require === 'JUMP' ? [0.28, 0.4, 0.52] : [0];
   outer: for (const jump of jumps) for (const [a, b] of spins) {
     for (const v of speeds) {

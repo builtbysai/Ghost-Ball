@@ -54,7 +54,7 @@ juice.setHost($('callouts'));
 const S = {
   screen: 'menu', phase: 'menu', attract: true,
   match: null, mode: null, session: null,
-  aim: { angle: 0 }, power: 0, spin: { a: 0, b: 0 }, jump: 0,
+  aim: { angle: 0 }, power: 0, spin: { a: 0, b: 0 }, jump: 0, masse: 0, elev: 0,
   drag: null, guide: null, guideDirty: true, guideT: 0,
   callSel: null, callAuto: null, autoCall: null,
   placeGhost: null, cueAnim: null, ai: null,
@@ -230,7 +230,7 @@ function enterAim() {
   $('btnPlace').classList.add('hidden');
   $('spinWidget').classList.remove('hidden'); $('powerStrip').classList.remove('hidden');
   const r = S.match.rules;
-  if (r.breakShot && S.session && (S.mode.kind === 'eight' || S.mode.kind === 'nine' || S.mode.kind === 'onepocket')) {
+  if (r.breakShot && S.session && (S.mode.kind === 'eight' || S.mode.kind === 'nine' || S.mode.kind === 'onepocket' || S.mode.kind === 'straight')) {
     $('btnPlace').textContent = 'MOVE CUE BALL'; $('btnPlace').classList.remove('hidden');
   }
   setAimTowardsTarget();
@@ -314,6 +314,8 @@ function buildTags() {
     } else if (kind === 'nine' || kind === 'runout') {
       g = kind === 'runout' ? `${r.score[0]} down` : r.turn === i ? 'At the table' : 'Waiting';
       if (i === 0) [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach((n) => tray.appendChild(miniBall(n, !tbl.includes(n))));
+    } else if (kind === 'straight') {
+      g = `${r.score[i]} of ${r.target}`;
     } else if (kind === 'onepocket') {
       g = `${r.score[i]} of ${ONE_POCKET_TARGET} · ${i === 0 ? 'ringed pocket' : 'white pocket'}`;
       r.owned[i].forEach((n) => tray.appendChild(miniBall(n, false)));
@@ -348,7 +350,7 @@ const pullFor = (p) => 0.012 + p * 0.5;
 function humanPlan(p) {
   const { a, b } = S.spin;
   const need8 = mustCall8(S.match.rules, onTable());
-  const plan = { angle: S.aim.angle - SQUIRT * a, speed: speedFromPower(p), a, b, jump: S.jump, called: null };
+  const plan = { angle: S.aim.angle - SQUIRT * a, speed: speedFromPower(p), a, b, jump: S.jump, masse: S.masse, called: null };
   if (need8) {
     plan.called = S.callSel != null ? S.callSel : predictPocket(plan, 8);
     if (plan.called == null) plan.called = -1;
@@ -357,7 +359,7 @@ function humanPlan(p) {
 }
 function predictPocket(plan, id) {
   const s = S.match.sim.clone(); s.events = [];
-  s.strike(0, plan.angle, plan.speed, plan.a, plan.b, plan.jump || 0); s.runToRest(25);
+  s.strike(0, plan.angle, plan.speed, plan.a, plan.b, plan.jump || 0, plan.masse || 0); s.runToRest(25);
   const pe = s.events.find((e) => e.type === 'pocket' && e.id === id);
   return pe ? pe.pocket : null;
 }
@@ -417,7 +419,7 @@ function cueGeom() {
   let off = S.spin.a * R;
   if (S.power > 0.9 && !a) off += Math.sin(S.time * 90) * 0.0012 * (S.power - 0.9) * 10;   // the cue trembles at full draw
   const g = Math.max(0.0005, gap + 0.002);
-  return { tipX: cue.x - dx * (R + g) + dy * off, tipY: cue.y - dy * (R + g) - dx * off, angle, power: a ? (a.struck ? 0 : a.power) : S.power, tipFlash: !!(a && a.struck && a.follow < 0.06), lift: (a ? a.plan.jump || 0 : S.jump) / 0.52 };
+  return { tipX: cue.x - dx * (R + g) + dy * off, tipY: cue.y - dy * (R + g) - dx * off, angle, power: a ? (a.struck ? 0 : a.power) : S.power, tipFlash: !!(a && a.struck && a.follow < 0.06), lift: Math.max((a ? a.plan.jump || 0 : S.jump) / 0.52, (a ? a.plan.masse || 0 : S.masse) / 1.3) };
 }
 
 // ---------------------------------------------------------------- aim guide (simulated by the real engine)
@@ -425,9 +427,9 @@ function computeGuide() {
   const m = S.match;
   const p = S.power > 0.04 ? S.power : 0.45;
   const s = m.sim.clone(); s.events = [];
-  const plan = { angle: S.aim.angle - SQUIRT * S.spin.a, speed: speedFromPower(p), a: S.spin.a, b: S.spin.b, jump: S.jump };
+  const plan = { angle: S.aim.angle - SQUIRT * S.spin.a, speed: speedFromPower(p), a: S.spin.a, b: S.spin.b, jump: S.jump, masse: S.masse };
   const cueB = s.ball(0);
-  s.strike(0, plan.angle, plan.speed, plan.a, plan.b, plan.jump);
+  s.strike(0, plan.angle, plan.speed, plan.a, plan.b, plan.jump, plan.masse);
   const pts = [{ x: cueB.x, y: cueB.y }];
   let last = pts[0], first = null, steps = 0;
   while (s.time < 4 && steps++ < 12000) {
@@ -472,7 +474,7 @@ function computeGuide() {
   }
   if (mustCall8(m.rules, onTable())) {
     const s2 = m.sim.clone(); s2.events = [];
-    s2.strike(0, plan.angle, plan.speed, plan.a, plan.b, plan.jump); s2.runToRest(20);
+    s2.strike(0, plan.angle, plan.speed, plan.a, plan.b, plan.jump, plan.masse); s2.runToRest(20);
     const pe = s2.events.find((e) => e.type === 'pocket' && e.id === 8);
     g.pred8 = pe ? pe.pocket : null; S.autoCall = pe ? pe.pocket : null;
   }
@@ -564,6 +566,7 @@ function announce(result, actor) {
     audio.chime(0);
   }
   if (result.lose) juice.callout('Lost the frame', result.lose, 'foul');
+  if (result.rerack) setTimeout(() => { if (S.screen === 'play') { juice.callout('Re-rack', 'Fourteen back on the table', 'big'); audio.chime(3); } }, 700);
 }
 
 function finishShot() {
@@ -591,7 +594,7 @@ function startReplay(shot = S.lastShot, back = null) {
   if (!shot || !(S.phase === 'aim' || S.phase === 'place')) return;
   const sim = new Sim({ table: S.match.table, params: S.match.sim.params, trackOrient: true });
   for (const b of shot.positions) sim.addBall(b.id, b.x, b.y).pocketed = b.pocketed;
-  sim.strike(0, shot.plan.angle, shot.plan.speed, shot.plan.a, shot.plan.b, shot.plan.jump || 0);
+  sim.strike(0, shot.plan.angle, shot.plan.speed, shot.plan.a, shot.plan.b, shot.plan.jump || 0, shot.plan.masse || 0);
   S.replay = { sim, back: back || S.phase };
   S.replayEv = 0; S.phase = 'replay';
   juice.reset();
@@ -1072,14 +1075,17 @@ canvas.addEventListener('wheel', (e) => {
   nudge('nudgeL', 1); nudge('nudgeR', -1);
 }
 
-const JUMP_STEPS = [0, 0.28, 0.4, 0.52];
-function setJump(v) {
-  S.jump = v; S.guideDirty = true;
+// cue elevation: flat, three jump levels (the ball leaves the slate), three massé levels (a steep cue that bends the path)
+const ELEV_STEPS = [{ label: 'OFF' }, { j: 0.28, label: 'J1' }, { j: 0.4, label: 'J2' }, { j: 0.52, label: 'J3' }, { m: 0.9, label: 'M1' }, { m: 1.1, label: 'M2' }, { m: 1.3, label: 'M3' }];
+function setElev(i) {
+  S.elev = i; const st = ELEV_STEPS[i];
+  S.jump = st.j || 0; S.masse = st.m || 0; S.guideDirty = true;
   const b = $('jumpBtn'); if (!b) return;
-  b.classList.toggle('on', v > 0);
-  b.querySelector('b').textContent = v === 0 ? 'OFF' : String(JUMP_STEPS.indexOf(v));
+  b.classList.toggle('on', i > 0);
+  b.querySelector('b').textContent = st.label;
 }
-const cycleJump = () => { setJump(JUMP_STEPS[(JUMP_STEPS.indexOf(S.jump) + 1) % JUMP_STEPS.length]); audio.tick(); };
+const setJump = (v) => setElev(v === 0 ? 0 : Math.max(0, ELEV_STEPS.findIndex((x) => x.j === v)));
+const cycleJump = () => { setElev((S.elev + 1) % ELEV_STEPS.length); audio.tick(); };
 $('jumpBtn').addEventListener('click', () => { audio.init(); cycleJump(); });
 
 $('btnPlace').onclick = () => {

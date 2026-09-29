@@ -79,7 +79,7 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
   }
 
   function quick() {
-    const kinds = ['eight', 'nine', 'onepocket'];
+    const kinds = ['eight', 'nine', 'straight', 'onepocket'];
     mount(`${backBtn()}
       <div class="scr-title">Quick Match</div><p class="scr-sub">A single frame. Pick a hall, a game and a rival.</p>
       <div class="label">The Hall</div>${hallRows(settings.hall)}
@@ -201,9 +201,10 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
       <li><b>Aim</b><br>Move the mouse (or drag on touch). <kbd>Shift</kbd>, the wheel, the arrows or the ◀ ▶ buttons fine-tune.</li>
       <li><b>Shoot</b><br>Press and drag away from your aim, or pull the power strip, then release. <kbd>Space</kbd> fires at the strip's power.</li>
       <li><b>Spin</b><br>Drag the dot on the cue ball. Top follows through, bottom draws back, sides bend the ball off cushions.</li>
-      <li><b>Jump</b><br>Raise the cue with the JUMP levels (or <kbd>J</kbd>) to hop over a blocking ball. It resets after every shot.</li>
+      <li><b>Jump and mass\u00e9</b><br>The elevation button (or <kbd>J</kbd>) cycles the cue: J1-J3 hop over a blocker, M1-M3 hit down and bend the ball toward the side you hit. It resets after every shot.</li>
       <li><b>8-Ball</b><br>Pot your group, then call a pocket for the 8.</li>
       <li><b>9-Ball</b><br>Always hit the lowest ball first. Pot the 9 to win.</li>
+      <li><b>Straight Pool</b><br>Any ball, any pocket, a point each. A foul costs a point (two on the break, fifteen for three in a row). When one ball is left, the other fourteen are racked again. First to 30.</li>
       <li><b>One-Pocket</b><br>Only balls in your foot-rail pocket count. First to eight wins. A foul gives a ball back.</li>
       <li><b>Chalk</b><br>You earn Chalk for winning and for skilled shots. Levels unlock cues, chalks and ball sets. Nothing is for sale.</li>
       <li><kbd>P</kbd> pause · <kbd>M</kbd> mute · <kbd>R</kbd> replay your last shot</li></ul>`, (root) => wireBack(root));

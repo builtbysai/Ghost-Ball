@@ -9,8 +9,8 @@ import { legalTargets, resolveShot, mustCall8, ONE_POCKET_OWNERS } from './rules
 
 export const LEVELS = [
   { id: 0, name: 'Rookie', blurb: 'A gentle start', sigA: 0.030, sigV: 0.08, cands: 3, speeds: 1, spins: [[0, 0]], rolls: 1, leave: 0, safety: false, think: 1.1, pick: 3 },
-  { id: 1, name: 'Club Pro', blurb: 'The house standard', sigA: 0.0085, sigV: 0.04, cands: 8, speeds: 2, spins: [[0, 0], [0, 0.25], [0, -0.25]], rolls: 2, leave: 0.35, safety: false, think: 1.4, pick: 1 },
-  { id: 2, name: 'Champion', blurb: 'No mercy', sigA: 0.0018, sigV: 0.012, cands: 10, speeds: 3, spins: [[0, 0], [0, 0.3], [0, -0.3]], rolls: 2, leave: 0.6, safety: true, banks: true, think: 1.7, pick: 1 },
+  { id: 1, name: 'Club Pro', blurb: 'The house standard', sigA: 0.0085, sigV: 0.04, cands: 8, speeds: 2, spins: [[0, 0], [0, 0.25], [0, -0.25]], rolls: 2, leave: 0.35, safety: false, kicks: true, think: 1.4, pick: 1 },
+  { id: 2, name: 'Champion', blurb: 'No mercy', sigA: 0.0018, sigV: 0.012, cands: 10, speeds: 3, spins: [[0, 0], [0, 0.3], [0, -0.3]], rolls: 2, leave: 0.6, safety: true, banks: true, kicks: true, jumps: true, think: 1.7, pick: 1 },
 ];
 
 const norm = (x, y) => { const l = Math.hypot(x, y) || 1; return [x / l, y / l]; };
@@ -113,7 +113,7 @@ export function choosePlacement(sim, rules, table, rand, level) {
 function outcome(base, rules, plan, level, rand) {
   const s = base.clone();
   const noiseA = gauss(rand) * level.sigA, noiseV = gauss(rand) * level.sigV;
-  s.strike(0, plan.angle + noiseA, plan.speed * (1 + noiseV), plan.a, plan.b);
+  s.strike(0, plan.angle + noiseA, plan.speed * (1 + noiseV), plan.a, plan.b, plan.jump || 0, plan.masse || 0);
   s.runToRest(25);
   const onTableBefore = base.balls.filter((b) => !b.pocketed).map((b) => b.id);
   const res = resolveShot(rules, { events: s.events, onTableBefore, calledPocket: plan.called });
@@ -219,6 +219,34 @@ export function* planShot({ sim, rules, table, level, rand }) {
     }
     scoredSafe.sort((a, b) => b.v - a.v);
     if (scoredSafe[0] && (!best || scoredSafe[0].v > best.v)) best = scoredSafe[0];
+  }
+
+  // snookered or nothing good: try to reach a legal ball by bouncing off a cushion first, or by jumping the blocker
+  if ((level.kicks || level.jumps) && (!best || best.v <= 0.1) && targets.length) {
+    const rails = [{ axis: 'y', v: HALF_W - R }, { axis: 'y', v: -(HALF_W - R) }, { axis: 'x', v: HALF_L - R }, { axis: 'x', v: -(HALF_L - R) }];
+    const rescue = [];
+    for (const t of targets) {
+      const tb = base.balls.find((b) => b.id === t && !b.pocketed);
+      if (!tb) continue;
+      if (level.kicks) {
+        for (const rl of rails) {
+          const mx = rl.axis === 'x' ? 2 * rl.v - tb.x : tb.x, my = rl.axis === 'y' ? 2 * rl.v - tb.y : tb.y;
+          const ang = Math.atan2(my - cue.y, mx - cue.x);
+          for (const sp of [2.2, 3.4, 4.8]) rescue.push({ angle: ang, speed: sp, a: 0, b: 0, called: need8 ? -1 : null });
+        }
+      }
+      if (level.jumps) {
+        const ang = Math.atan2(tb.y - cue.y, tb.x - cue.x);
+        for (const j of [0.28, 0.4]) for (const sp of [3.6, 4.6]) rescue.push({ angle: ang, speed: sp, a: 0, b: 0, jump: j, called: need8 ? -1 : null });
+      }
+    }
+    const precise2 = { ...level, sigA: 0.002, sigV: 0.008 };
+    for (const plan of rescue) {
+      const o = outcome(base, rules, plan, precise2, rand);
+      const v = scoreOutcome(o, table, level, me) - 0.15;      // a small premium on doing this the easy way
+      if (!best || v > best.v) best = { plan, v };
+      yield;
+    }
   }
 
   if (level.pick > 1 && scored.length) {

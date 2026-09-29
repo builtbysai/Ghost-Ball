@@ -143,3 +143,53 @@ test('run-out: the run ends on the first miss or foul, and clearing the 9 ends i
   assert.equal(clear.rules.winner, 0);
   assert.equal(clear.rules.loseReason, null);
 });
+
+import { newMatch as newMatch2, rerackStraight } from '../src/game.js';
+test('straight pool: a point a ball, fouls cost points, three fouls cost fifteen, the break needs a pot or two rails', () => {
+  const r = { ...newRules('straight'), breakShot: false };
+  const good = resolveShot(r, { events: [hit(0, 3), pot(3, 1), pot(4, 2), rail(0)], onTableBefore: ALL15 });
+  assert.equal(good.rules.score[0], 2);
+  assert.equal(good.rules.turn, 0, 'potting keeps the turn');
+
+  const foul = resolveShot(r, { events: [hit(0, 3)], onTableBefore: ALL15 });
+  assert.equal(foul.rules.score[0], -1);
+  assert.equal(foul.rules.turn, 1);
+  assert.equal(foul.rules.ballInHand, true);
+
+  let rr = { ...r, consec: [2, 0] };
+  const third = resolveShot(rr, { events: [hit(0, 3)], onTableBefore: ALL15 });
+  assert.equal(third.rules.score[0], -16, 'the third foul in a row costs 1 + 15');
+  assert.equal(third.rules.consec[0], 0);
+
+  const brk = resolveShot({ ...newRules('straight') }, { events: [hit(0, 1), rail(1)], onTableBefore: ALL15 });
+  assert.equal(brk.result.foul, true);
+  assert.equal(brk.rules.score[0], -2, 'a foul on the break costs two');
+  const okBreak = resolveShot({ ...newRules('straight') }, { events: [hit(0, 1), rail(1), rail(2), rail(0)], onTableBefore: ALL15 });
+  assert.equal(okBreak.result.foul, false);
+});
+
+test('straight pool: the first player to the target wins, and one ball left triggers the re-rack', () => {
+  const near = { ...newRules('straight'), breakShot: false, score: [29, 0] };
+  assert.equal(resolveShot(near, { events: [hit(0, 3), pot(3, 1), rail(0)], onTableBefore: ALL15 }).rules.winner, 0);
+  const late = { ...newRules('straight'), breakShot: false };
+  const res = resolveShot(late, { events: [hit(0, 3), pot(3, 1), rail(0)], onTableBefore: [0, 3, 7] });
+  assert.equal(res.result.rerack, true, 'with one ball remaining after the shot, the rack refills');
+  assert.equal(resolveShot(late, { events: [hit(0, 3), pot(3, 1), rail(0)], onTableBefore: ALL15 }).result.rerack, false);
+});
+
+test('straight pool re-rack puts fourteen balls back with the apex empty and keeps the last ball and the cue ball clear of them', () => {
+  const m = newMatch2({ kind: 'straight', seed: 3 });
+  for (const b of m.sim.balls) if (b.id !== 0 && b.id !== 7) b.pocketed = true;
+  m.sim.ball(0).x = -0.3; m.sim.ball(0).y = 0.2;
+  m.sim.ball(7).x = 0.9; m.sim.ball(7).y = 0.1;                      // inside the rack zone: it must move
+  m.rules.shots = 5;
+  rerackStraight(m);
+  const on = m.sim.balls.filter((b) => !b.pocketed);
+  assert.equal(on.length, 16, 'cue plus fifteen objects');
+  for (let i = 0; i < on.length; i++) for (let j = i + 1; j < on.length; j++) {
+    assert.ok(Math.hypot(on[i].x - on[j].x, on[i].y - on[j].y) >= 0.0572, `balls ${on[i].id} and ${on[j].id} overlap`);
+  }
+  const apexClear = !on.some((b) => b.id !== 0 && b.id !== 7 && Math.abs(b.x - 0.635) < 0.01 && Math.abs(b.y) < 0.01);
+  assert.ok(apexClear, 'the apex spot should be empty');
+  assert.ok(m.sim.ball(7).x < 0.45, 'the leftover ball should leave the rack zone');
+});

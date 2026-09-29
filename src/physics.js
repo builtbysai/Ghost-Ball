@@ -75,20 +75,28 @@ export class Sim {
    * the stroke speed splits into horizontal and vertical parts and the ball leaves
    * the slate. Returns the effective launch angle.
    */
-  strike(id, angle, speed, a = 0, b = 0, jump = 0) {
+  strike(id, angle, speed, a = 0, b = 0, jump = 0, masse = 0) {
     const ball = this.ball(id);
     const p = this.params;
     const total = Math.min(speed, p.maxSpeed);
-    const v = total * Math.cos(jump);
+    // A massé is a steep cue that hits down and off centre, so the ball stays on the slate. The
+    // stroke splits into a forward part (cos e) and a downward part the slate absorbs.
+    const v = total * Math.cos(masse || jump);
     const eff = angle + p.squirt * a;         // hit right of center, squirt to the left
     const dx = Math.cos(eff), dy = Math.sin(eff);
     ball.vx = dx * v; ball.vy = dy * v;
-    ball.vz = total * Math.sin(jump);
+    ball.vz = masse ? 0 : total * Math.sin(jump);
     if (ball.vz > 0) ball.z = 1e-9;
-    const k = 2.5 * v / R;
-    ball.wz = k * a;
-    ball.wx = k * b * -dy;                    // b = 0.4 gives instant rolling
-    ball.wy = k * b * dx;
+    const k = 2.5 * total / R;                // angular speed per unit of tip offset, from the full stroke impulse
+    // Tip offset (a to the right, b up) about a cue raised by e gives, in the frame of the shot:
+    //   spin about the direction of travel  a * sin e   <- the massé spin: cloth friction bends the path
+    //   spin about the vertical             a * cos e   <- ordinary side spin
+    //   spin about the horizontal normal    b           <- top/back spin
+    const e = masse || 0, sinE = Math.sin(e), cosE = Math.cos(e);
+    ball.wz = k * a * cosE;
+    const along = k * a * sinE;               // component along the shot direction
+    ball.wx = along * dx + k * b * -dy;       // b = 0.4 gives instant rolling
+    ball.wy = along * dy + k * b * dx;
     this.events.push({ t: this.time, type: 'cue', id, speed: v });
     return eff;
   }

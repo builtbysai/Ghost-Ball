@@ -135,3 +135,24 @@ test('a jumped cue ball clears a blocker that a flat shot would hit, lands, and 
   assert.equal(c.vz, 0);
   assert.ok(jumped.sim.events.some((e) => e.type === 'land' && e.id === 0), 'it should land with an event');
 });
+
+test('a massé bends the cue ball toward the side it was hit on, and a flat cue with the same side spin does not', () => {
+  const lateral = (a, masse) => {
+    const sim = new Sim();
+    sim.addBall(0, -1.0, 0);
+    sim.strike(0, 0, 3.5, a, 0, 0, masse);
+    let far = 0;
+    for (let i = 0; i < 12000 && sim.isMoving(); i++) {
+      sim.step(sim.nextDt());
+      const c = sim.ball(0);
+      if (Math.abs(c.y) > Math.abs(far)) far = c.y;
+      if (Math.abs(c.y) > 0.55 || c.x > 1.2) break;
+    }
+    return far;
+  };
+  const right = lateral(0.3, 1.1), left = lateral(-0.3, 1.1), flat = lateral(0.3, 0);
+  assert.ok(right < -0.15, `right-hand massé should curve to the right (negative y), got ${right}`);
+  assert.ok(left > 0.15, `left-hand massé should curve to the left, got ${left}`);
+  assert.ok(Math.abs(flat) < 0.08, `ordinary side spin should barely curve the ball, got ${flat}`);
+  assert.ok(Math.abs(right + left) < 0.05, 'the two hands should mirror each other');
+});

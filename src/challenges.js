@@ -31,6 +31,8 @@ export const CHALLENGES = [
   { id: 'c12', name: 'Spin Doctor', blurb: 'Use English so the cue ball lands in the ring.', setup: { cue: { x: -0.8, y: -0.4 }, balls: [{ id: 14, x: 0.2, y: -0.3 }] }, objective: { pot: [14], spinMin: 0.15, zone: { x: 0.6, y: 0.35, r: 0.3 } }, solution: { angle: 0.0524, speed: 5.5, a: 0.3, b: 0 } },
   { id: 'c13', name: 'Over the Wall', blurb: 'Set the JUMP level, then leap the eight and pot the 6.', setup: { cue: { x: -0.2, y: -0.5 }, balls: [{ id: 8, x: 0.33, y: -0.09 }, { id: 6, x: 0.9, y: 0.35 }] }, objective: { pot: [6], require: 'JUMP', noTouch: [8] }, solution: { angle: 0.6283, speed: 4.2, a: 0, b: 0, jump: 0.28 } },
   { id: 'c14', name: 'Skip the Pack', blurb: 'Jump the blocker and drive the 11 to the corner.', setup: { cue: { x: -0.33, y: 0.31 }, balls: [{ id: 9, x: 0.18, y: 0.005 }, { id: 11, x: 0.7, y: -0.3 }] }, objective: { pot: [11], require: 'JUMP', noTouch: [9] }, solution: { angle: -0.555, speed: 4.2, a: 0, b: 0, jump: 0.28 } },
+  { id: 'c15', name: 'Around the Corner', blurb: 'Set a MASSE level, hit off-centre, and curve around the eight to pot the 3.', setup: { cue: { x: -0.7, y: -0.05 }, balls: [{ id: 8, x: -0.2, y: 0.096 }, { id: 3, x: 0.5, y: 0.3 }] }, objective: { pot: [3], require: 'MASSE', noTouch: [8] }, solution: { angle: 0.9425, speed: 3.6, a: 0.15, b: 0, masse: 0.9 } },
+  { id: 'c16', name: 'The Hook', blurb: 'Bend the cue ball around the blocker into the 12.', setup: { cue: { x: -0.6, y: 0.25 }, balls: [{ id: 9, x: 0.0, y: 0.041 }, { id: 12, x: 0.55, y: -0.15 }] }, objective: { pot: [12], require: 'MASSE', noTouch: [9] }, solution: { angle: 0.8116, speed: 4.6, a: 0.15, b: 0, masse: 0.9 } },
 ];
 
 // Guided lessons: same machinery as the trick shots, with coaching text shown on every attempt.
@@ -71,7 +73,7 @@ export function evaluate(ch, m, plan = null) {
   if (o.require) {
     const tags = (result.tags || []).map((t) => t.id);
     const ok = tags.includes(o.require) || (o.require === 'DOUBLE' && potted.length >= 2);
-    if (!ok) return { solved: false, why: { BANK: 'That needs a bank shot', KICK: 'The cue ball has to hit a cushion first', COMBO: 'Drive one ball into the other', LONG: 'Take the long way', JUMP: 'Jump over the blocker', DRAW: 'Draw the cue ball back', FOLLOW: 'Follow through' }[o.require] || 'Not quite' };
+    if (!ok) return { solved: false, why: { BANK: 'That needs a bank shot', KICK: 'The cue ball has to hit a cushion first', COMBO: 'Drive one ball into the other', LONG: 'Take the long way', JUMP: 'Jump over the blocker', MASSE: 'Curve it with a mass\u00e9', DRAW: 'Draw the cue ball back', FOLLOW: 'Follow through' }[o.require] || 'Not quite' };
   }
   if (o.minSpeed && plan && plan.speed < o.minSpeed) return { solved: false, why: 'Too soft. It needs more power' };
   if (o.backspin && plan && plan.b > -0.15) return { solved: false, why: 'Draw the cue ball: hit it low' };

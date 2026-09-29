@@ -12,7 +12,7 @@ test('every trick-shot challenge and lesson is solvable by its shipped solution'
 });
 
 test('challenges that demand a technique are not solved by a plain hit at the object ball', () => {
-  for (const id of ['c03', 'c04', 'c06', 'c07', 'c12', 'c13', 'c14', 'l4', 'l5']) {
+  for (const id of ['c03', 'c04', 'c06', 'c07', 'c12', 'c13', 'c14', 'c15', 'c16', 'l4', 'l5']) {
     const ch = ALL_CHALLENGES.find((c) => c.id === id);
     const target = ch.setup.balls.find((b) => b.id === ch.objective.pot[0]);
     const plain = { angle: Math.atan2(target.y - ch.setup.cue.y, target.x - ch.setup.cue.x), speed: 2.4, a: 0, b: 0 };

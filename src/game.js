@@ -12,7 +12,7 @@ export const CLOTH = {
   slow: { muRoll: 0.015, muSlide: 0.24 },
 };
 
-const blankStats = () => ({ shots: 0, pots: 0, fouls: 0, run: 0, bestRun: 0, banks: 0, kicks: 0, combos: 0, draws: 0, jumps: 0, golden: 0, xp: 0, tags: [] });
+const blankStats = () => ({ shots: 0, pots: 0, fouls: 0, run: 0, bestRun: 0, banks: 0, kicks: 0, combos: 0, draws: 0, jumps: 0, masses: 0, golden: 0, xp: 0, tags: [] });
 
 /**
  * opts.setup (trick shots): { cue: {x,y}, balls: [{id,x,y}] } replaces the rack.
@@ -67,6 +67,28 @@ export function rerackKeepCue(m) {
   if (!inRack) { c.x = keep.x; c.y = keep.y; }
 }
 
+/**
+ * Straight pool: when one object ball is left, the other fourteen are racked again with the
+ * apex empty. The lone ball and the cue ball stay where they are unless they sit in the rack.
+ */
+export function rerackStraight(m) {
+  const sim = m.sim;
+  const left = sim.balls.filter((b) => b.id !== 0 && !b.pocketed);
+  const down = sim.balls.filter((b) => b.id !== 0 && b.pocketed);
+  const spots = rackPositions('eight', m.seed + m.rules.shots * 7 + 1).sort((a, b) => a.x - b.x || a.y - b.y).slice(1);   // apex left empty
+  const rand = rng(m.seed * 13 + m.rules.shots);
+  down.forEach((b, i) => {
+    const p = spots[i];
+    b.pocketed = false; b.pocket = -1; b.x = p.x; b.y = p.y;
+    b.vx = b.vy = b.vz = 0; b.wx = b.wy = b.wz = 0; b.z = 0;
+    b.q = numberUpQuat(rand);
+  });
+  const inRack = (b) => b.x > 0.45;
+  const cue = sim.ball(0);
+  if (inRack(cue)) { cue.x = HEAD_X; cue.y = 0; }
+  for (const b of left) if (inRack(b)) { b.x = HEAD_X + 0.3; b.y = Math.abs(cue.y) < 0.1 ? 0.25 : 0; }
+}
+
 export const onTableIds = (m) => m.sim.balls.filter((b) => !b.pocketed).map((b) => b.id);
 
 /** Put the cue ball down (ball in hand). */
@@ -85,11 +107,11 @@ export function beginShot(m, plan) {
     positions: sim.balls.map((b) => ({ id: b.id, x: b.x, y: b.y, pocketed: b.pocketed })),
     wasBreak: m.rules.breakShot,
     shooter: m.rules.turn,
-    plan: { a: plan.a || 0, b: plan.b || 0, jump: plan.jump || 0 },
+    plan: { a: plan.a || 0, b: plan.b || 0, jump: plan.jump || 0, masse: plan.masse || 0 },
   };
   sim.events = [];
   sim.shotStart = sim.time;          // the live loop's safety timeout is relative to this, never to the match clock
-  return sim.strike(0, plan.angle, plan.speed, plan.a || 0, plan.b || 0, plan.jump || 0);
+  return sim.strike(0, plan.angle, plan.speed, plan.a || 0, plan.b || 0, plan.jump || 0, plan.masse || 0);
 }
 
 /** Judge the finished shot, respot balls, update stats, and hand back the result. */
@@ -104,6 +126,7 @@ export function endShot(m) {
     const spot = respotPosition(sim.balls.filter((o) => !o.pocketed && o.id !== id), HALF_L);
     b.pocketed = false; b.pocket = -1; b.x = spot.x; b.y = spot.y; b.vx = b.vy = 0;
   }
+  if (result.rerack && m.rules.winner == null) rerackStraight(m);
   const cue = sim.ball(0);
   const cueAfter = { x: cue.x, y: cue.y, pocketed: cue.pocketed };
   if (cue.pocketed) placeCue(m, HEAD_X, 0);          // parked until the incoming player places it
@@ -121,7 +144,7 @@ export function endShot(m) {
   if (rt) tags.push(rt);
   for (const t of tags) {
     st.tags.push(t.id); st.xp += t.xp;
-    if (t.id === 'BANK') st.banks++; else if (t.id === 'KICK') st.kicks++; else if (t.id === 'COMBO') st.combos++; else if (t.id === 'DRAW') st.draws++; else if (t.id === 'JUMP') st.jumps++; else if (t.id === 'GOLDEN') st.golden++;
+    if (t.id === 'BANK') st.banks++; else if (t.id === 'KICK') st.kicks++; else if (t.id === 'COMBO') st.combos++; else if (t.id === 'DRAW') st.draws++; else if (t.id === 'JUMP') st.jumps++; else if (t.id === 'MASSE') st.masses++; else if (t.id === 'GOLDEN') st.golden++;
   }
   st.xp += goodPots * 5;
   result.tags = tags;

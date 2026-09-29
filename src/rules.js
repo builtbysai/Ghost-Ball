@@ -12,6 +12,7 @@ import { FOOT_X, HEAD_X, BALL_R } from './table.js';
 export const GAMES = {
   eight: { name: '8-Ball', blurb: 'Solids vs stripes, then the 8', menu: true },
   nine: { name: '9-Ball', blurb: 'Lowest ball first, pot the 9', menu: true },
+  straight: { name: 'Straight Pool', blurb: 'Race to 30. Any ball, any pocket', menu: true },
   onepocket: { name: 'One-Pocket', blurb: 'Your pocket, first to 8 balls', menu: true },
   practice: { name: 'Practice', blurb: 'Free table, no rules', menu: true },
   runout: { name: 'Run-Out', blurb: 'Clear the rack, miss and it ends', menu: false },
@@ -22,6 +23,7 @@ export const GAMES = {
 /** Which foot-rail corner each player owns in one-pocket (pocket indices from table.js). */
 export const ONE_POCKET_OWNERS = [1, 3];
 export const ONE_POCKET_TARGET = 8;
+export const STRAIGHT_TARGET = 30;
 
 export function newRules(kind, opts = {}) {
   const solo = kind === 'practice' || kind === 'runout' || kind === 'trick' || kind === 'blitz';
@@ -33,7 +35,9 @@ export function newRules(kind, opts = {}) {
     kitchen: !solo,                       // cue ball must start behind the head string
     open: kind === 'eight',
     groups: [null, null],                 // 'solid' | 'stripe' per player (eight-ball)
-    score: [0, 0],                        // one-pocket balls, run-out balls
+    score: [0, 0],                        // one-pocket balls, run-out balls, straight-pool points
+    consec: [0, 0],                       // straight pool: consecutive fouls
+    target: kind === 'straight' ? STRAIGHT_TARGET : null,
     owned: [[], []],                      // one-pocket: ids each player has potted in their pocket
     winner: null,
     loseReason: null,
@@ -51,7 +55,7 @@ const groupBalls = (g) => (g === 'solid' ? [1, 2, 3, 4, 5, 6, 7] : [9, 10, 11, 1
 /** Balls the shooter may legally contact first, given the table state. */
 export function legalTargets(rules, onTable) {
   const objs = onTable.filter((id) => id !== 0);
-  if (rules.kind === 'practice' || rules.kind === 'onepocket' || rules.kind === 'trick' || rules.kind === 'blitz') return objs;
+  if (rules.kind === 'practice' || rules.kind === 'onepocket' || rules.kind === 'trick' || rules.kind === 'blitz' || rules.kind === 'straight') return objs;
   if (rules.kind === 'nine' || rules.kind === 'runout') return objs.length ? [Math.min(...objs)] : [];
   const g = rules.groups[rules.turn];
   if (rules.open || !g) return objs.filter((id) => id !== 8);
@@ -101,7 +105,7 @@ function summarize(events, onTable) {
  * Returns { rules, result } where result = { foul, reasons[], pocketed[], respot[], text, sub, continueTurn }.
  */
 export function resolveShot(rules, shot) {
-  const r = { ...rules, groups: rules.groups.slice(), fouls: rules.fouls.slice(), score: rules.score.slice(), owned: rules.owned.map((o) => o.slice()) };
+  const r = { ...rules, groups: rules.groups.slice(), fouls: rules.fouls.slice(), score: rules.score.slice(), consec: (rules.consec || [0, 0]).slice(), owned: rules.owned.map((o) => o.slice()) };
   const me = r.turn, opp = 1 - me;
   const s = summarize(shot.events, shot.onTableBefore);
   const before = shot.onTableBefore;
@@ -141,7 +145,9 @@ export function resolveShot(rules, shot) {
     else addFoul(`Must hit a ${g === 'solid' ? 'solid' : 'stripe'} first`);
   }
   const brokeLegally = s.objectRails >= 4 || potted.length > 0;
-  if (wasBreak && (r.kind === 'eight' || r.kind === 'nine')) {
+  if (wasBreak && r.kind === 'straight') {
+    if (!(potted.length > 0 || s.objectRails >= 2)) addFoul('The break needs two balls to a rail');
+  } else if (wasBreak && (r.kind === 'eight' || r.kind === 'nine')) {
     if (!brokeLegally) addFoul('Fewer than four balls reached a rail');
   } else if (s.firstHit !== null && !potted.length && !s.railAfterContact) {
     addFoul('No ball reached a rail');
@@ -207,6 +213,26 @@ export function resolveShot(rules, shot) {
     if (potted.includes(9) && foul) respot.push(9);
   }
 
+  // ---- straight pool (open): a point a ball, fouls cost points, the rack refills when one ball is left ----
+  let rerack = false;
+  if (r.kind === 'straight') {
+    if (foul) {
+      r.score[me] -= wasBreak ? 2 : 1;
+      r.consec[me]++;
+      if (r.consec[me] >= 3) { r.score[me] -= 15; r.consec[me] = 0; sub = 'Three fouls in a row: 15 points off'; }
+    } else {
+      r.consec[me] = 0;
+      r.score[me] += potted.length;
+    }
+    if (r.score[me] >= r.target) { r.winner = me; text = `${r.target} points`; }
+    else {
+      continueTurn = !foul && potted.length > 0;
+      const left = before.filter((id) => id !== 0 && !potted.includes(id)).length;
+      if (left <= 1) rerack = true;
+      if (continueTurn) text = `${r.score[me]} of ${r.target}`;
+    }
+  }
+
   // ---- one-pocket -----------------------------------------------------------
   if (r.kind === 'onepocket') {
     const mineP = ONE_POCKET_OWNERS[me], theirsP = ONE_POCKET_OWNERS[opp];
@@ -256,7 +282,7 @@ export function resolveShot(rules, shot) {
   }
   r.breakShot = false;
 
-  const result = { foul, reasons, pocketed: potted, respot, text, sub, continueTurn, lose, scratch: s.cueScratched, firstHit: s.firstHit, objectRails: s.objectRails };
+  const result = { foul, reasons, pocketed: potted, respot, text, sub, continueTurn, lose, scratch: s.cueScratched, firstHit: s.firstHit, objectRails: s.objectRails, rerack };
   r.last = result;
   return { rules: r, result };
 }

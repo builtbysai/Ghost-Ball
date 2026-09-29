@@ -34,6 +34,7 @@ export function analyzeShot({ events, before, cueAfter, result, breakShot = fals
     }
   }
   if (!potted.length) return tags;
+  if (plan && plan.masse > 0) tags.push({ id: 'MASSE', label: 'Mass\u00e9', xp: 30 });
 
   let firstContact = null;
   for (const e of events) {

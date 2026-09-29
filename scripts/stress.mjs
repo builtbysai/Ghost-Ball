@@ -3,11 +3,11 @@ import { newMatch, playShotNow } from '../src/game.js';
 import { planNow, LEVELS } from '../src/ai.js';
 import { rng, HALF_L, HALF_W } from '../src/table.js';
 import { BALL_R } from '../src/table.js';
-const kinds = ['eight', 'nine', 'onepocket'];
+const kinds = ['eight', 'nine', 'onepocket', 'straight'];
 const N = +process.argv[2] || 12;
 let problems = 0, games = 0, shots = 0;
 for (let g = 0; g < N; g++) {
-  const kind = kinds[g % 3];
+  const kind = kinds[g % 4];
   const m = newMatch({ kind, seed: 900 + g, pocket: ['forgiving', 'standard', 'tournament'][g % 3], cloth: ['fast', 'standard', 'slow'][(g + 1) % 3] });
   const rand = rng(g + 77);
   const total = m.sim.balls.length;

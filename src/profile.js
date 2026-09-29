@@ -9,7 +9,7 @@ const KEY = 'pool.profile.v2';
 const blank = () => ({
   xp: 0,
   equipped: { cue: 'ash', chalk: 'blue', ballset: 'classic' },
-  stats: { matches: 0, wins: 0, pots: 0, banks: 0, kicks: 0, combos: 0, jumps: 0, golden: 0, dailyClears: 0, bestRun: 0, fouls: 0 },
+  stats: { matches: 0, wins: 0, pots: 0, banks: 0, kicks: 0, combos: 0, jumps: 0, masses: 0, golden: 0, dailyClears: 0, bestRun: 0, fouls: 0 },
   achievements: {},     // id -> timestamp
   blitz: { best: 0, plays: 0 },
   circuit: {},          // 'parlor:0' -> stars (1..3)
@@ -80,7 +80,7 @@ export function createProfile(storage = null) {
     addStats(stat) {
       const s = data.stats;
       s.pots += stat.pots; s.banks += stat.banks; s.kicks += stat.kicks; s.combos += stat.combos; s.fouls += stat.fouls;
-      s.jumps += stat.jumps || 0; s.golden += stat.golden || 0;
+      s.jumps += stat.jumps || 0; s.masses += stat.masses || 0; s.golden += stat.golden || 0;
       s.bestRun = Math.max(s.bestRun, stat.bestRun);
       save();
     },
