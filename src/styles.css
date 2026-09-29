@@ -42,6 +42,7 @@ svg{ fill:currentColor; width:20px; height:20px; }
 .hud-c{ text-align:center; padding-top:2px; pointer-events:none; }
 .modeTag{ font:700 11px var(--display); letter-spacing:3px; color:var(--sub); text-transform:uppercase; }
 .status{ display:inline-block; margin-top:5px; padding:6px 16px; background:var(--panel); font:700 15px var(--display); letter-spacing:1.6px; text-transform:uppercase; border-bottom:3px solid var(--accent); max-width:min(320px,60vw); }
+.status.urgent{ border-bottom-color:#ff5a4d; color:#ff8a7d; }
 .btns{ display:flex; gap:6px; pointer-events:auto; }
 .iconbtn{ width:42px; height:42px; background:var(--panel); border:none; display:grid; place-items:center; cursor:pointer; color:var(--ink); border-bottom:3px solid var(--line);
   clip-path:polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%); transition:border-color .15s, transform .1s; }

@@ -5,7 +5,8 @@
 import { Sim, R } from './physics.js';
 import { HEAD_X, HALF_L, HALF_W, validCuePlacement, rng } from './table.js';
 import { GAMES, legalTargets, mustCall8, groupOf, ONE_POCKET_OWNERS, ONE_POCKET_TARGET } from './rules.js';
-import { newMatch, beginShot, endShot, placeCue, onTableIds } from './game.js';
+import { newMatch, beginShot, endShot, placeCue, onTableIds, rerackKeepCue } from './game.js';
+import { newBlitz, scoreShot, clearRack, multiplier, blitzXp, CLEAR_BONUS, CLEAR_TIME, SCRATCH_POINTS, SCRATCH_TIME } from './blitz.js';
 import { planShot, planNow, LEVELS } from './ai.js';
 import { HALLS, HALL_BY_ID } from './halls.js';
 import { Renderer } from './render.js';
@@ -62,7 +63,7 @@ const S = {
   shotCount: 0, keyPower: 0.5, breaker: 0,
   fineBase: null, doneTimer: 0,
   slowDone: false, decisive: [],
-  trick: null, ended: false,
+  trick: null, ended: false, blitz: null, blitzSec: -1,
   inputMode: 'mouse', drag: null, strip: null, padStroke: null, touchPt: null, padConnected: false,
 };
 
@@ -97,7 +98,7 @@ const onTable = () => onTableIds(S.match);
 const kindName = () => (S.session && S.session.type === 'daily' ? 'Daily Run' : S.session && S.session.type === 'trick' ? 'Trick Shot' : GAMES[S.mode.kind].name);
 
 function seatsFor(cfg) {
-  if (cfg.type === 'trick' || cfg.type === 'daily' || cfg.type === 'practice') return [{ human: true, name: 'You' }];
+  if (cfg.type === 'trick' || cfg.type === 'daily' || cfg.type === 'practice' || cfg.type === 'blitz') return [{ human: true, name: 'You' }];
   if (cfg.type === 'circuit') return [{ human: true, name: 'You' }, { human: false, level: cfg.rival.level, name: cfg.rival.name }];
   if (cfg.opp === '2p') return [{ human: true, name: 'Player 1' }, { human: true, name: 'Player 2' }];
   if (cfg.opp === 'demo') return [{ human: false, level: LEVELS[2], name: LEVELS[2].name }, { human: false, level: LEVELS[1], name: LEVELS[1].name }];
@@ -138,6 +139,7 @@ function makeMatch() {
   renderer.setTable(S.match.table);
   juice.reset(); S.cueAnim = null; S.ai = null; S.callSel = null; S.callAuto = null; S.lastShot = null; S.replay = null;
   S.power = 0; S.spin = { a: 0, b: 0 }; S.shotCount = 0; S.slowDone = false; S.ended = false;
+  S.blitz = cfg.type === 'blitz' ? newBlitz() : null; S.blitzSec = -1;
   setJump(0);
   updateSpinDot();
   $('btnRerack').classList.toggle('hidden', cfg.type !== 'practice');
@@ -180,6 +182,7 @@ const actions = {
   startRival: (idx) => { const r = RIVALS[idx]; startSession({ type: 'circuit', kind: r.kind, opp: 'ai', hall: r.hall, rival: r, rivalIdx: idx }); },
   startChallenge: (id) => { const ch = findChallenge(id); const i = CHALLENGES.indexOf(ch); startSession({ type: 'trick', kind: 'trick', opp: 'none', hall: ch.lesson ? 'parlor' : HALLS[i % HALLS.length].id, challenge: id }); },
   startDaily: () => { const date = localDateString(); startSession({ type: 'daily', kind: 'runout', opp: 'none', hall: dailyHall(date), date }); },
+  startBlitz: (hall) => startSession({ type: 'blitz', kind: 'blitz', opp: 'none', hall }),
   startPractice: (hall) => startSession({ type: 'practice', kind: 'practice', opp: 'none', hall }),
   previewHall: (id) => applyHall(id),
   gearChanged: () => applyGear(),
@@ -235,7 +238,9 @@ function enterAim() {
   const seat = seatOf();
   const multi = S.mode.seats.length > 1;
   status(S.session && S.session.type === 'trick' ? `Attempt ${S.trick.attempts}` : multi ? (seat.name === 'You' ? 'Your shot' : `${seat.name}'s shot`) : 'Your shot');
+  S.blitzSec = -1;
   if (mustCall8(r, onTable())) hint('Call a pocket for the 8-ball: tap a glowing pocket');
+  else if (S.blitz && S.shotCount === 0) hint('Sixty seconds. Pot everything. Streaks multiply your score.');
   else if (S.session && S.session.type === 'trick' && S.trick.ch.lesson) hint(S.trick.ch.coach);
   else if (S.session && S.session.type === 'trick' && S.trick.attempts === 1) hint(S.trick.ch.blurb);
   else if (!profile.seen('coach1')) hint(coachText());
@@ -312,7 +317,8 @@ function buildTags() {
     } else if (kind === 'onepocket') {
       g = `${r.score[i]} of ${ONE_POCKET_TARGET} · ${i === 0 ? 'ringed pocket' : 'white pocket'}`;
       r.owned[i].forEach((n) => tray.appendChild(miniBall(n, false)));
-    } else if (kind === 'trick') g = `Attempt ${S.trick.attempts}`;
+    } else if (kind === 'blitz') g = `${S.blitz.score.toLocaleString()} pts \u00b7 x${multiplier(S.blitz.streak + 1)} next`;
+    else if (kind === 'trick') g = `Attempt ${S.trick.attempts}`;
     else g = 'Free practice';
     el.querySelector('.pgroup').textContent = g;
   });
@@ -394,7 +400,7 @@ function strikeNow() {
   }
   juice.chalkPuff(cue.x - dir[0] * (R + 0.01), cue.y - dir[1] * (R + 0.01));
   S.phase = 'roll';
-  hint(''); status('…');
+  hint(''); if (!S.blitz) status('…');
   setJump(0);
 }
 
@@ -567,9 +573,10 @@ function finishShot() {
   const result = endShot(m);
   S.lastShot.result = result;
   if (!S.attract) $('btnReplay').classList.remove('hidden');
-  announce(result, actor);
+  if (S.blitz) blitzShot(result, actor); else announce(result, actor);
   buildTags();
   S.phase = 'roll-done';
+  if (S.blitz && (S.blitz.ending || S.blitz.t <= 0)) endBlitz(900);
   S.doneTimer = result.foul || result.tags && result.tags.length ? 1.25 : 0.55;
   // trick shots resolve per attempt
   if (S.session && S.session.type === 'trick') {
@@ -678,6 +685,39 @@ function dailyEnd(m) {
   ui.results({ achievements: lastAch, kicker: `Daily Run · ${cfg.date}`, title: cleared ? 'Rack cleared' : `${st.pots} down`, sub: cleared ? 'Every ball, in order.' : `Run ended: ${(m.rules.loseReason || '').toLowerCase()}`, rows: [['Score', score.toLocaleString()], ['Today\'s best', d.todayBest.toLocaleString()], ['All-time best', profile.data.daily.best.toLocaleString()], ['Streak', `${d.streak} day${d.streak === 1 ? '' : 's'}`]], xp, buttons: [{ label: 'Run it again', primary: true, cb: () => startSession({ ...cfg, rematch: true }) }, { label: 'Menu', cb: () => enterMenu('home') }] });
 }
 
+function blitzShot(result, actor) {
+  const b = S.blitz, m = S.match;
+  const sc = scoreShot(b, result);
+  if (result.scratch) {
+    audio.foul(); buzz([40, 30, 40]);
+    juice.callout('Scratch', `-${SCRATCH_POINTS} points \u00b7 -${SCRATCH_TIME} seconds`, 'foul');
+  } else if (sc.points > 0) {
+    if (result.tags && result.tags.length) announce({ ...result, foul: false }, actor);
+    else { juice.callout(sc.label || 'Pocketed', `+${sc.points}`, 'good'); audio.chime(Math.min(4, sc.mult - 1)); }
+  }
+  if (m.sim.balls.every((x) => x.id === 0 || x.pocketed)) {
+    clearRack(b);
+    rerackKeepCue(m);
+    setTimeout(() => { if (S.blitz) { juice.callout('Rack cleared', `+${CLEAR_BONUS} \u00b7 +${CLEAR_TIME} seconds`, 'big'); audio.chime(4); } }, 500);
+    S.blitzSec = -1;
+  }
+}
+
+function endBlitz(delay = 600) {
+  if (S.ended) return;
+  S.ended = true; S.phase = 'over';
+  hideControls(); juice.releaseSlowMo();
+  setTimeout(() => {
+    if (S.screen !== 'play' || !S.blitz) return;
+    const b = S.blitz, cfg = S.session;
+    const rb = profile.recordBlitz(b.score);
+    profile.addStats(S.match.stats[0]);
+    const xp = awardWithAchievements(blitzXp(b.score));
+    audio.win();
+    ui.results({ achievements: lastAch, kicker: 'Blitz', title: rb.newBest && b.score > 0 ? 'New best' : "Time's up", sub: `${b.balls} balls potted \u00b7 best streak ${b.bestStreak}`, rows: [['Score', b.score.toLocaleString()], ['Personal best', rb.best.toLocaleString()], ['Racks cleared', b.racks], ['Balls potted', b.balls]], xp, buttons: [{ label: 'Go again', primary: true, cb: () => startSession({ ...cfg }) }, { label: 'Menu', cb: () => enterMenu('home') }] });
+  }, delay);
+}
+
 function trickSolved() {
   const cfg = S.session, t = S.trick;
   if (t.ch.lesson) return lessonDone();
@@ -754,8 +794,26 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
+function blitzClock(dt) {
+  const b = S.blitz;
+  if (!b || S.phase === 'over' || S.phase === 'replay') return;
+  b.t = Math.max(0, b.t - dt);
+  const sec = Math.ceil(b.t);
+  if (sec !== S.blitzSec) {
+    S.blitzSec = sec;
+    status(`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);
+    $('status').classList.toggle('urgent', sec <= 10);
+    if (sec <= 5 && sec > 0) audio.tick();
+  }
+  if (b.t <= 0) {
+    if (S.phase === 'aim' || S.phase === 'place' || S.phase === 'roll-done') endBlitz(400);
+    else b.ending = true;                       // let the shot in flight finish and count
+  }
+}
+
 function update(dt) {
   const m = S.match;
+  blitzClock(dt);
   const { dt: sdt } = juice.update(dt, S.time);
   switch (S.phase) {
     case 'aim':

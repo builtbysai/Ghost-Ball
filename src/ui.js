@@ -49,7 +49,8 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
         <button class="mbtn" data-a="circuit"><span class="num">02</span><div class="tt"><b>The Circuit</b><span>${nr ? `Next: ${esc(nr.name)} at ${HALL_BY_ID[nr.hall].name}` : 'Every rival beaten. Chase the stars.'}</span></div><span class="go">›</span></button>
         <button class="mbtn" data-a="tricks"><span class="num">03</span><div class="tt"><b>Trick Shots</b><span>${solved} of ${CHALLENGES.length} solved · ${profile.totalStars('challenges')} of ${CHALLENGES.length * 3} stars</span></div><span class="go">›</span></button>
         <button class="mbtn" data-a="daily"><span class="num">04</span><div class="tt"><b>Daily Run</b><span>${todayDone ? `Today's best ${d.todayBest.toLocaleString()}` : 'Same rack for everyone today'} · streak ${d.streak}</span></div><span class="go">›</span></button>
-        <button class="mbtn" data-a="practice"><span class="num">05</span><div class="tt"><b>Practice</b><span>A free table. Test any shot.</span></div><span class="go">›</span></button>
+        <button class="mbtn" data-a="blitz"><span class="num">05</span><div class="tt"><b>Blitz</b><span>60 seconds, streaks, one rack after another \u00b7 best ${profile.data.blitz.best.toLocaleString()}</span></div><span class="go">\u203a</span></button>
+        <button class="mbtn" data-a="practice"><span class="num">06</span><div class="tt"><b>Practice</b><span>A free table. Test any shot.</span></div><span class="go">›</span></button>
       </div>
       <div class="mfoot"><button class="linkbtn" data-a="profile">Profile</button><button class="linkbtn" data-a="locker">Locker</button><button class="linkbtn" data-a="settings">Settings</button><button class="linkbtn" data-a="how">How to play</button></div>`,
     (root) => {
@@ -57,6 +58,7 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
         b.onclick = () => click(() => {
           const a = b.dataset.a;
           if (a === 'daily') return actions.startDaily();
+          if (a === 'blitz') return actions.startBlitz(settings.hall);
           if (a === 'lesson') { const next = LESSONS.find((l) => !profile.data.lessons[l.id]); return actions.startChallenge(next.id); }
           show(a);
         });

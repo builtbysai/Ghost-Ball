@@ -57,6 +57,16 @@ function randomQuat(rand) {
   return [Math.sqrt(1 - u1) * Math.sin(u2), Math.sqrt(1 - u1) * Math.cos(u2), Math.sqrt(u1) * Math.sin(u3), Math.sqrt(u1) * Math.cos(u3)];
 }
 
+/** Blitz: rack fifteen balls again without moving the cue ball (unless it sits where the rack goes). */
+export function rerackKeepCue(m) {
+  const cue = m.sim.ball(0);
+  const keep = { x: cue.x, y: cue.y };
+  rerack(m);
+  const c = m.sim.ball(0);
+  const inRack = keep.x > 0.5;               // the rack occupies the foot end
+  if (!inRack) { c.x = keep.x; c.y = keep.y; }
+}
+
 export const onTableIds = (m) => m.sim.balls.filter((b) => !b.pocketed).map((b) => b.id);
 
 /** Put the cue ball down (ball in hand). */

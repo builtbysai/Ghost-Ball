@@ -26,6 +26,8 @@ export const ACHIEVEMENTS = [
   { id: 'tricks', name: 'Trick Artist', desc: 'Solve every trick shot', xp: 120, test: (p) => CHALLENGES.every((c) => p.data.challenges[c.id]) },
   { id: 'threeStars', name: 'Showman', desc: 'Earn three stars on ten trick shots', xp: 100, test: (p) => Object.values(p.data.challenges).filter((s) => s >= 3).length >= 10 },
   { id: 'daily', name: 'Clean Sweep', desc: 'Clear a Daily Run rack', xp: 100, test: (p) => st(p).dailyClears >= 1 },
+  { id: 'blitz1', name: 'Quick Hands', desc: 'Score 1,500 in Blitz', xp: 80, test: (p) => p.data.blitz.best >= 1500 },
+  { id: 'blitz2', name: 'Lightning', desc: 'Score 3,500 in Blitz', xp: 160, test: (p) => p.data.blitz.best >= 3500 },
   { id: 'streak3', name: 'Regular', desc: 'Play the Daily Run three days running', xp: 60, test: (p) => p.data.daily.streak >= 3 },
   { id: 'level10', name: 'Chalked Up', desc: 'Reach Chalk level 10', xp: 100, test: (p) => p.level() >= 10 },
 ];

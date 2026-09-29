@@ -21,9 +21,10 @@ Open http://localhost:8124. Deep links: `?play&game=nine&rival=2&hall=stage`, `?
 | **Lessons** | Five guided lessons (aim, power, cutting, draw, English) with coaching text on every attempt. Your first stop |
 | **Trick Shots** | Fourteen hand-built setups: bank, kick, combo, draw, follow, English, double, cluster, long pot, and two jump shots. Solve first try for three stars. Every challenge and lesson is verified solvable by a test |
 | **Daily Run** | Same pre-broken nine-ball table for everyone each day. Clear the rack; the first miss ends the run. Best score and a streak that never punishes you |
+| **Blitz** | Sixty seconds on a fresh rack. 100 a ball times a streak multiplier (up to x5), extra for multi-ball shots, a scratch costs 300 points and 3 seconds, clearing the rack pays 500 and adds 8 seconds. Personal best kept |
 | **Practice** | A free table with re-rack |
 | **Chalk** | XP for wins, stars and skilled shots. Levels unlock cues, chalks and ball sets in the Locker |
-| **Achievements** | 21 long-term goals (bank ten shots, run eight balls, clear a hall, land five jump shots, a golden break...) on the Profile screen, each worth Chalk once |
+| **Achievements** | 23 long-term goals (bank ten shots, run eight balls, clear a hall, land five jump shots, a golden break...) on the Profile screen, each worth Chalk once |
 | **Installable** | A web manifest and a network-first service worker: add it to your home screen, and it opens offline after the first visit |
 
 ### The halls
@@ -67,6 +68,7 @@ Restraint over volume (see `docs/DESIGN.md`). Hit-stop appears only on hard impa
 - **`rules.js`**: the referee for every game, pure functions from a shot's event log to the next state.
 - **`game.js`**: match controller and per-player stats. **`shotinfo.js`**: detects the callouts.
 - **`ai.js`**: PickPocket-style planner: geometric candidates (including one-cushion banks at the top level) verified in the real sim under execution noise, scored on the leave, with safeties at the top level.
+- **`blitz.js`**: Blitz scoring (pure, tested).
 - **`circuit.js`**, **`challenges.js`**, **`daily.js`**, **`profile.js`**, **`achievements.js`**, **`gear.js`**: progression and content.
 - **`render.js`**, **`ballshader.js`**, **`halls.js`**: canvas renderer, per-pixel sphere shader with a real 3D orientation per ball, and the five halls.
 - **`juice.js`**, **`audio.js`**: the feel layer and fully procedural sound (no samples).
@@ -79,7 +81,7 @@ Restraint over volume (see `docs/DESIGN.md`). Hit-stop appears only on hard impa
 node --test tests/*.test.mjs
 ```
 
-50 behavior tests: follow/draw and throw geometry, English on a cushion, energy never rising through a break, determinism, pocketing vs jaw rattle, every game's fouls and win/loss edge cases, AI finishing whole games without stalling, exact shot replay, each trick shot solvable by its shipped solution, the callout detector, the stroke state machine (slow pushes, flicks, jitter, stale motion) and the gamepad layer (deadzone, edges, aim response), Chalk levels and unlocks, older saved profiles gaining new fields, achievements unlocking exactly once, jump-shot physics, Circuit progression, the Daily Run's shared layout and streak, and a regression test for shots being cut short in long matches. Helpful scripts: `node scripts/autoplay.mjs eight 2 0 4` plays AI-vs-AI headless; `node scripts/stress.mjs 18` plays many games checking for NaNs, stray balls and stalls; `node scripts/compare.mjs 10` pits two AI configurations against each other; `node scripts/solve-challenges.mjs c04` searches for a trick shot's solution with the real engine.
+54 behavior tests: follow/draw and throw geometry, English on a cushion, energy never rising through a break, determinism, pocketing vs jaw rattle, every game's fouls and win/loss edge cases, AI finishing whole games without stalling, exact shot replay, each trick shot solvable by its shipped solution, the callout detector, the stroke state machine (slow pushes, flicks, jitter, stale motion) and the gamepad layer (deadzone, edges, aim response), Chalk levels and unlocks, older saved profiles gaining new fields, achievements unlocking exactly once, jump-shot physics, Circuit progression, the Daily Run's shared layout and streak, and a regression test for shots being cut short in long matches. Helpful scripts: `node scripts/autoplay.mjs eight 2 0 4` plays AI-vs-AI headless; `node scripts/stress.mjs 18` plays many games checking for NaNs, stray balls and stalls; `node scripts/compare.mjs 10` pits two AI configurations against each other; `node scripts/solve-challenges.mjs c04` searches for a trick shot's solution with the real engine.
 
 ## Roadmap
 Online play (the deterministic engine means only shot parameters cross the wire), masse shots, straight pool, snooker, three-cushion, AI that uses kicks and jumps.

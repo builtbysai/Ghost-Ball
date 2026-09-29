@@ -16,6 +16,7 @@ export const GAMES = {
   practice: { name: 'Practice', blurb: 'Free table, no rules', menu: true },
   runout: { name: 'Run-Out', blurb: 'Clear the rack, miss and it ends', menu: false },
   trick: { name: 'Trick Shot', blurb: 'One setup, one solution', menu: false },
+  blitz: { name: 'Blitz', blurb: 'Sixty seconds. Pot everything.', menu: false },
 };
 
 /** Which foot-rail corner each player owns in one-pocket (pocket indices from table.js). */
@@ -23,7 +24,7 @@ export const ONE_POCKET_OWNERS = [1, 3];
 export const ONE_POCKET_TARGET = 8;
 
 export function newRules(kind, opts = {}) {
-  const solo = kind === 'practice' || kind === 'runout' || kind === 'trick';
+  const solo = kind === 'practice' || kind === 'runout' || kind === 'trick' || kind === 'blitz';
   return {
     kind,
     turn: opts.breaker ?? 0,
@@ -50,7 +51,7 @@ const groupBalls = (g) => (g === 'solid' ? [1, 2, 3, 4, 5, 6, 7] : [9, 10, 11, 1
 /** Balls the shooter may legally contact first, given the table state. */
 export function legalTargets(rules, onTable) {
   const objs = onTable.filter((id) => id !== 0);
-  if (rules.kind === 'practice' || rules.kind === 'onepocket' || rules.kind === 'trick') return objs;
+  if (rules.kind === 'practice' || rules.kind === 'onepocket' || rules.kind === 'trick' || rules.kind === 'blitz') return objs;
   if (rules.kind === 'nine' || rules.kind === 'runout') return objs.length ? [Math.min(...objs)] : [];
   const g = rules.groups[rules.turn];
   if (rules.open || !g) return objs.filter((id) => id !== 8);
@@ -115,7 +116,7 @@ export function resolveShot(rules, shot) {
   let lose = null;
   r.shots++;
 
-  if (r.kind === 'practice' || r.kind === 'trick') {
+  if (r.kind === 'practice' || r.kind === 'trick' || r.kind === 'blitz') {
     r.ballInHand = false;
     r.kitchen = false;
     r.breakShot = false;

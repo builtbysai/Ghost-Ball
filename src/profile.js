@@ -11,6 +11,7 @@ const blank = () => ({
   equipped: { cue: 'ash', chalk: 'blue', ballset: 'classic' },
   stats: { matches: 0, wins: 0, pots: 0, banks: 0, kicks: 0, combos: 0, jumps: 0, golden: 0, dailyClears: 0, bestRun: 0, fouls: 0 },
   achievements: {},     // id -> timestamp
+  blitz: { best: 0, plays: 0 },
   circuit: {},          // 'parlor:0' -> stars (1..3)
   challenges: {},       // 'c01' -> stars
   lessons: {},          // 'l1' -> 1 when done
@@ -26,7 +27,7 @@ export function createProfile(storage = null) {
       const saved = JSON.parse(raw), fresh = blank();
       // fill in anything added since this profile was saved, one level deep
       data = { ...fresh, ...saved };
-      for (const k of ['stats', 'daily', 'equipped']) data[k] = { ...fresh[k], ...(saved[k] || {}) };
+      for (const k of ['stats', 'daily', 'equipped', 'blitz']) data[k] = { ...fresh[k], ...(saved[k] || {}) };
       for (const k of ['circuit', 'challenges', 'lessons', 'achievements', 'seen']) data[k] = saved[k] || {};
     }
   } catch { /* corrupt or unavailable: start fresh */ }
@@ -102,6 +103,14 @@ export function createProfile(storage = null) {
       if (newBest) { d.best = score; d.bestDate = date; }
       save();
       return { streak: d.streak, newBest, todayBest: d.todayBest };
+    },
+    /** Record a finished Blitz; returns { newBest, best }. */
+    recordBlitz(score) {
+      const b = data.blitz; b.plays++;
+      const newBest = score > b.best;
+      if (newBest) b.best = score;
+      save();
+      return { newBest, best: b.best };
     },
     noteDailyClear() { data.stats.dailyClears++; save(); },
     markSeen(k) { if (!data.seen[k]) { data.seen[k] = true; save(); } },
