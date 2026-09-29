@@ -17,13 +17,14 @@
 
 <div id="hud" class="hidden">
   <div class="hud-l"><div class="tag" id="tagA"><i class="av"></i><div class="tx"><b class="pname"></b><em class="pgroup"></em></div><div class="tray"></div></div></div>
-  <div class="hud-c"><div class="modeTag"></div><div class="status" id="status"></div></div>
+  <div class="hud-c"><div class="modeTag"></div><div class="status" id="status"></div><div class="netchip hidden" id="netchip"><i></i><em>-- ms</em></div></div>
   <div class="hud-r">
     <div class="tag" id="tagB"><i class="av"></i><div class="tx"><b class="pname"></b><em class="pgroup"></em></div><div class="tray"></div></div>
     <div class="btns">
       <button class="iconbtn hidden" id="btnReplay" title="Replay last shot (R)" aria-label="Replay last shot"><svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
       <button class="iconbtn hidden" id="btnHint" title="Show me" aria-label="Show me the solution"><svg viewBox="0 0 24 24"><path d="M9 21h6v-1H9zm3-19a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg></button>
       <button class="iconbtn hidden" id="btnRerack" title="Re-rack" aria-label="Re-rack"><svg viewBox="0 0 24 24"><path d="M12 3 2 21h20zm0 6 5.5 10h-11z"/></svg></button>
+      <button class="iconbtn hidden" id="btnEmote" title="Say something" aria-label="Quick chat"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4z"/></svg></button>
       <button class="iconbtn" id="btnFull" title="Fullscreen (F)" aria-label="Toggle fullscreen"><svg viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z"/></svg></button>
       <button class="iconbtn" id="btnSound" title="Mute (M)" aria-label="Mute all audio"><svg viewBox="0 0 24 24"><path d="M3 10v4h4l5 4V6L7 10zm13.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg></button>
       <button class="iconbtn" id="btnPause" title="Pause (P)" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg></button>
@@ -31,6 +32,7 @@
   </div>
 </div>
 
+<div id="emotePanel" class="hidden"></div>
 <div id="callouts" aria-live="polite"></div>
 <div id="banner" class="hidden" role="status" aria-live="polite"><b></b><span></span></div>
 <div id="hint" class="hidden"></div>

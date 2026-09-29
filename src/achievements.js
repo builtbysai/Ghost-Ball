@@ -21,6 +21,8 @@ export const ACHIEVEMENTS = [
   { id: 'combo5', name: 'Chain Reaction', desc: 'Sink five combinations', xp: 60, test: (p) => st(p).combos >= 5 },
   { id: 'jump5', name: 'Airborne', desc: 'Land five jump shots', xp: 80, test: (p) => st(p).jumps >= 5 },
   { id: 'masse3', name: 'Curve Ball', desc: 'Pot three balls with a mass\u00e9', xp: 100, test: (p) => st(p).masses >= 3 },
+  { id: 'online1', name: 'Across the Wire', desc: 'Win an online match', xp: 80, test: (p) => st(p).onlineWins >= 1 },
+  { id: 'online10', name: 'Regular at the Table', desc: 'Win ten online matches', xp: 160, test: (p) => st(p).onlineWins >= 10 },
   { id: 'run5', name: 'On a Roll', desc: 'Run five balls in a row', xp: 60, test: (p) => st(p).bestRun >= 5 },
   { id: 'run8', name: 'Table Runner', desc: 'Run eight balls in a row', xp: 120, test: (p) => st(p).bestRun >= 8 },
   { id: 'golden', name: 'Golden Break', desc: 'Sink the 9 on the break', xp: 150, test: (p) => st(p).golden >= 1 },

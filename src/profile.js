@@ -9,7 +9,7 @@ const KEY = 'pool.profile.v2';
 const blank = () => ({
   xp: 0,
   equipped: { cue: 'ash', chalk: 'blue', ballset: 'classic' },
-  stats: { matches: 0, wins: 0, pots: 0, banks: 0, kicks: 0, combos: 0, jumps: 0, masses: 0, golden: 0, dailyClears: 0, bestRun: 0, fouls: 0 },
+  stats: { matches: 0, wins: 0, pots: 0, banks: 0, kicks: 0, combos: 0, jumps: 0, masses: 0, onlineWins: 0, golden: 0, dailyClears: 0, bestRun: 0, fouls: 0 },
   achievements: {},     // id -> timestamp
   blitz: { best: 0, plays: 0 },
   circuit: {},          // 'parlor:0' -> stars (1..3)

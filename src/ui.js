@@ -9,6 +9,7 @@ import { RIVALS, rivalsOf, hallOpen, nextRival, GOALS } from './circuit.js';
 import { CHALLENGES, LESSONS } from './challenges.js';
 import { localDateString } from './profile.js';
 import { ACHIEVEMENTS } from './achievements.js';
+import { cleanCode } from './online.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -47,10 +48,11 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
         ${lessonsLeft ? `<button class="mbtn primary" data-a="lesson"><span class="num">★</span><div class="tt"><b>${lessonsDone ? 'Continue lessons' : 'Learn the basics'}</b><span>${lessonsDone} of ${LESSONS.length} done · aim, power, cut, draw, English</span></div><span class="go">›</span></button>` : ''}
         <button class="mbtn ${lessonsLeft ? '' : 'primary'}" data-a="quick"><span class="num">01</span><div class="tt"><b>Quick Match</b><span>${GAMES[settings.kind].name} · ${oppLabel()} · ${HALL_BY_ID[settings.hall].name}</span></div><span class="go">›</span></button>
         <button class="mbtn" data-a="circuit"><span class="num">02</span><div class="tt"><b>The Circuit</b><span>${nr ? `Next: ${esc(nr.name)} at ${HALL_BY_ID[nr.hall].name}` : 'Every rival beaten. Chase the stars.'}</span></div><span class="go">›</span></button>
-        <button class="mbtn" data-a="tricks"><span class="num">03</span><div class="tt"><b>Trick Shots</b><span>${solved} of ${CHALLENGES.length} solved · ${profile.totalStars('challenges')} of ${CHALLENGES.length * 3} stars</span></div><span class="go">›</span></button>
-        <button class="mbtn" data-a="daily"><span class="num">04</span><div class="tt"><b>Daily Run</b><span>${todayDone ? `Today's best ${d.todayBest.toLocaleString()}` : 'Same rack for everyone today'} · streak ${d.streak}</span></div><span class="go">›</span></button>
-        <button class="mbtn" data-a="blitz"><span class="num">05</span><div class="tt"><b>Blitz</b><span>60 seconds, streaks, one rack after another \u00b7 best ${profile.data.blitz.best.toLocaleString()}</span></div><span class="go">\u203a</span></button>
-        <button class="mbtn" data-a="practice"><span class="num">06</span><div class="tt"><b>Practice</b><span>A free table. Test any shot.</span></div><span class="go">›</span></button>
+        <button class="mbtn" data-a="online"><span class="num">03</span><div class="tt"><b>Play Online</b><span>A private table for two. Share a code.</span></div><span class="go">\u203a</span></button>
+        <button class="mbtn" data-a="tricks"><span class="num">04</span><div class="tt"><b>Trick Shots</b><span>${solved} of ${CHALLENGES.length} solved · ${profile.totalStars('challenges')} of ${CHALLENGES.length * 3} stars</span></div><span class="go">›</span></button>
+        <button class="mbtn" data-a="daily"><span class="num">05</span><div class="tt"><b>Daily Run</b><span>${todayDone ? `Today's best ${d.todayBest.toLocaleString()}` : 'Same rack for everyone today'} · streak ${d.streak}</span></div><span class="go">›</span></button>
+        <button class="mbtn" data-a="blitz"><span class="num">06</span><div class="tt"><b>Blitz</b><span>60 seconds, streaks, one rack after another \u00b7 best ${profile.data.blitz.best.toLocaleString()}</span></div><span class="go">\u203a</span></button>
+        <button class="mbtn" data-a="practice"><span class="num">07</span><div class="tt"><b>Practice</b><span>A free table. Test any shot.</span></div><span class="go">›</span></button>
       </div>
       <div class="mfoot"><button class="linkbtn" data-a="profile">Profile</button><button class="linkbtn" data-a="locker">Locker</button><button class="linkbtn" data-a="settings">Settings</button><button class="linkbtn" data-a="how">How to play</button></div>`,
     (root) => {
@@ -205,6 +207,7 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
       <li><b>8-Ball</b><br>Pot your group, then call a pocket for the 8.</li>
       <li><b>9-Ball</b><br>Always hit the lowest ball first. Pot the 9 to win.</li>
       <li><b>Straight Pool</b><br>Any ball, any pocket, a point each. A foul costs a point (two on the break, fifteen for three in a row). When one ball is left, the other fourteen are racked again. First to 30.</li>
+      <li><b>Online</b><br>Host a private table and send the code, or join with one. Both players see each other's cue. A shot clock keeps things moving, and if the connection drops you have thirty seconds to come back.</li>
       <li><b>One-Pocket</b><br>Only balls in your foot-rail pocket count. First to eight wins. A foul gives a ball back.</li>
       <li><b>Chalk</b><br>You earn Chalk for winning and for skilled shots. Levels unlock cues, chalks and ball sets. Nothing is for sale.</li>
       <li><kbd>P</kbd> pause · <kbd>M</kbd> mute · <kbd>R</kbd> replay your last shot</li></ul>`, (root) => wireBack(root));
@@ -222,9 +225,65 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
     (root) => wireBack(root));
   }
 
+  // ---------------------------------------------------------------- online
+  function onlineScreen() {
+    const kinds = ['eight', 'nine', 'straight', 'onepocket'];
+    mount(`${backBtn()}<div class="scr-title">Play Online</div><p class="scr-sub">A private table for two. Host one and send the code or link, or join a friend's.</p>
+      <div class="label">Your name</div><input id="nameIn" class="field" maxlength="16" autocomplete="off" spellcheck="false" value="${esc(settings.name || '')}" placeholder="Player">
+      <div class="label">Host a table</div>
+      <div class="chips" id="oKind">${kinds.map((k) => `<button class="chip ${settings.kind === k ? 'sel' : ''}" data-k="${k}">${GAMES[k].name}<small>${GAMES[k].blurb}</small></button>`).join('')}</div>
+      <div class="label">The hall</div>${hallRows(settings.hall)}
+      <div class="label">Shot clock</div>
+      <div class="chips" id="oClock">${[['off', 'Off'], ['30', '30 seconds'], ['60', '60 seconds']].map(([v, t]) => `<button class="chip ${settings.clock === v ? 'sel' : ''}" data-c="${v}">${t}</button>`).join('')}</div>
+      <button class="mbtn primary startbtn" id="oHost"><span class="num"></span><div class="tt"><b>Host a table</b><span>You get a code to share</span></div><span class="go">\u203a</span></button>
+      <div class="label">Join a table</div>
+      <div class="joinrow"><input id="codeIn" class="field code" maxlength="7" placeholder="ABC234" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" id="oJoin">Join</button></div>
+      <p class="fine">Games connect directly between the two players (peer to peer). Both sides run the same simulation, so nothing is sent but your shots.</p>`,
+    (root) => {
+      wireBack(root);
+      wireHalls(root, () => settings.hall, (id) => { settings.hall = id; saveSettings(); actions.previewHall(id); });
+      root.querySelectorAll('[data-k]').forEach((b) => { b.onclick = () => click(() => { settings.kind = b.dataset.k; saveSettings(); root.querySelectorAll('[data-k]').forEach((x) => x.classList.toggle('sel', x === b)); }); });
+      root.querySelectorAll('[data-c]').forEach((b) => { b.onclick = () => click(() => { settings.clock = b.dataset.c; saveSettings(); root.querySelectorAll('[data-c]').forEach((x) => x.classList.toggle('sel', x === b)); }); });
+      const nameIn = $('nameIn'), codeIn = $('codeIn');
+      nameIn.oninput = () => { settings.name = nameIn.value.trim().slice(0, 16); saveSettings(); };
+      codeIn.oninput = () => { codeIn.value = cleanCode(codeIn.value); };
+      $('oHost').onclick = () => click(() => actions.onlineHost({ kind: settings.kind === 'practice' ? 'eight' : settings.kind, hall: settings.hall, clock: settings.clock === 'off' ? 0 : +settings.clock }));
+      $('oJoin').onclick = () => click(() => actions.onlineJoin(codeIn.value));
+      codeIn.onkeydown = (e) => { if (e.key === 'Enter') $('oJoin').click(); };
+    });
+  }
+
+  function lobby({ title, code, link, sub, onCancel }) {
+    openSheet(`<div class="kick">Online</div><h2>${esc(title)}</h2>
+      <div class="bigcode" id="lobCode">${esc(code)}</div>
+      <p class="scr-sub" id="lobSub">${esc(sub)}</p>
+      <p class="fine err hidden" id="lobErr"></p>
+      <div class="btnrow">${link ? '<button class="btn primary" id="lobCopy">Copy invite link</button>' : ''}<button class="btn" id="lobCancel">Cancel</button></div>`,
+    () => {
+      const copy = $('lobCopy');
+      if (copy) copy.onclick = async () => { try { await navigator.clipboard.writeText(link); copy.textContent = 'Copied'; } catch { copy.textContent = link; } };
+      $('lobCancel').onclick = () => { closeSheet(); onCancel(); };
+    });
+    return {
+      close: closeSheet,
+      setSub(t) { const e = $('lobSub'); if (e) e.textContent = t; },
+      error(t) { const e = $('lobErr'); if (e) { e.textContent = t; e.classList.remove('hidden'); } const s = $('lobSub'); if (s) s.textContent = ''; },
+    };
+  }
+
+  function notice(text) {
+    openSheet(`<div class="kick">Ghost Ball</div><p class="scr-sub" style="font-size:16px;color:var(--ink)">${esc(text)}</p><div class="btnrow"><button class="btn primary" id="noteOk">OK</button></div>`, () => { $('noteOk').onclick = closeSheet; });
+  }
+
+  function onlineMenu({ onResume, onResign }) {
+    openSheet(`<div class="kick">Online match</div><h2>Menu</h2><p class="scr-sub">The game keeps running while this is open.</p>
+      <div class="btnrow"><button class="btn primary" id="omResume">Back to the table</button><button class="btn" id="omResign">Resign and leave</button></div>`,
+    () => { $('omResume').onclick = () => { closeSheet(); onResume(); }; $('omResign').onclick = () => { closeSheet(); onResign(); }; });
+  }
+
   function show(name) {
     screen = name;
-    ({ home, quick, practice, circuit, tricks, locker, profile: profileScreen, settings: settingsScreen, how }[name] || home)();
+    ({ home, quick, practice, online: onlineScreen, circuit, tricks, locker, profile: profileScreen, settings: settingsScreen, how }[name] || home)();
   }
 
   // ---------------------------------------------------------------- modal sheets
@@ -264,13 +323,16 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
       <div id="rUnlocks"></div>
       <div class="btnrow">${data.buttons.map((b, i) => `<button class="btn ${b.primary ? 'primary' : ''}" data-b="${i}">${esc(b.label)}</button>`).join('')}</div>`,
     (root) => {
-      root.querySelectorAll('[data-b]').forEach((b) => { b.onclick = () => { closeSheet(); data.buttons[+b.dataset.b].cb(); }; });
+      root.querySelectorAll('[data-b]').forEach((b) => { b.onclick = () => { const spec = data.buttons[+b.dataset.b]; if (!spec.keep) closeSheet(); spec.cb(); }; });
       // stars pop in one at a time, then the Chalk counts up and the bar fills
       const stars = root.querySelectorAll('#rStars i');
       let t = 350;
       for (let i = 0; i < (data.stars || 0); i++) { setTimeout(() => { stars[i] && stars[i].classList.add('on'); audio.star(i); }, t); t += 340; }
       if (xp) setTimeout(() => animateXp(root, xp), t);
     });
+    return {
+      setButton(i, label, disabled) { const b = sheet.querySelector(`[data-b="${i}"]`); if (b) { b.textContent = label; b.disabled = !!disabled; } },
+    };
   }
 
   function fracAt(xp, level) { const lo = levelXp(level), hi = levelXp(level + 1); return (xp - lo) / (hi - lo); }
@@ -301,5 +363,5 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
   }
   const levelFor = levelForXp;
 
-  return { show, home, pause, results, closeSheet, get screen() { return screen; } };
+  return { show, home, pause, results, lobby, notice, onlineMenu, closeSheet, get screen() { return screen; } };
 }

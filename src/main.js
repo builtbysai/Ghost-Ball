@@ -20,6 +20,9 @@ import { CHALLENGES, LESSONS, ALL_CHALLENGES, findChallenge, evaluate, stars as 
 import { dailyLayout } from './daily.js';
 import { checkAchievements } from './achievements.js';
 import { Stroke, speedFromPower, powerFromSpeed } from './stroke.js';
+import { OnlineLink, EMOTES, applyTimeout, newCode, cleanCode, validCode } from './online.js';
+import { snapshot, restore, divergence, inSync } from './sync.js';
+import { localTransport, trysteroTransport } from './transports.js';
 import { PadInput, aimRate } from './gamepad.js';
 import { createUI } from './ui.js';
 
@@ -37,7 +40,7 @@ const safeStorage = {
   setItem(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
   removeItem(k) { try { localStorage.removeItem(k); } catch { /* private mode */ } },
 };
-const DEFAULTS = { hall: 'parlor', kind: 'eight', opp: '1', assist: 'full', pocket: 'standard', cloth: 'standard', sound: 'on', music: 'on', shake: 'full', haptics: 'on', hand: 'right', stroke: 'med', stick: 'med' };
+const DEFAULTS = { hall: 'parlor', kind: 'eight', opp: '1', assist: 'full', pocket: 'standard', cloth: 'standard', sound: 'on', music: 'on', shake: 'full', haptics: 'on', hand: 'right', stroke: 'med', stick: 'med', name: '', clock: '60' };
 let settings = { ...DEFAULTS };
 try { settings = { ...DEFAULTS, ...JSON.parse(safeStorage.getItem('pool.settings2') || '{}') }; } catch { /* first run */ }
 if (!HALL_BY_ID[settings.hall]) settings.hall = 'parlor';
@@ -64,6 +67,7 @@ const S = {
   fineBase: null, doneTimer: 0,
   slowDone: false, decisive: [],
   trick: null, ended: false, blitz: null, blitzSec: -1,
+  online: null, remoteAim: null, remotePlacing: false, clockSec: -1,
   inputMode: 'mouse', drag: null, strip: null, padStroke: null, touchPt: null, padConnected: false,
 };
 
@@ -93,11 +97,12 @@ function applyGear() {
 
 // ---------------------------------------------------------------- helpers over the match
 const seatOf = () => S.mode.seats[S.match.rules.turn % S.mode.seats.length];
-const humanTurn = () => !S.attract && S.mode && S.match && seatOf().human;
+const humanTurn = () => !S.attract && S.mode && S.match && seatOf().human && seatOf().local !== false;
 const onTable = () => onTableIds(S.match);
 const kindName = () => (S.session && S.session.type === 'daily' ? 'Daily Run' : S.session && S.session.type === 'trick' ? 'Trick Shot' : GAMES[S.mode.kind].name);
 
 function seatsFor(cfg) {
+  if (cfg.type === 'online') return cfg.online.cfg.names.map((n, i) => ({ human: true, local: i === cfg.online.seat, name: n }));
   if (cfg.type === 'trick' || cfg.type === 'daily' || cfg.type === 'practice' || cfg.type === 'blitz') return [{ human: true, name: 'You' }];
   if (cfg.type === 'circuit') return [{ human: true, name: 'You' }, { human: false, level: cfg.rival.level, name: cfg.rival.name }];
   if (cfg.opp === '2p') return [{ human: true, name: 'Player 1' }, { human: true, name: 'Player 2' }];
@@ -135,7 +140,8 @@ function makeMatch() {
   if (cfg.type === 'trick') setup = S.trick.ch.setup;
   if (cfg.type === 'daily') setup = S.dailySetup;
   const seats = S.mode.seats;
-  S.match = newMatch({ kind: cfg.kind, seed: cfg.type === 'daily' ? dailySeed(cfg.date) : (Math.random() * 1e9) | 0, pocket: settings.pocket, cloth: settings.cloth, breaker: seats.length > 1 ? S.breaker % seats.length : 0, trackOrient: true, setup });
+  const oc = cfg.type === 'online' ? cfg.online.cfg : null;      // online: the host's settings and seed, identical on both ends
+  S.match = newMatch({ kind: cfg.kind, seed: oc ? oc.seed : cfg.type === 'daily' ? dailySeed(cfg.date) : (Math.random() * 1e9) | 0, pocket: oc ? oc.pocket : settings.pocket, cloth: oc ? oc.cloth : settings.cloth, breaker: oc ? oc.breaker : seats.length > 1 ? S.breaker % seats.length : 0, trackOrient: true, setup });
   renderer.setTable(S.match.table);
   juice.reset(); S.cueAnim = null; S.ai = null; S.callSel = null; S.callAuto = null; S.lastShot = null; S.replay = null;
   S.power = 0; S.spin = { a: 0, b: 0 }; S.shotCount = 0; S.slowDone = false; S.ended = false;
@@ -183,6 +189,8 @@ const actions = {
   startChallenge: (id) => { const ch = findChallenge(id); const i = CHALLENGES.indexOf(ch); startSession({ type: 'trick', kind: 'trick', opp: 'none', hall: ch.lesson ? 'parlor' : HALLS[i % HALLS.length].id, challenge: id }); },
   startDaily: () => { const date = localDateString(); startSession({ type: 'daily', kind: 'runout', opp: 'none', hall: dailyHall(date), date }); },
   startBlitz: (hall) => startSession({ type: 'blitz', kind: 'blitz', opp: 'none', hall }),
+  onlineHost: (o) => onlineHost(o),
+  onlineJoin: (c) => onlineJoin(c),
   startPractice: (hall) => startSession({ type: 'practice', kind: 'practice', opp: 'none', hall }),
   previewHall: (id) => applyHall(id),
   gearChanged: () => applyGear(),
@@ -204,6 +212,15 @@ function nextPhase() {
   if (r.winner != null && !S.attract) return gameOver();
   if (r.winner != null && S.attract) { S.phase = 'over'; setTimeout(() => { if (S.attract && S.screen === 'menu') startAttract(); }, 2600); return; }
   const seat = seatOf();
+  if (S.online) { S.online.turnStart = performance.now(); S.online.timeoutSent = -1; S.clockSec = -1; S.remoteAim = null; }
+  if (seat.human && seat.local === false) {                        // the other player's turn: watch their cue
+    S.phase = 'remote'; S.remotePlacing = r.ballInHand && !r.breakShot;
+    hideControls(); juice.clearAim(); hint('');
+    if (S.remotePlacing) { const cue = S.match.sim.ball(0); S.placeGhost = { x: cue.x, y: cue.y, valid: true, kitchen: r.kitchen, remote: true }; } else S.placeGhost = null;
+    status(`${seat.name}'s shot`);
+    buildTags();
+    return;
+  }
   if (seat.human) {
     if (r.ballInHand && !r.breakShot) enterPlace(); else enterAim();
   } else {
@@ -301,8 +318,9 @@ function buildTags() {
     const el = $(id);
     el.classList.toggle('active', two ? r.turn === i && r.winner == null : true);
     const av = el.querySelector('.av');
-    av.classList.toggle('you', !!seats[i].human && seats[i].name === 'You');
-    av.textContent = seats[i].human && seats[i].name === 'You' ? '' : seats[i].name === 'Player 1' ? '1' : seats[i].name === 'Player 2' ? '2' : seats[i].name[0];
+    const isYou = !!seats[i].human && (seats[i].name === 'You' || (S.online && seats[i].local));
+    av.classList.toggle('you', isYou);
+    av.textContent = isYou ? '' : seats[i].name === 'Player 1' ? '1' : seats[i].name === 'Player 2' ? '2' : seats[i].name[0];
     el.querySelector('.pname').textContent = seats[i].name;
     const tray = el.querySelector('.tray'); tray.innerHTML = '';
     let g = '';
@@ -365,7 +383,8 @@ function predictPocket(plan, id) {
 }
 
 function fire(plan, power, visualPull = power) {
-  if (S.phase !== 'aim' && S.phase !== 'ai') return;
+  if (S.phase !== 'aim' && S.phase !== 'ai' && S.phase !== 'remote') return;
+  if (S.online && S.online.started && seatOf().local !== false) S.online.link.send({ t: 'shot', n: S.online.shotN, plan });
   S.phase = 'shooting';
   hideControls(); hint('');
   const pull0 = pullFor(visualPull);
@@ -575,6 +594,7 @@ function finishShot() {
   const actor = seatOf().name;
   const result = endShot(m);
   S.lastShot.result = result;
+  if (S.online && S.online.started) onlineAfterShot();
   if (!S.attract) $('btnReplay').classList.remove('hidden');
   if (S.blitz) blitzShot(result, actor); else announce(result, actor);
   buildTags();
@@ -643,6 +663,7 @@ function gameOver() {
   const st = m.stats[0];
   setTimeout(() => {
     if (S.phase !== 'over' || S.screen !== 'play') return;
+    if (cfg.type === 'online') return onlineEnd(m);
     if (cfg.type === 'daily') return dailyEnd(m);
     if (cfg.type === 'circuit') return circuitEnd(m);
     const vsAI = seats.length === 2 && !seats[1].human && seats[0].human;
@@ -816,6 +837,7 @@ function blitzClock(dt) {
 
 function update(dt) {
   const m = S.match;
+  onlineTick(dt);
   blitzClock(dt);
   const { dt: sdt } = juice.update(dt, S.time);
   switch (S.phase) {
@@ -850,8 +872,9 @@ function update(dt) {
     }
     case 'roll-done':
       S.doneTimer -= dt;
-      if (S.doneTimer <= 0) nextPhase();
+      if (S.doneTimer <= 0 && onlineReadyToAdvance()) nextPhase();     // a guest waits briefly for the host's snapshot
       break;
+    case 'remote': juice.clearAim(); break;
     case 'trick-miss':
       S.doneTimer -= dt;
       if (S.doneTimer <= 0) {
@@ -888,9 +911,9 @@ function render() {
     balls: sim.balls, time: S.time, effects: juice.effects, sinking: juice.sinking,
     showGuide: !menu && S.phase === 'aim' && humanTurn() && settings.assist !== 'none',
     guide: S.guide, assist: settings.assist, hideCue: false,
-    tension: (S.phase === 'aim' || S.phase === 'ai') && !menu ? S.power : 0, cueBall: m.sim.ball(0),
+    tension: (S.phase === 'aim' || S.phase === 'ai' || S.phase === 'remote') && !menu ? S.power : 0, cueBall: m.sim.ball(0),
   };
-  if (!menu && S.phase === 'place' && S.placeGhost) { f.placeGhost = S.placeGhost; f.hideCue = true; }
+  if (!menu && (S.phase === 'place' || (S.phase === 'remote' && S.remotePlacing)) && S.placeGhost) { f.placeGhost = S.placeGhost; f.hideCue = true; }
   if (!menu && S.phase === 'aim' && humanTurn() && mustCall8(m.rules, onTable())) f.call = { pockets: [0, 1, 2, 3, 4, 5], selected: S.callSel != null ? S.callSel : S.callAuto };
   if (!menu && S.phase === 'ai' && S.callSel != null && mustCall8(m.rules, onTable())) f.call = { pockets: [S.callSel], selected: S.callSel };
   // table markings: one-pocket ownership, trick-shot targets
@@ -911,7 +934,7 @@ function render() {
     const cb = m.sim.ball(0), g = S.guide;
     f.loupe = { pt: S.touchPt, target: g.ghost ? { x: g.ghost.x, y: g.ghost.y } : { x: cb.x + Math.cos(S.aim.angle) * 0.5, y: cb.y + Math.sin(S.aim.angle) * 0.5 } };
   }
-  const showCue = !menu ? (S.phase === 'aim' || S.phase === 'shooting' || S.phase === 'ai' || (S.phase === 'roll' && S.cueAnim)) : (S.phase === 'ai' || S.phase === 'shooting' || (S.phase === 'roll' && S.cueAnim));
+  const showCue = !menu ? (S.phase === 'aim' || S.phase === 'shooting' || S.phase === 'ai' || (S.phase === 'remote' && !S.remotePlacing) || (S.phase === 'roll' && S.cueAnim)) : (S.phase === 'ai' || S.phase === 'shooting' || (S.phase === 'roll' && S.cueAnim));
   if (showCue && !m.sim.ball(0).pocketed) { const g = cueGeom(); f.cue = { visible: true, ...g }; }
   renderer.draw(f);
 }
@@ -935,6 +958,7 @@ function commitPlace() {
   const g = S.placeGhost; if (!g || !g.valid) return;
   placeCue(S.match, g.x, g.y); audio.place();
   S.match.rules.ballInHand = false;
+  if (S.online && S.online.started) S.online.link.send({ t: 'placed', x: g.x, y: g.y });
   enterAim();
 }
 function setAim(angle) { S.aim.angle = angle; S.guideDirty = true; }
@@ -1173,6 +1197,7 @@ function padUpdate(dt) {
 
 // ---- keyboard
 window.addEventListener('keydown', (e) => {
+  if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;          // typing a name or a table code
   noteInput('kbd');
   const k = e.key;
   if (menuActive() && !e.ctrlKey && !e.metaKey) {
@@ -1222,6 +1247,11 @@ async function keepAwake() {
 function applyHand() { document.body.classList.toggle('lefty', settings.hand === 'left'); }
 
 function togglePause() {
+  if (S.online && S.online.started) {                                // an online game never pauses; the menu offers resign
+    if (modalOpen()) { ui.closeSheet(); return; }
+    ui.onlineMenu({ onResume: () => {}, onResign: () => { const O = S.online; O.link.send({ t: 'resign' }); onlineLeave(false); enterMenu('online'); } });
+    return;
+  }
   if (S.paused) { S.paused = false; ui.closeSheet(); if (audio.ctx) audio.ctx.resume(); return; }
   S.paused = true; audio.roll(0);
   ui.pause({ onResume: () => { S.paused = false; }, onRestart: () => { S.paused = false; startSession({ ...S.session }); }, onQuit: () => { S.paused = false; enterMenu('home'); } });
@@ -1239,13 +1269,286 @@ $('btnHint').onclick = showSolution;
 if (!document.documentElement.requestFullscreen) $('btnFull').classList.add('hidden');
 $('btnFull').onclick = toggleFullscreen;
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && S.screen === 'play' && !S.paused && S.phase !== 'over') togglePause();
+  if (document.hidden && S.screen === 'play' && !S.paused && S.phase !== 'over' && !S.online) togglePause();
   if (!document.hidden && S.screen === 'play') keepAwake();
 });
 
 function onResize() { renderer.resize(window.innerWidth, window.innerHeight, Math.min(window.devicePixelRatio || 1, 2)); }
 window.addEventListener('resize', onResize);
 window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
+
+// ---------------------------------------------------------------- online play
+// Both players simulate every shot from the same seed and the shooter's plan; the host
+// sends a snapshot after each shot so the guest can correct any floating-point drift.
+const netKind = () => (new URLSearchParams(location.search).get('net') === 'local' ? 'local' : 'trystero');
+const myName = () => {
+  if (!settings.name) { settings.name = `Player${10 + ((Math.random() * 90) | 0)}`; saveSettings(); }
+  return settings.name;
+};
+const shareLink = (code) => `${location.origin}${location.pathname}?join=${code}`;
+const netMessage = (e) => (e && /does not support/i.test(e.message || '') ? e.message : 'Could not reach the network. Check your connection and try again.');
+let lobby = null;
+
+function onlineLeave(tellPeer = true) {
+  const O = S.online;
+  if (O) {
+    clearInterval(O.retry); clearTimeout(O.joinTimer);
+    try { if (tellPeer) O.link.close(); else O.link.tr.close(); } catch { /* already closed */ }
+  }
+  S.online = null;
+  $('btnEmote').classList.add('hidden'); $('emotePanel').classList.add('hidden'); $('netchip').classList.add('hidden');
+  if (lobby) { lobby.close(); lobby = null; }
+}
+
+async function openLink(code, role) {
+  const tr = netKind() === 'local' ? localTransport(code) : await trysteroTransport(code);
+  return new OnlineLink(tr, { role, name: myName() });
+}
+
+function newOnlineState(link, role, code, cfg) {
+  return { link, role, code, cfg, seat: role === 'host' ? 0 : 1, shotN: 0, syncs: {}, awaiting: 0, awaitStart: 0, lostAt: 0, byeSeen: false, started: false,
+    rematchMine: false, rematchTheirs: false, aimT: 0, placeT: 0, pingT: 0, turnStart: performance.now(), lastEmote: 0, timeoutSent: -1, resultsHandle: null, retry: 0, joinTimer: 0 };
+}
+
+async function onlineHost(opts) {
+  onlineLeave();
+  const code = newCode();
+  lobby = ui.lobby({ title: 'Your table', code, link: shareLink(code), sub: 'Waiting for your opponent to join…', onCancel: () => { onlineLeave(); enterMenu('online'); } });
+  try {
+    const link = await openLink(code, 'host');
+    const cfg = { kind: opts.kind, hall: opts.hall, pocket: settings.pocket, cloth: settings.cloth, clock: opts.clock, breaker: 0, seed: 1, names: [myName(), 'Player'] };
+    S.online = newOnlineState(link, 'host', code, cfg);
+    wireLink(link);
+  } catch (e) { if (lobby) lobby.error(netMessage(e)); }
+}
+
+async function onlineJoin(raw) {
+  onlineLeave();
+  const code = cleanCode(raw);
+  if (!validCode(code)) { ui.notice('A table code is six letters and numbers.'); return; }
+  lobby = ui.lobby({ title: 'Joining', code, sub: 'Looking for the table…', onCancel: () => { onlineLeave(); enterMenu('online'); } });
+  try {
+    const link = await openLink(code, 'guest');
+    S.online = newOnlineState(link, 'guest', code, null);
+    wireLink(link);
+    S.online.joinTimer = setTimeout(() => { if (S.online && !S.online.started && lobby) lobby.error("Couldn't find that table. Check the code, and that your friend is still waiting."); }, 25000);
+  } catch (e) { if (lobby) lobby.error(netMessage(e)); }
+}
+
+function beginOnline(cfg, snap = null, n = 0) {
+  const O = S.online; if (!O) return;
+  O.cfg = cfg; O.started = true; O.syncs = {}; O.awaiting = 0; O.shotN = n; O.lostAt = 0; O.byeSeen = false;
+  O.rematchMine = O.rematchTheirs = false; O.resultsHandle = null; O.timeoutSent = -1;
+  clearInterval(O.retry);
+  if (lobby) { lobby.close(); lobby = null; }
+  startSession({ type: 'online', kind: cfg.kind, opp: 'online', hall: cfg.hall, online: { cfg, seat: O.seat } });
+  $('btnEmote').classList.remove('hidden'); $('netchip').classList.remove('hidden');
+  if (snap) { restore(S.match, snap); buildTags(); nextPhase(); }
+}
+
+function forfeit(reason) {
+  const O = S.online, m = S.match;
+  if (!O || !m || m.rules.winner != null) return;
+  m.rules.winner = O.seat; m.rules.loseReason = reason;
+  if (['aim', 'place', 'remote', 'roll-done'].includes(S.phase)) nextPhase();     // a shot in flight finishes first
+}
+
+function guestRetry() {
+  const O = S.online;
+  if (!O || O.role !== 'guest' || !O.lostAt) return;
+  if (performance.now() - O.lostAt > 30000) return endByDisconnect();
+  try { O.link.tr.close(); } catch { /* already closed */ }
+  openLink(O.code, 'guest').then((l) => { if (S.online !== O) { l.tr.close(); return; } O.link = l; wireLink(l); }).catch(() => {});
+}
+function endByDisconnect() {
+  const O = S.online; if (!O) return;
+  if (O.role === 'host') { O.lostAt = 0; forfeit('Your opponent disconnected'); }
+  else { onlineLeave(false); ui.notice('The connection was lost and could not be restored.'); enterMenu('online'); }
+}
+
+function showEmote(seat, id) {
+  const tag = seat === 0 ? $('tagA') : $('tagB');
+  tag.querySelectorAll('.bubble').forEach((b) => b.remove());
+  const el = document.createElement('div');
+  el.className = 'bubble'; el.textContent = EMOTES[id];
+  tag.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+  if (seat !== S.online.seat) audio.chime(1);
+}
+
+function applySync(msg) {
+  const O = S.online, m = S.match;
+  const d = divergence(m, msg.snap);
+  if (!inSync(d)) { restore(m, msg.snap); buildTags(); }
+  if (msg.n >= O.awaiting) O.awaiting = 0;
+}
+
+function doTimeout() {
+  const O = S.online, m = S.match;
+  if (!O || !m || !['aim', 'place', 'remote'].includes(S.phase)) return;
+  cancelStroke();
+  m.rules = applyTimeout(m.rules);
+  juice.callout('Time', 'The turn passes · ball in hand', 'foul'); audio.foul();
+  if (O.role === 'host') O.link.send({ t: 'sync', n: O.shotN, snap: snapshot(m) });
+  nextPhase();
+}
+
+function onlineAfterShot() {
+  const O = S.online;
+  O.shotN++;
+  if (O.role === 'host') O.link.send({ t: 'sync', n: O.shotN, snap: snapshot(S.match) });
+  else {
+    O.awaiting = O.shotN; O.awaitStart = performance.now();
+    if (O.syncs[O.shotN]) applySync(O.syncs[O.shotN]);
+  }
+}
+const onlineReadyToAdvance = () => { const O = S.online; return !O || O.role === 'host' || O.awaiting === 0 || performance.now() - O.awaitStart > 2500; };
+
+function onlineTick(dt) {
+  const O = S.online;
+  if (!O || !O.started || S.screen !== 'play') return;
+  const now = performance.now();
+  if (now - O.pingT > 3000) { O.pingT = now; O.link.ping(); }
+  if (O.lostAt) O.turnStart += dt * 1000;                      // the clock waits while the connection is down
+  if (S.phase === 'aim' && humanTurn() && now - O.aimT > 80) {
+    O.aimT = now;
+    O.link.send({ t: 'aim', ang: S.aim.angle, pw: S.power, sa: S.spin.a, sb: S.spin.b, el: S.elev, c: S.callSel });
+  }
+  if (S.phase === 'place' && humanTurn() && S.placeGhost && now - O.placeT > 80) {
+    O.placeT = now;
+    O.link.send({ t: 'place', x: S.placeGhost.x, y: S.placeGhost.y });
+  }
+  if (S.phase === 'remote' && S.remoteAim) {
+    const k = 1 - Math.exp(-dt * 14), R = S.remoteAim;
+    S.aim.angle += wrap(R.ang - S.aim.angle) * k;
+    S.power += (R.pw - S.power) * k;
+    S.spin = { a: S.spin.a + (R.sa - S.spin.a) * k, b: S.spin.b + (R.sb - S.spin.b) * k };
+    if (R.c != null) S.callSel = R.c;
+  }
+  const clock = O.cfg && O.cfg.clock;
+  if (clock && ['aim', 'place', 'remote'].includes(S.phase) && !O.lostAt) {
+    const left = clock - (now - O.turnStart) / 1000;
+    if (left <= 20) {
+      const sec = Math.max(0, Math.ceil(left));
+      const label = humanTurn() ? 'Your shot' : `${seatOf().name}'s shot`;
+      if (sec !== S.clockSec) { S.clockSec = sec; status(`${label} · 0:${String(sec).padStart(2, '0')}`); $('status').classList.toggle('urgent', sec <= 10); if (sec <= 5 && sec > 0 && humanTurn()) audio.tick(); }
+    }
+    if (left <= 0 && O.role === 'host' && O.timeoutSent !== O.shotN) { O.timeoutSent = O.shotN; O.link.send({ t: 'timeout', n: O.shotN }); doTimeout(); }
+  } else if (S.clockSec !== -1) { S.clockSec = -1; $('status').classList.remove('urgent'); }
+  if (O.lostAt && now - O.lostAt > 30000 && O.role === 'host') endByDisconnect();
+}
+
+function wireLink(link) {
+  const on = link.on;
+  on.hello = () => {
+    const O = S.online; if (!O || O.link !== link) return;
+    if (O.role !== 'host') return;
+    if (!O.started) {
+      const cfg = { ...O.cfg, seed: 1 + ((Math.random() * 2 ** 30) | 0), names: [myName(), link.peerName] };
+      link.send({ t: 'start', cfg });
+      beginOnline(cfg);
+    } else {                                                        // the guest came back: send them the game as it stands
+      O.lostAt = 0; hint('');
+      link.send({ t: 'resume', cfg: O.cfg, snap: snapshot(S.match), n: O.shotN });
+    }
+  };
+  on.start = (m) => {
+    const O = S.online; if (!O || O.role !== 'guest') return;
+    if (O.started && S.phase !== 'over') return;                    // only a new game after the last one ended
+    clearTimeout(O.joinTimer); beginOnline(m.cfg);
+  };
+  on.resume = (m) => { const O = S.online; if (!O || O.role !== 'guest') return; clearTimeout(O.joinTimer); beginOnline(m.cfg, m.snap, m.n); };
+  on.aim = (m) => { if (S.phase === 'remote') S.remoteAim = m; };
+  on.place = (m) => { if (S.phase === 'remote' && S.remotePlacing) S.placeGhost = { x: m.x, y: m.y, valid: true, kitchen: S.match.rules.kitchen, remote: true }; };
+  on.placed = (m) => {
+    if (S.phase !== 'remote') return;
+    const mm = S.match;
+    if (validCuePlacement(m.x, m.y, mm.sim.balls, mm.rules.kitchen)) { placeCue(mm, m.x, m.y); mm.rules.ballInHand = false; }
+    S.remotePlacing = false; S.placeGhost = null;
+  };
+  on.shot = (m) => {
+    const O = S.online; if (!O || S.phase !== 'remote' || m.n !== O.shotN) return;
+    const p = m.plan;
+    S.aim.angle = p.angle + SQUIRT * p.a; S.spin = { a: p.a, b: p.b }; S.remotePlacing = false; S.placeGhost = null;
+    fire(p, powerFromSpeed(p.speed), S.power);
+  };
+  on.sync = (m) => {
+    const O = S.online; if (!O || O.role !== 'guest') return;
+    O.syncs[m.n] = m;
+    if (O.awaiting && O.awaiting === m.n) applySync(m);
+    else if (m.n === O.shotN && ['aim', 'place', 'remote'].includes(S.phase)) { applySync(m); }   // e.g. after a shot-clock timeout
+  };
+  on.emote = (m) => { const O = S.online; if (O && O.started) showEmote(1 - O.seat, m.id); };
+  on.timeout = (m) => { const O = S.online; if (O && O.role === 'guest' && m.n === O.shotN) doTimeout(); };
+  on.resign = () => forfeit('Your opponent resigned');
+  on.bye = () => { if (S.online) S.online.byeSeen = true; };
+  on.rematch = () => {
+    const O = S.online; if (!O) return;
+    O.rematchTheirs = true;
+    if (O.resultsHandle) O.resultsHandle.setButton(0, O.rematchMine ? 'Starting…' : 'Accept rematch', O.rematchMine);
+    if (O.rematchMine && O.role === 'host') hostStartRematch();
+  };
+  on.peerLeave = () => {
+    const O = S.online;
+    if (!O || O.link !== link) return;
+    if (!O.started) { if (lobby && O.role === 'host') lobby.setSub('Waiting for your opponent to join…'); return; }
+    if (O.byeSeen || S.phase === 'over') { if (S.phase !== 'over') forfeit('Your opponent left the table'); else if (O.resultsHandle) O.resultsHandle.setButton(0, 'Opponent left', true); return; }
+    O.lostAt = performance.now();
+    hint('Connection lost. Waiting for your opponent…');
+    if (O.role === 'guest') { clearInterval(O.retry); O.retry = setInterval(guestRetry, 7000); }
+  };
+  on.rtt = (ms) => {
+    const chip = $('netchip'); if (!chip) return;
+    chip.querySelector('em').textContent = `${Math.round(ms)} ms`;
+    chip.querySelector('i').className = ms < 90 ? 'good' : ms < 220 ? 'fair' : 'poor';
+  };
+}
+
+function hostStartRematch() {
+  const O = S.online; if (!O || O.role !== 'host') return;
+  const cfg = { ...O.cfg, seed: 1 + ((Math.random() * 2 ** 30) | 0), breaker: 1 - O.cfg.breaker };
+  O.link.send({ t: 'start', cfg });
+  beginOnline(cfg);
+}
+function requestRematch() {
+  const O = S.online; if (!O) return;
+  O.rematchMine = true;
+  O.link.send({ t: 'rematch' });
+  if (O.resultsHandle) O.resultsHandle.setButton(0, O.rematchTheirs ? 'Starting…' : 'Waiting for opponent…', true);
+  if (O.rematchTheirs && O.role === 'host') hostStartRematch();
+}
+
+function onlineEnd(m) {
+  const O = S.online, seat = O.seat, st = m.stats[seat], won = m.rules.winner === seat;
+  profile.recordMatch(st, won);
+  if (won) profile.data.stats.onlineWins++;
+  const xp = awardWithAchievements((won ? 70 : 20) + st.xp);
+  audio.win();
+  O.resultsHandle = ui.results({
+    achievements: lastAch, kicker: `Online · ${GAMES[O.cfg.kind].name}`, title: won ? 'Victory' : 'Defeat',
+    sub: m.rules.loseReason ? m.rules.loseReason : `${O.cfg.names[1 - seat]} ${won ? 'lost' : 'won'} the frame`, rows: statRows(st), xp,
+    buttons: [{ label: 'Rematch', primary: true, keep: true, cb: requestRematch }, { label: 'Leave table', cb: () => { onlineLeave(); enterMenu('online'); } }],
+  });
+  if (O.rematchTheirs) O.resultsHandle.setButton(0, 'Accept rematch', false);
+}
+
+function openEmotes() {
+  const p = $('emotePanel');
+  if (!p.hasChildNodes()) {
+    EMOTES.forEach((t, id) => {
+      const b = document.createElement('button');
+      b.textContent = t;
+      b.onclick = () => {
+        const O = S.online, now = performance.now();
+        if (!O || now - O.lastEmote < 1500) return;
+        O.lastEmote = now; O.link.send({ t: 'emote', id }); showEmote(O.seat, id); p.classList.add('hidden'); audio.tick();
+      };
+      p.appendChild(b);
+    });
+  }
+  p.classList.toggle('hidden');
+}
+$('btnEmote').onclick = openEmotes;
 
 // ---------------------------------------------------------------- boot
 juice.shakeScale = shakeScale();
@@ -1265,6 +1568,7 @@ requestAnimationFrame(frame);
   if (q.has('play')) startSession({ type: 'quick', kind: q.get('game') || 'eight', opp: q.get('rival') || '1', hall: settings.hall });
   if (q.get('trick')) actions.startChallenge(q.get('trick'));
   if (q.has('daily')) actions.startDaily();
+  if (q.get('join')) { ui.show('online'); onlineJoin(q.get('join')); }
   if (q.get('screen')) ui.show(q.get('screen'));
 }
 
