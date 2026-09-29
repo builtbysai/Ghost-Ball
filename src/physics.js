@@ -419,11 +419,3 @@ export class Sim {
     this.events.push({ t: this.time, type: 'rail', id: b.id, wall: wallId, speed, x: b.x, y: b.y });
   }
 }
-
-/** Convenience: a fresh sim with the cue ball and a rack. */
-export function newRackSim(rack, cue, opts = {}) {
-  const sim = new Sim(opts);
-  sim.addBall(0, cue.x, cue.y);
-  for (const r of rack) sim.addBall(r.id, r.x, r.y);
-  return sim;
-}

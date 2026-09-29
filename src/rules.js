@@ -50,7 +50,6 @@ export function newRules(kind, opts = {}) {
 export const isSolid = (id) => id >= 1 && id <= 7;
 export const isStripe = (id) => id >= 9 && id <= 15;
 export const groupOf = (id) => (isSolid(id) ? 'solid' : isStripe(id) ? 'stripe' : null);
-const groupBalls = (g) => (g === 'solid' ? [1, 2, 3, 4, 5, 6, 7] : [9, 10, 11, 12, 13, 14, 15]);
 
 /** Balls the shooter may legally contact first, given the table state. */
 export function legalTargets(rules, onTable) {
@@ -293,11 +292,4 @@ export function respotPosition(occupied, halfL) {
   for (let x = FOOT_X; x < halfL - BALL_R * 1.5; x += 0.004) if (free(x)) return { x, y: 0 };
   for (let x = FOOT_X; x > HEAD_X; x -= 0.004) if (free(x)) return { x, y: 0 };
   return { x: FOOT_X, y: 0 };
-}
-
-export function ballsRemaining(rules, onTable, player) {
-  if (rules.kind !== 'eight') return null;
-  const g = rules.groups[player];
-  if (!g) return null;
-  return groupBalls(g).filter((id) => onTable.includes(id));
 }
