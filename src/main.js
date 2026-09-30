@@ -128,6 +128,7 @@ function startSession(cfg) {
   if (!cfg.rematch) S.breaker = 0; else S.breaker = 1 - S.breaker;
   showPlayChrome(true);
   renderer.setLayout({ menu: false });
+  hint(''); status(''); $('status').classList.remove('urgent');
   makeMatch();
   audio.chalk();
   audio.swoosh();
@@ -164,12 +165,13 @@ function startAttract() {
   S.match = newMatch({ kind, seed: (Math.random() * 1e9) | 0, pocket: 'standard', trackOrient: true });
   renderer.setTable(S.match.table);
   juice.reset(); S.cueAnim = null; S.ai = null; S.spin = { a: 0, b: 0 }; S.power = 0;
-  hideControls(); hint('');
+  hideControls(); hint(''); status('');
   nextPhase();
 }
 
 function enterMenu(screen = 'home') {
   S.paused = false;
+  hint(''); status('');
   showPlayChrome(false);
   ui.closeSheet();
   $('banner').classList.add('hidden');
@@ -238,8 +240,8 @@ function enterPlace() {
   hideControls(); juice.clearAim();
   $('btnPlace').textContent = 'PLACE CUE BALL';
   $('btnPlace').classList.remove('hidden');
-  status('Ball in hand');
-  hint(S.match.rules.kitchen ? 'Place the cue ball behind the head string' : 'Place the cue ball anywhere');
+  status(S.match.rules.kitchen ? 'Ball in hand \u00b7 head string' : 'Ball in hand \u00b7 anywhere');
+  hint('');
 }
 
 function enterAim() {
@@ -256,7 +258,8 @@ function enterAim() {
   const multi = S.mode.seats.length > 1;
   status(S.session && S.session.type === 'trick' ? `Attempt ${S.trick.attempts}` : multi ? (seat.name === 'You' ? 'Your shot' : `${seat.name}'s shot`) : 'Your shot');
   S.blitzSec = -1;
-  if (mustCall8(r, onTable())) hint('Call a pocket for the 8-ball: tap a glowing pocket');
+  if (S.attract) hint('');
+  else if (mustCall8(r, onTable())) hint('Call a pocket for the 8-ball: tap a glowing pocket');
   else if (S.blitz && S.shotCount === 0) hint('Sixty seconds. Pot everything. Streaks multiply your score.');
   else if (S.session && S.session.type === 'trick' && S.trick.ch.lesson) hint(S.trick.ch.coach);
   else if (S.session && S.session.type === 'trick' && S.trick.attempts === 1) hint(S.trick.ch.blurb);
@@ -296,7 +299,7 @@ function banner(title, sub, kind = '') {
   clearTimeout(bannerTimer); bannerTimer = setTimeout(() => el.classList.add('hidden'), 2400);
 }
 function status(t) { $('status').textContent = t; }
-function hint(t) { const h = $('hint'); if (t) { h.textContent = t; h.classList.remove('hidden'); } else h.classList.add('hidden'); }
+function hint(t) { const h = $('hint'); h.textContent = t || ''; h.classList.toggle('hidden', !t); }
 
 function miniBall(id, gone) {
   const d = document.createElement('div');
@@ -350,9 +353,13 @@ function updateSpinDot() {
 }
 function updatePowerUI() {
   const strip = $('powerStrip').querySelector('.track');
-  const h = strip.clientHeight - 30;
-  strip.querySelector('.handle').style.top = `${S.power * h}px`;
-  strip.querySelector('.fill').style.height = `${S.power * h + 15}px`;
+  const horiz = strip.clientWidth > strip.clientHeight;
+  const span = (horiz ? strip.clientWidth : strip.clientHeight) - 30;
+  const handle = strip.querySelector('.handle'), fill = strip.querySelector('.fill');
+  handle.style.top = horiz ? '' : `${S.power * span}px`;
+  handle.style.left = horiz ? `${S.power * span + 15}px` : '';
+  fill.style.height = horiz ? '' : `${S.power * span + 15}px`;
+  fill.style.width = horiz ? `${S.power * span + 15}px` : '';
   strip.querySelector('.handle em').textContent = S.power > 0.02 ? `${Math.round(S.power * 100)}` : 'POWER';
 }
 function maybePortraitHint() {
@@ -599,7 +606,7 @@ function finishShot() {
   if (S.blitz) blitzShot(result, actor); else announce(result, actor);
   buildTags();
   S.phase = 'roll-done';
-  if (S.blitz && (S.blitz.ending || S.blitz.t <= 0)) endBlitz(900);
+  if (S.blitz && (S.blitz.ending || S.blitz.t <= 0)) endBlitz(450);
   S.doneTimer = result.foul || result.tags && result.tags.length ? 1.25 : 0.55;
   // trick shots resolve per attempt
   if (S.session && S.session.type === 'trick') {
@@ -658,7 +665,7 @@ function awardWithAchievements(baseXp) {
 function gameOver() {
   if (S.ended) return;
   S.ended = true; S.phase = 'over';
-  hideControls(); juice.releaseSlowMo();
+  hideControls(); juice.releaseSlowMo(); hint(''); status('');
   const m = S.match, r = m.rules, seats = S.mode.seats, cfg = S.session;
   const st = m.stats[0];
   setTimeout(() => {
@@ -677,7 +684,7 @@ function gameOver() {
       audio.win();
       ui.results({ kicker: GAMES[cfg.kind].name, title: `${seats[r.winner % seats.length].name} wins`, sub: r.loseReason || '', rows: [], buttons: [{ label: 'Rematch', primary: true, cb: () => startSession({ ...cfg, rematch: true }) }, { label: 'Menu', cb: () => enterMenu('home') }] });
     }
-  }, 1100);
+  }, 400);
 }
 
 function circuitEnd(m) {
@@ -727,7 +734,7 @@ function blitzShot(result, actor) {
   }
 }
 
-function endBlitz(delay = 600) {
+function endBlitz(delay = 450) {
   if (S.ended) return;
   S.ended = true; S.phase = 'over';
   hideControls(); juice.releaseSlowMo();
@@ -1060,7 +1067,7 @@ canvas.addEventListener('wheel', (e) => {
 { // power strip: the same stroke, on a track (pull down, push or flick up)
   const track = $('powerStrip').querySelector('.track');
   let stroke = null, lastS = 0;
-  const sOf = (ev) => { const r = track.getBoundingClientRect(); return clamp((ev.clientY - r.top - 15) / (r.height - 30), 0, 1.2) * 0.62; };
+  const sOf = (ev) => { const r = track.getBoundingClientRect(); return r.width > r.height ? clamp((ev.clientX - r.left - 15) / (r.width - 30), 0, 1.2) * 0.62 : clamp((ev.clientY - r.top - 15) / (r.height - 30), 0, 1.2) * 0.62; };
   track.addEventListener('pointerdown', (e) => {
     audio.init(); noteInput(e.pointerType === 'touch' ? 'touch' : 'mouse');
     if (S.phase !== 'aim' || !humanTurn()) return;
@@ -1079,7 +1086,7 @@ canvas.addEventListener('wheel', (e) => {
   track.addEventListener('pointercancel', () => { stroke = null; cancelStroke(); });
 }
 
-{ // spin widget and aim nudges
+{ // spin widget: drag the red dot, double-tap to center
   const ball = document.querySelector('#spinWidget .ball');
   let active = false;
   const setFromEvent = (e) => {
@@ -1090,13 +1097,6 @@ canvas.addEventListener('wheel', (e) => {
   ball.addEventListener('pointermove', (e) => { if (active) setFromEvent(e); });
   ball.addEventListener('pointerup', () => { active = false; });
   ball.addEventListener('dblclick', () => setSpin(0, 0));
-  const nudge = (id, dir) => {
-    const el = $(id); let timer = 0;
-    const step = () => { if (S.phase === 'aim' && humanTurn()) setAim(S.aim.angle + dir * 0.0016); };
-    el.addEventListener('pointerdown', (e) => { e.preventDefault(); step(); timer = setInterval(step, 40); });
-    for (const t of ['pointerup', 'pointerleave', 'pointercancel']) el.addEventListener(t, () => clearInterval(timer));
-  };
-  nudge('nudgeL', 1); nudge('nudgeR', -1);
 }
 
 // cue elevation: flat, three jump levels (the ball leaves the slate), three massé levels (a steep cue that bends the path)
@@ -1196,7 +1196,9 @@ function padUpdate(dt) {
 }
 
 // ---- keyboard
+window.addEventListener('pointerdown', () => document.body.classList.remove('kbd-nav'));
 window.addEventListener('keydown', (e) => {
+  if (e.key === 'Tab' || e.key.startsWith('Arrow')) document.body.classList.add('kbd-nav');
   if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;          // typing a name or a table code
   noteInput('kbd');
   const k = e.key;
@@ -1254,20 +1256,13 @@ function togglePause() {
   }
   if (S.paused) { S.paused = false; ui.closeSheet(); if (audio.ctx) audio.ctx.resume(); return; }
   S.paused = true; audio.roll(0);
-  ui.pause({ onResume: () => { S.paused = false; }, onRestart: () => { S.paused = false; startSession({ ...S.session }); }, onQuit: () => { S.paused = false; enterMenu('home'); } });
+  ui.pause({ onResume: () => { S.paused = false; }, onRestart: () => { S.paused = false; startSession({ ...S.session }); }, onQuit: () => { S.paused = false; enterMenu('home'); }, onToggleSound: () => { toggleMute(); return audio.masterMuted ? 'Sound: off' : 'Sound: on'; }, onFullscreen: () => toggleFullscreen(), soundLabel: () => (audio.masterMuted ? 'Sound: off' : 'Sound: on') });
 }
-function toggleMute() {
-  audio.init();
-  audio.setMasterMuted(!audio.masterMuted);
-  $('btnSound').classList.toggle('off', audio.masterMuted);
-}
+function toggleMute() { audio.init(); audio.setMasterMuted(!audio.masterMuted); }
 $('btnPause').onclick = togglePause;
-$('btnSound').onclick = toggleMute;
 $('btnReplay').onclick = () => startReplay();
 $('btnRerack').onclick = () => startSession({ ...S.session });
 $('btnHint').onclick = showSolution;
-if (!document.documentElement.requestFullscreen) $('btnFull').classList.add('hidden');
-$('btnFull').onclick = toggleFullscreen;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && S.screen === 'play' && !S.paused && S.phase !== 'over' && !S.online) togglePause();
   if (!document.hidden && S.screen === 'play') keepAwake();
@@ -1301,7 +1296,8 @@ function onlineLeave(tellPeer = true) {
 }
 
 async function openLink(code, role) {
-  const tr = netKind() === 'local' ? localTransport(code) : await trysteroTransport(code);
+  const onRelayError = () => { if (lobby && S.online && !S.online.started) lobby.error('Could not reach the matchmaking relays. Check your connection and try again.'); };
+  const tr = netKind() === 'local' ? localTransport(code) : await trysteroTransport(code, onRelayError);
   return new OnlineLink(tr, { role, name: myName() });
 }
 
@@ -1331,7 +1327,9 @@ async function onlineJoin(raw) {
     const link = await openLink(code, 'guest');
     S.online = newOnlineState(link, 'guest', code, null);
     wireLink(link);
-    S.online.joinTimer = setTimeout(() => { if (S.online && !S.online.started && lobby) lobby.error("Couldn't find that table. Check the code, and that your friend is still waiting."); }, 25000);
+    const lob = lobby;
+    S.online.joinTimer = setTimeout(() => { if (S.online && !S.online.started && lobby === lob) lob.error("Couldn't find that table. Check the code, and that your friend is still waiting."); }, 12000);
+    setTimeout(() => { if (S.online && !S.online.started && lobby === lob) lob.setSub('Still looking. Make sure your friend is hosting and the code matches.'); }, 6000);
   } catch (e) { if (lobby) lobby.error(netMessage(e)); }
 }
 

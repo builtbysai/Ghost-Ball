@@ -238,15 +238,18 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
   }
   function wireHalls(root, set) {
     root.querySelectorAll('[data-hall]').forEach((b) => {
-      b.onclick = () => click(() => { set(b.dataset.hall); root.querySelectorAll('.hallrow').forEach((x) => x.classList.toggle('sel', x === b)); });
+      b.onclick = () => click(() => { set(b.dataset.hall); b.parentElement.querySelectorAll('[data-hall]').forEach((x) => x.classList.toggle('sel', x === b)); });
     });
+  }
+  function hallChips(selected) {
+    return `<div class="chips hallchips">${HALLS.map((h) => `<button class="chip hallchip ${h.id === selected ? 'sel' : ''}" data-hall="${h.id}"><i class="sw" style="--rail:${h.rail.a};--cloth:${h.cloth.base}"></i>${h.name}</button>`).join('')}</div>`;
   }
 
   function quick() {
     const kinds = ['eight', 'nine', 'straight', 'onepocket'];
     mount(`${backBtn()}
       <div class="scr-title">Quick Match</div><p class="scr-sub">A single frame. Pick a hall, a game and a rival.</p>
-      <div class="label">The Hall</div>${hallRows(settings.hall)}
+      <div class="label">The Hall</div>${hallChips(settings.hall)}
       <div class="label">The Game</div>
       <div class="chips" id="qKind">${kinds.map((k) => `<button class="chip ${settings.kind === k ? 'sel' : ''}" data-k="${k}">${GAMES[k].name}<small>${GAMES[k].blurb}</small></button>`).join('')}</div>
       <div class="label">The Rival</div>
@@ -277,26 +280,35 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
   // ---------------------------------------------------------------- circuit
   function circuit() {
     const nr = nextRival(profile);
+    const openHall = nr ? nr.hall : (HALLS.find((h) => hallOpen(profile, h.id)) || {}).id;
     const blocks = HALLS.map((h, hi) => {
       const open = hallOpen(profile, h.id);
       const rs = rivalsOf(h.id);
+      const earned = rs.reduce((a, r, k) => a + (profile.data.circuit[`${h.id}:${k}`] || 0), 0);
+      const expanded = open && h.id === openHall;
       const rows = rs.map((r, k) => {
         const st = profile.data.circuit[`${h.id}:${k}`] || 0;
         const prevBeaten = k === 0 || (profile.data.circuit[`${h.id}:${k - 1}`] || 0) >= 1;
         const playable = open && prevBeaten;
         const isNext = nr && nr.idx === r.idx;
-        const goals = (r.goals || []).map((g) => GOALS[g].label).join(' · ');
+        const goals = (r.goals || []).map((g) => GOALS[g].label).join(' \u00b7 ');
         return `<button class="rival ${isNext ? 'next' : ''}" data-r="${r.idx}" ${playable ? '' : 'disabled'} title="${esc(goals)}">
           <i class="mono" style="--c:${BALL_COLORS[r.idx % BALL_COLORS.length]}">${esc(r.name[0])}</i><div class="who"><b>${esc(r.name)}</b><span>${esc(r.bio)}</span></div>
           <span class="kind">${KIND_LABEL[r.kind] || ''}</span>${starsHtml(st)}</button>`;
       }).join('');
-      return `<div class="cir-hall ${open ? '' : 'locked'}"><div class="cir-head"><b>${hi + 1}. ${h.name}</b><span>${h.year}${open ? '' : ' · Locked'}</span></div>${rows}${open ? '' : '<p class="fine">Beat all three rivals in the previous hall to open this one.</p>'}</div>`;
+      return `<div class="cir-hall ${open ? '' : 'locked'} ${expanded ? '' : 'folded'}"><button class="cir-head" data-fold="${h.id}" ${open ? '' : 'disabled'}><b>${hi + 1}. ${h.name}</b><span class="cir-meta">${h.year}${open ? ` \u00b7 ${earned} of 9 stars` : ' \u00b7 Locked'}</span><span class="chev">${expanded ? '\u25be' : '\u203a'}</span></button><div class="cir-body">${rows}${open ? '' : '<p class="fine">Beat all three rivals in the previous hall to open this one.</p>'}</div></div>`;
     }).join('');
     mount(`${backBtn()}<div class="scr-title">The Circuit</div><p class="scr-sub">Fifteen rivals across five halls. A win is one star. Run the table without a scratch, or pot three in a row, to make it three.</p>${blocks}`,
     (root) => {
       wireBack(root);
       root.querySelectorAll('[data-r]').forEach((b) => { b.onclick = () => click(() => actions.startRival(+b.dataset.r)); });
-      const n = root.querySelector('.rival.next'); if (n) n.scrollIntoView({ block: 'center' });
+      root.querySelectorAll('[data-fold]').forEach((b) => {
+        b.onclick = () => click(() => {
+          const hall = b.closest('.cir-hall');
+          const nowFolded = hall.classList.toggle('folded');
+          b.querySelector('.chev').textContent = nowFolded ? '\u203a' : '\u25be';
+        });
+      });
     });
   }
 
@@ -322,7 +334,7 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
       const swatch = kind === 'cue' ? `<span class="cuevis"><i class="tip" style="background:#d9c9a3"></i><i class="shaft" style="background:linear-gradient(180deg, ${it.shaft}, ${it.shaft})"></i><i class="joint"></i><i class="wrap" style="background-color:${it.wrap}"></i><i class="butt" style="background:${it.butt}"></i><i class="cap"></i></span>`
         : kind === 'chalk' ? `<span class="chalkvis" style="background:${it.color};display:block"></span>`
         : `<span class="setvis">${it.colors.slice(1, 6).map((c) => `<i style="background:${c}"></i>`).join('')}</span>`;
-      return `<button class="chip gearcard ${on ? 'sel' : ''} ${locked ? 'locked' : ''}" data-g="${kind}:${it.id}">${it.name}<small>${locked ? `Unlocks at chalk level ${it.level}` : on ? 'On the table now' : it.desc || 'Tap to equip'}</small>${swatch}${on ? '<span class="tag-on">Equipped</span>' : ''}</button>`;
+      return `<button class="chip gearcard ${on ? 'sel' : ''} ${locked ? 'locked' : ''}" data-g="${kind}:${it.id}">${it.name}<small>${locked ? `Chalk level ${it.level}` : on ? 'On the table now' : it.desc || 'Tap to equip'}</small>${swatch}${on ? '<span class="tag-on">Equipped</span>' : ''}</button>`;
     }).join('')}</div>`;
     const eq = profile.data.equipped;
     mount(`${backBtn()}<div class="scr-title">Locker</div><p class="scr-sub">Everything here is earned by playing. No prices, no timers. Chalk level ${lvl}.</p>
@@ -347,7 +359,7 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
     shake: [['off', 'Off'], ['low', 'Low'], ['full', 'Full']], haptics: [['on', 'On'], ['off', 'Off']],
     hand: [['right', 'Right'], ['left', 'Left']], stroke: [['low', 'Low'], ['med', 'Medium'], ['high', 'High']], stick: [['slow', 'Slow'], ['med', 'Medium'], ['fast', 'Fast']],
   };
-  const LABEL = { assist: 'Aim assist', pocket: 'Pockets', cloth: 'Cloth', sound: 'Sound', music: 'Music', shake: 'Screen shake', haptics: 'Haptics', hand: 'Controls', stroke: 'Stroke feel', stick: 'Aim stick' };
+  const LABEL = { assist: 'Aim assist', pocket: 'Pockets', cloth: 'Cloth', sound: 'Sound', music: 'Music', shake: 'Screen shake', haptics: 'Haptics', hand: 'Cue side', stroke: 'Stroke feel', stick: 'Aim stick' };
   const GROUPS = [
     ['The Table', ['pocket', 'cloth']],
     ['Assists', ['assist']],
@@ -355,7 +367,7 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
     ['Controls', ['hand', 'stroke', 'stick']],
   ];
   function settingsRows() {
-    return GROUPS.map(([g, keys]) => `<div class="label" style="margin-top:16px">${g}</div>${keys.map((k) => `<div class="setrow"><label>${LABEL[k]}</label><div class="seg3" data-set="${k}">${OPT[k].map(([v, t]) => `<button class="chip ${settings[k] === v ? 'sel' : ''}" data-v="${v}">${t}</button>`).join('')}</div></div>`).join('')}`).join('');
+    return GROUPS.map(([g, keys]) => `<div class="setgroup"><div class="label">${g}</div>${keys.map((k) => `<div class="setrow"><label>${LABEL[k]}</label><div class="seg3" data-set="${k}">${OPT[k].map(([v, t]) => `<button class="chip ${settings[k] === v ? 'sel' : ''}" data-v="${v}">${t}</button>`).join('')}</div></div>`).join('')}</div>`).join('');
   }
   function wireSettings(root) {
     root.querySelectorAll('.seg3').forEach((seg) => {
@@ -371,31 +383,31 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
     if (r) r.onclick = () => { if (r.dataset.armed) { actions.resetProgress(); } else { r.dataset.armed = '1'; r.textContent = 'Tap again to erase everything'; } };
   }
   function settingsScreen() {
-    mount(`${backBtn()}<div class="scr-title">Settings</div>${settingsRows()}<p class="fine" style="margin-top:14px">Pocket and cloth changes apply to the next match. Screen shake also respects your system's reduced-motion setting.</p>
-      <div class="danger"><b>Reset progress</b><p>Erases rivals, stars, chalk levels, gear and stats. There is no way back.</p><button class="btn" id="resetBtn">Reset all progress</button></div>`,
+    mount(`${backBtn()}<div class="scr-title">Settings</div><div class="setcols">${settingsRows()}</div><p class="fine">Pocket and cloth changes apply to the next match. Screen shake also respects your system's reduced-motion setting.</p>
+      <div class="danger"><b>Reset progress</b><p>Erases rivals, stars, chalk levels, gear and stats. No way back.</p><button class="btn" id="resetBtn">Reset all progress</button></div>`,
     (root) => { wireBack(root); wireSettings(root); });
   }
   function how() {
     const step = (n, t, p) => `<div class="howstep"><span class="n">${n}</span><div><b>${t}</b><p>${p}</p></div></div>`;
     const nextLesson = LESSONS.find((l) => !profile.data.lessons[l.id]);
     const lessonsDone = LESSONS.filter((l) => profile.data.lessons[l.id]).length;
-    mount(`${backBtn()}<div class="scr-title">How to play</div><p class="scr-sub">Pool here is shot with a real stroke. Three moves cover almost everything.</p>
+    mount(`${backBtn()}<div class="scr-title">How to play</div><p class="scr-sub">Shot with a real stroke. Three moves cover almost everything.</p>
       ${nextLesson ? `<button class="mbtn primary lessoncard" id="lessonCard"><span class="num">${ICON.book}</span><div class="tt"><b>Learn the basics</b><span>${lessonsDone} of ${LESSONS.length} done · next: ${esc(nextLesson.name)}. Aim, power, cut, draw and English, one shot at a time.</span></div><span class="go">›</span></button>` : ''}
       <div class="howsteps">
-        ${step(1, 'Aim', 'Move the mouse, or drag on touch, to swing the cue. The line is honest: the ghost ball shows contact, the short line shows where the object ball goes, and the stub shows where the cue ball drifts after. <kbd>Shift</kbd>, the wheel, the arrow keys or the fine-aim buttons trim it.')}
-        ${step(2, 'Shoot', 'Press, pull back, and push forward. Your push speed is the shot speed, so a real stroke plays better than a click. Pull the power gauge on the right instead if you prefer, then release. <kbd>Space</kbd> fires at the gauge power.')}
-        ${step(3, 'Spin', 'Drag the red dot on the cue ball at bottom left. Top is follow, bottom is draw, sides bend the ball off cushions. Double-tap the ball to center it.')}
+        ${step(1, 'Aim', 'Drag to swing the cue. Lines show where each ball goes. <kbd>Shift</kbd>, wheel or arrows trim.')}
+        ${step(2, 'Shoot', 'Press, pull back, push forward: push speed is shot speed. Or pull the gauge and release.')}
+        ${step(3, 'Spin', 'Drag the red dot. Top follows, bottom draws, sides bend off cushions. Double-tap centers it.')}
       </div>
       <ul class="howlist">
-      <li><b>Jump and massé</b>The Jump button (or <kbd>J</kbd>) cycles cue elevation: J1 to J3 hop over a blocker, M1 to M3 strike down and bend the ball toward the side you hit. It resets after every shot.</li>
-      <li><b>8-Ball</b>Pot your group, then call a pocket for the 8 by tapping one. The game suggests the likeliest pocket; tap another if you see a better one.</li>
-      <li><b>9-Ball</b>Always hit the lowest ball first. Pot the 9 to win.</li>
-      <li><b>Straight Pool</b>Any ball, any pocket, a point each. A foul costs a point (two on the break, fifteen for three in a row). When one ball is left, the other fourteen are racked again. First to 30.</li>
-      <li><b>One-Pocket</b>Only balls in your foot-rail pocket count. First to eight wins. A foul gives a ball back.</li>
-      <li><b>Ball in hand</b>After a scratch or a foul, drag the ghost cue ball anywhere legal and tap Place cue ball. Green means legal, red means it overlaps a ball or a rail.</li>
-      <li><b>Online</b>Host a private table and send the code, or join with one. Both players see each other's cue. A shot clock keeps things moving, and if the connection drops you have thirty seconds to come back.</li>
-      <li><b>Chalk</b>You earn Chalk for winning and for skilled shots. Levels unlock cues, chalks and ball sets in the Locker. Nothing is for sale.</li>
-      <li><b>Keys</b><kbd>P</kbd> pause · <kbd>M</kbd> mute · <kbd>R</kbd> replay your last shot · <kbd>F</kbd> fullscreen. Gamepads work too: left stick aims, right stick strokes, triggers set power.</li></ul>`, (root) => {
+      <li><b>Jump and massé</b>J1 to J3 hop a blocker, M1 to M3 bend it sideways. Jump button or <kbd>J</kbd> cycles.</li>
+      <li><b>8-Ball</b>Pot your group, then tap a pocket to call the 8.</li>
+      <li><b>9-Ball</b>Lowest ball first. Pot the 9 to win.</li>
+      <li><b>Straight Pool</b>Any ball, any pocket. A foul costs a point. Race to 30.</li>
+      <li><b>One-Pocket</b>Only your foot pocket counts. First to 8. Fouls spot a ball.</li>
+      <li><b>Ball in hand</b>Drag the ghost ball to a legal spot. Green yes, red no.</li>
+      <li><b>Online</b>Host or join with a code. Drops get 30 seconds.</li>
+      <li><b>Chalk</b>Wins earn Chalk. Levels unlock gear.</li>
+      <li><b>Keys</b><kbd>P</kbd> pause, <kbd>M</kbd> mute, <kbd>R</kbd> replay, <kbd>F</kbd> fullscreen. Gamepads work too.</li></ul>`, (root) => {
       wireBack(root);
       const lc = root.querySelector('#lessonCard');
       if (lc) lc.onclick = () => click(() => actions.startChallenge(nextLesson.id));
@@ -409,8 +421,8 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
     const cell = (a, b) => `<div class="statcell"><b>${b}</b><span>${a}</span></div>`;
     mount(`${backBtn()}<div class="scr-title">Profile</div><p class="scr-sub">Chalk level ${pr.level} · ${earned} of ${ACHIEVEMENTS.length} achievements</p>
       <div class="statgrid">${cell('Matches', s.matches)}${cell('Wins', s.wins)}${cell('Balls potted', s.pots)}${cell('Best run', s.bestRun)}${cell('Banks', s.banks)}${cell('Kicks', s.kicks)}${cell('Combos', s.combos)}${cell('Jump shots', s.jumps)}${cell('Fouls', s.fouls)}${cell('Daily best', profile.data.daily.best.toLocaleString())}${cell('Daily streak', profile.data.daily.streak)}${cell('Stars', profile.totalStars('circuit') + profile.totalStars('challenges'))}</div>
-      <div class="label">Achievements</div>
-      <div class="achlist">${ACHIEVEMENTS.map((a) => { const got = profile.data.achievements[a.id]; return `<div class="ach ${got ? 'got' : ''}"><i>${got ? '★' : '○'}</i><div><b>${esc(a.name)}</b><span>${esc(a.desc)}</span></div><em>+${a.xp}</em></div>`; }).join('')}</div>`,
+      <div class="label">Achievements · ${earned} of ${ACHIEVEMENTS.length}</div>
+      <div class="achgrid">${ACHIEVEMENTS.map((a) => { const got = profile.data.achievements[a.id]; return `<div class="ach ${got ? 'got' : ''}" title="${esc(a.desc)}"><i>${got ? '★' : '○'}</i><b>${esc(a.name)}</b><span>+${a.xp}</span></div>`; }).join('')}</div>`,
     (root) => wireBack(root));
   }
 
@@ -420,14 +432,14 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
     mount(`${backBtn()}<div class="scr-title">Play Online</div><p class="scr-sub">A private table for two. Host one and send the code or link, or join a friend's.</p>
       <div class="label">Your name</div><input id="nameIn" class="field" maxlength="16" autocomplete="off" spellcheck="false" value="${esc(settings.name || '')}" placeholder="Player">
       <div class="label">Host a table</div>
-      <div class="chips" id="oKind">${kinds.map((k) => `<button class="chip ${settings.kind === k ? 'sel' : ''}" data-k="${k}">${GAMES[k].name}<small>${GAMES[k].blurb}</small></button>`).join('')}</div>
-      <div class="label">The hall</div>${hallRows(settings.hall)}
+      <div class="chips" id="oKind">${kinds.map((k) => `<button class="chip ${settings.kind === k ? 'sel' : ''}" data-k="${k}">${GAMES[k].name}</button>`).join('')}</div>
+      <div class="label">The hall</div>${hallChips(settings.hall)}
       <div class="label">Shot clock</div>
       <div class="chips" id="oClock">${[['off', 'Off'], ['30', '30 seconds'], ['60', '60 seconds']].map(([v, t]) => `<button class="chip ${settings.clock === v ? 'sel' : ''}" data-c="${v}">${t}</button>`).join('')}</div>
       <button class="mbtn primary startbtn" id="oHost"><span class="num">${ICON.globe}</span><div class="tt"><b>Host a table</b><span>You get a code to share</span></div><span class="go">›</span></button>
       <div class="label">Join a table</div>
       <div class="joinrow"><input id="codeIn" class="field code" maxlength="7" placeholder="ABC234" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" id="oJoin">Join</button></div>
-      <p class="fine">Games connect directly between the two players, peer to peer. Both sides run the same simulation, so nothing is sent but your shots.</p>`,
+      <p class="fine">Games connect peer to peer. Nothing is sent but your shots.</p>`,
     (root) => {
       wireBack(root);
       wireHalls(root, (id) => { settings.hall = id; saveSettings(); actions.previewHall(id); });
@@ -458,7 +470,7 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
     return {
       close: closeSheet,
       setSub(t) { const e = $('lobSub'); if (e) e.textContent = t; },
-      error(t) { const e = $('lobErr'); if (e) { e.textContent = t; e.classList.remove('hidden'); } const s = $('lobSub'); if (s) s.textContent = ''; },
+      error(t) { const e = $('lobErr'); if (e) { e.textContent = t; e.classList.remove('hidden'); } const s = $('lobSub'); if (s) s.textContent = ''; const d = sheet.querySelector('.waitdots'); if (d) d.style.display = 'none'; const c = $('lobCancel'); if (c) c.textContent = 'Back'; },
     };
   }
 
@@ -496,17 +508,27 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
     else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
   });
 
-  function pause({ onResume, onRestart, onQuit }) {
+  let pauseArgs = null;
+  function pause(args) {
+    pauseArgs = args;
+    const { onResume, onRestart, onQuit, onToggleSound, onFullscreen, soundLabel } = args;
     openSheet(`<div class="kick">Paused</div><h2>Take five</h2>
       <div class="btnrow"><button class="btn primary" id="sResume">Resume</button><button class="btn" id="sRestart">Restart match</button><button class="btn" id="sQuit">Quit to menu</button></div>
-      <div class="label">Table settings</div>
-      ${settingsRows()}`,
-    (root) => {
-      wireSettings(root);
+      <div class="btnrow">${onToggleSound ? '<button class="btn" id="sSound"></button>' : ''}${onFullscreen ? '<button class="btn" id="sFull">Fullscreen</button>' : ''}<button class="btn" id="sSettings">Table settings</button></div>`,
+    () => {
       $('sResume').onclick = () => { closeSheet(); onResume(); };
       $('sRestart').onclick = () => { closeSheet(); onRestart(); };
       $('sQuit').onclick = () => { closeSheet(); onQuit(); };
+      $('sSettings').onclick = () => pauseSettings();
+      const snd = $('sSound');
+      if (snd) { snd.textContent = soundLabel ? soundLabel() : 'Sound'; snd.onclick = () => { snd.textContent = onToggleSound(); }; }
+      const ful = $('sFull');
+      if (ful) ful.onclick = () => onFullscreen();
     });
+  }
+  function pauseSettings() {
+    openSheet(`<div class="kick">Paused</div><h2>Table settings</h2><div class="setcols">${settingsRows()}</div><div class="btnrow"><button class="btn primary" id="sBack">Back</button></div>`,
+    (root) => { wireSettings(root); $('sBack').onclick = () => pause(pauseArgs); });
   }
 
   /**

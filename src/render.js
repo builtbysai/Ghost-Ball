@@ -38,7 +38,7 @@ export class Renderer {
     this.gear = { cue: { shaft: '#ead7a8', butt: '#3b2b21', wrap: '#4a78b8', ring: '#cfd4d8' }, chalk: '#3f86d8' };
     this.sprites = new Map();
     this.spriteSize = 0;
-    this.margins = { top: 92, bottom: 24, side: 16 };
+    this.margins = { top: 92, bottom: 116, left: 132, right: 132 };
     this.motes = Array.from({ length: 34 }, (_, i) => { const r = seeded(i + 3); return { x: (r() - 0.5) * 2.4, y: (r() - 0.5) * 1.2, p: r() * TAU, sp: 0.02 + r() * 0.04, a: 0.05 + r() * 0.12, s: 0.003 + r() * 0.004 }; });
     this.menuMode = false;   // the menu shrinks the table and pushes it right so the UI has room
     this.tableFrac = 1;
@@ -64,12 +64,22 @@ export class Renderer {
     this.layer.width = this.canvas.width; this.layer.height = this.canvas.height;
     const short = h < 520;
     const narrow = w <= 760;
-    const m = this.margins = narrow ? { top: 176, bottom: 20, side: 12 } : short ? { top: 58, bottom: 8, side: 84 } : { top: 92, bottom: 24, side: 16 };
     const portrait = h > w * 1.08;
-    const availW = (w - m.side * 2) * (portrait ? 1 : this.tableFrac), availH = h - m.top - m.bottom;
+    // In play the table is inset to open gutters the controls live in, so
+    // nothing tappable ever covers the table or its rails: the spin puck
+    // owns the bottom left, the power gauge the right, and the hint line
+    // and place pill stack in the band under the table. Menu framing is
+    // unchanged from the layout the menu screens were built around.
+    const m = this.margins = this.menuMode
+      ? (narrow ? { top: 176, bottom: 20, left: 12, right: 12 } : short ? { top: 58, bottom: 8, left: 84, right: 84 } : { top: 92, bottom: 24, left: 16, right: 16 })
+      : portrait && narrow ? { top: 168, bottom: 156, left: 12, right: 12 }
+        : short ? { top: 58, bottom: 84, left: 100, right: 100 }
+          : narrow ? { top: 120, bottom: 84, left: 100, right: 100 }
+            : { top: 92, bottom: 116, left: 132, right: 132 };
+    const availW = (w - m.left - m.right) * (portrait ? 1 : this.tableFrac), availH = h - m.top - m.bottom;
     const tw = portrait ? OUT_Y * 2 : OUT_X * 2, th = portrait ? OUT_X * 2 : OUT_Y * 2;
     const s = Math.min(availW / tw, availH / th) * (portrait && this.tableFrac < 1 ? 0.8 : 1);
-    this.view = { cx: w / 2 + (portrait ? 0 : this.offsetX), cy: m.top + availH / 2, s, rot: portrait ? Math.PI / 2 : 0 };
+    this.view = { cx: m.left + (w - m.left - m.right) / 2 + (portrait ? 0 : this.offsetX), cy: m.top + availH / 2, s, rot: portrait ? Math.PI / 2 : 0 };
     this.portrait = portrait;
     const px = Math.max(16, Math.ceil(2 * R * s * dpr * 1.12) + 2);
     if (px !== this.spriteSize) { this.spriteSize = px; this.sprites.clear(); }
