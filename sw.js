@@ -1,7 +1,7 @@
 // Network-first with a cache fallback: players always get the latest files when
 // online (the request revalidates, so a fresh deploy is never masked by the HTTP
 // cache), and the game still opens offline after the first visit.
-const CACHE = 'ghost-ball-v3';
+const CACHE = 'ghost-ball-v4';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => {

@@ -57,8 +57,8 @@ export class Renderer {
 
   resize(w, h, dpr) {
     this.w = w; this.h = h; this.dpr = dpr;
-    this.tableFrac = this.menuMode ? 0.62 : 1;
-    this.offsetX = this.menuMode ? w * 0.19 : 0;
+    this.tableFrac = this.menuMode ? 0.94 : 1;
+    this.offsetX = 0;
     this.canvas.width = Math.round(w * dpr); this.canvas.height = Math.round(h * dpr);
     this.canvas.style.width = w + 'px'; this.canvas.style.height = h + 'px';
     this.layer.width = this.canvas.width; this.layer.height = this.canvas.height;
@@ -115,10 +115,12 @@ export class Renderer {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.hall.paint(ctx, this.w, this.h);
     if (this.menuMode) {
-      // the room falls off into darkness behind the menu card
-      const sh = ctx.createLinearGradient(0, 0, this.w * 0.62, 0);
-      sh.addColorStop(0, 'rgba(5,4,2,0.62)'); sh.addColorStop(0.55, 'rgba(5,4,2,0.34)'); sh.addColorStop(1, 'rgba(5,4,2,0)');
-      ctx.fillStyle = sh; ctx.fillRect(0, 0, this.w * 0.62, this.h);
+      // the hall dims under a lamp vignette so the club card floats on the stage
+      ctx.fillStyle = 'rgba(5,4,2,0.30)'; ctx.fillRect(0, 0, this.w, this.h);
+      const vg = ctx.createRadialGradient(this.w / 2, this.h * 0.44, Math.min(this.w, this.h) * 0.32, this.w / 2, this.h * 0.44, Math.max(this.w, this.h) * 0.72);
+      vg.addColorStop(0, 'rgba(4,3,2,0)');
+      vg.addColorStop(1, 'rgba(4,3,2,0.52)');
+      ctx.fillStyle = vg; ctx.fillRect(0, 0, this.w, this.h);
     }
     const { cx, cy, s, rot } = this.view, d = this.dpr;
     ctx.setTransform(d, 0, 0, d, 0, 0);

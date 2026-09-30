@@ -7,9 +7,12 @@ import { LEVELS } from './ai.js';
 import { CUES, CHALKS, BALLSETS, xpForLevel, levelForXp } from './gear.js';
 import { RIVALS, rivalsOf, hallOpen, nextRival, GOALS } from './circuit.js';
 import { CHALLENGES, LESSONS } from './challenges.js';
-import { localDateString } from './profile.js';
+import { localDateString, dailySeed } from './profile.js';
 import { ACHIEVEMENTS } from './achievements.js';
 import { cleanCode } from './online.js';
+import { Renderer } from './render.js';
+import { buildTable, BALL_R, HEAD_X, FOOT_X } from './table.js';
+import { BallSprite } from './ballshader.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -27,6 +30,47 @@ const ICON = {
   book: '<svg viewBox="0 0 24 24"><path d="M4 3h13a3 3 0 0 1 3 3v15H7a3 3 0 0 1-3-3zm2 2v13a1 1 0 0 0 1 1h11V6a1 1 0 0 0-1-1z"/></svg>',
 };
 
+// Hall thumbnails are painted by the game's own room and table painters, so
+// the carousel shows the real table you are about to play on, not a picture
+// of one. A fresh rack and the cue ball are stamped on top with the real
+// ball sprites. Painted once per hall and ball set, then cached.
+const thumbPainter = new Renderer(document.createElement('canvas'));
+const thumbTable = buildTable();
+const thumbCache = new Map();
+const RACK = [1, 9, 2, 10, 8, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15];
+function hallThumb(hall, setId) {
+  const key = `${hall.id}:${setId}`;
+  const hit = thumbCache.get(key);
+  if (hit) return hit;
+  const W = 720, H = 228, SS = 1.5;
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(W * SS); cv.height = Math.round(H * SS);
+  const ctx = cv.getContext('2d');
+  ctx.scale(SS, SS);
+  hall.paint(ctx, W, H);
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+  const s = Math.min((W * 0.985) / 2.88, (H * 0.985) / 1.61);
+  ctx.scale(s, -s);
+  thumbPainter.paintTable(ctx, hall, thumbTable);
+  ctx.restore();
+  const dia = Math.max(10, Math.round(2 * BALL_R * s));
+  const drawBall = (id, x, y) => {
+    const px = W / 2 + x * s, py = H / 2 - y * s;
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.ellipse(px, py + dia * 0.16, dia * 0.46, dia * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+    const spr = new BallSprite(id, dia);
+    ctx.drawImage(spr.render([1, 0, 0, 0], 0), px - dia / 2, py - dia / 2, dia, dia);
+  };
+  let n = 0;
+  for (let row = 0; row < 5; row++) for (let k = 0; k <= row; k++) {
+    drawBall(RACK[n++], FOOT_X + row * BALL_R * 1.74, (k - row / 2) * 2 * BALL_R * 1.01);
+  }
+  drawBall(0, HEAD_X, 0);
+  thumbCache.set(key, cv);
+  return cv;
+}
+
 export function createUI({ profile, settings, saveSettings, actions, audio }) {
   const panel = $('menuPanel');
   const modal = $('modal'), sheet = $('modalSheet');
@@ -43,43 +87,146 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
   function wireBack(root) { root.querySelectorAll('[data-back]').forEach((b) => { b.onclick = () => click(() => show(b.dataset.back)); }); }
 
   // ---------------------------------------------------------------- home
+  // One centered club card over the live table of the chosen hall. Selection
+  // (hall, mode, game, rival) and launch (the Play button) stay separate, and
+  // the button always says exactly what is about to happen.
   function home() {
     const pr = profile.progress();
     const nr = nextRival(profile);
-    const solved = Object.keys(profile.data.challenges).length;
-    const lessonsDone = LESSONS.filter((l) => profile.data.lessons[l.id]).length, lessonsLeft = lessonsDone < LESSONS.length;
     const today = localDateString();
     const d = profile.data.daily;
     const todayDone = d.todayDate === today;
-    const row = (a, icon, title, sub, primary = false) => `<button class="mbtn ${primary ? 'primary' : ''}" data-a="${a}"><span class="num">${icon}</span><div class="tt"><b>${title}</b><span>${sub}</span></div><span class="go">›</span></button>`;
+    const totalStars = profile.totalStars('circuit') + profile.totalStars('challenges');
+    const dailyHall = HALL_BY_ID[HALLS[dailySeed(today) % HALLS.length].id];
+    let mode = 'quick';
+    let hallIdx = Math.max(0, HALLS.findIndex((h) => h.id === settings.hall));
+    const kinds = ['eight', 'nine', 'straight', 'onepocket'];
+    const opps = [...LEVELS.map((l) => ({ v: String(l.id), t: l.name })), { v: '2p', t: 'Two players' }, { v: 'demo', t: 'Watch' }];
+    const MODES = [
+      ['quick', 'Quick Match', ICON.play],
+      ['circuit', 'Circuit', ICON.trophy],
+      ['tricks', 'Trick Shots', ICON.star],
+      ['daily', 'Daily Run', ICON.sun],
+      ['blitz', 'Blitz', ICON.bolt],
+      ['online', 'Online', ICON.globe],
+    ];
     mount(`
-      <div class="wordmark"><small>A Pool Game</small><h1><span>GH<i class="ghostO"></i>ST</span><span>BALL</span></h1></div>
-      <p class="tagline">Five halls from pool's history. A circuit of rivals, trick shots, a daily run and private online tables. Everything is earned by playing.</p>
-      <div class="profile" data-a="profile" role="button" tabindex="0"><div class="ring" style="--p:${Math.round(pr.frac * 100)}"><i>${pr.level}</i></div>
-        <div><b>Chalk level ${pr.level}</b><span>${pr.into} of ${pr.need} chalk to level ${pr.level + 1}</span></div>
-        <div class="pright"><b>${profile.totalStars('circuit') + profile.totalStars('challenges')} stars</b><span>on the wall</span></div></div>
-      <div class="mlist">
-        ${lessonsLeft ? row('lesson', ICON.book, lessonsDone ? 'Continue lessons' : 'Learn the basics', `${lessonsDone} of ${LESSONS.length} done · aim, power, cut, draw, English`, true) : ''}
-        ${row('quick', ICON.play, 'Quick Match', `${GAMES[settings.kind].name} · ${oppLabel()} · ${HALL_BY_ID[settings.hall].name}`, !lessonsLeft)}
-        ${row('circuit', ICON.trophy, 'The Circuit', nr ? `Next up: ${esc(nr.name)} at ${HALL_BY_ID[nr.hall].name}` : 'Every rival beaten. Now chase the stars.')}
-        ${row('online', ICON.globe, 'Play Online', 'A private table for two. Share a code.')}
-        ${row('tricks', ICON.star, 'Trick Shots', `${solved} of ${CHALLENGES.length} solved · ${profile.totalStars('challenges')} of ${CHALLENGES.length * 3} stars`)}
-        ${row('daily', ICON.sun, 'Daily Run', `${todayDone ? `Today's best ${d.todayBest.toLocaleString()}` : 'Same rack for everyone today'} · streak ${d.streak}`)}
-        ${row('blitz', ICON.bolt, 'Blitz', `60 seconds, streaks, one rack after another · best ${profile.data.blitz.best.toLocaleString()}`)}
-        ${row('practice', ICON.target, 'Practice', 'A free table. Test any shot.')}
+      <div class="m-head">
+        <div class="m-kicker">A members' billiard hall</div>
+        <h1 class="m-word">GH<i class="ghostO"></i>ST&nbsp;BALL</h1>
+        <p class="m-title">Real spin. Real wood. Nothing to buy.</p>
       </div>
-      <div class="mfoot"><button class="linkbtn" data-a="profile">Profile</button><button class="linkbtn" data-a="locker">Locker</button><button class="linkbtn" data-a="settings">Settings</button><button class="linkbtn" data-a="how">How to play</button></div>
-      <div class="ver">Ghost Ball · no ads, no shop, nothing to wait for</div>`,
+      <button class="standing" data-a="profile">
+        <span class="ring" style="--p:${Math.round(pr.frac * 100)}"><i>${pr.level}</i></span>
+        <span class="st-tx"><b>Chalk level ${pr.level}</b><span>${pr.into} of ${pr.need} to level ${pr.level + 1}</span></span>
+        <span class="st-bar"><i style="width:${Math.round(pr.frac * 100)}%"></i></span>
+        <span class="st-right"><b>${totalStars} stars</b><span>daily streak ${d.streak}</span></span>
+      </button>
+      <div class="label m-label">The table</div>
+      <div class="car">
+        <div class="carView">
+          <div class="carTrack" id="carTrack">${HALLS.map((h) => `<div class="carSlide" data-hall="${h.id}"></div>`).join('')}</div>
+          <button class="carArrow prev" id="carPrev" aria-label="Previous hall">&#8249;</button>
+          <button class="carArrow next" id="carNext" aria-label="Next hall">&#8250;</button>
+          <span class="carCount" id="carCount"></span>
+          <div class="carCap"><b id="carName"></b><span class="carMeta" id="carMeta"></span><span class="carLine" id="carLine"></span></div>
+        </div>
+        <div class="carDots" id="carDots">${HALLS.map((h, i) => `<button class="cdot" data-i="${i}" aria-label="${esc(h.name)}"></button>`).join('')}</div>
+      </div>
+      <div class="label m-label">Play</div>
+      <div class="modes" id="mModes">${MODES.map(([v, t, ic]) => `<button class="mode ${v === mode ? 'sel' : ''}" data-mode="${v}"><span class="mic">${ic}</span>${t}</button>`).join('')}</div>
+      <div class="mOpts" id="mOpts"></div>
+      <button class="playbtn" id="mPlay" data-pf="1"><span class="pl-top">Play</span><span class="pl-sum" id="mSum"></span></button>
+      <div class="mfoot">
+        <button class="linkbtn" data-a="how">How to play</button><span class="fdot">·</span>
+        <button class="linkbtn" data-a="practice">Practice</button><span class="fdot">·</span>
+        <button class="linkbtn" data-a="locker">Locker</button><span class="fdot">·</span>
+        <button class="linkbtn" data-a="profile">Profile</button><span class="fdot">·</span>
+        <button class="linkbtn" data-a="settings">Settings</button><span class="fdot">·</span>
+        <a class="linkbtn" href="https://github.com/builtbysai/Ghost-Ball" target="_blank" rel="noopener">GitHub</a>
+      </div>
+      <div class="ver">Ghost Ball · everything here is earned by playing</div>`,
     (root) => {
-      root.querySelectorAll('[data-a]').forEach((b) => {
-        b.onclick = () => click(() => {
-          const a = b.dataset.a;
-          if (a === 'daily') return actions.startDaily();
-          if (a === 'blitz') return actions.startBlitz(settings.hall);
-          if (a === 'lesson') { const next = LESSONS.find((l) => !profile.data.lessons[l.id]); return actions.startChallenge(next.id); }
-          show(a);
-        });
+      const track = root.querySelector('#carTrack');
+      const slides = [...track.children];
+      const playBtn = root.querySelector('#mPlay'), playTop = playBtn.querySelector('.pl-top');
+      const opts = root.querySelector('#mOpts');
+
+      slides.forEach((sl) => {
+        const cv = hallThumb(HALL_BY_ID[sl.dataset.hall], profile.data.equipped.ballset);
+        cv.className = 'carImg';
+        sl.appendChild(cv);
+        sl.onclick = () => click(() => setHall(HALLS.findIndex((h) => h.id === sl.dataset.hall)));
       });
+
+      function setHall(i) {
+        hallIdx = (i + HALLS.length) % HALLS.length;
+        const h = HALLS[hallIdx];
+        track.style.transform = `translateX(${-hallIdx * 100}%)`;
+        root.querySelector('#carName').textContent = h.name;
+        root.querySelector('#carMeta').textContent = h.year;
+        root.querySelector('#carLine').textContent = h.tagline;
+        root.querySelector('#carCount').textContent = `${hallIdx + 1} / ${HALLS.length}`;
+        root.querySelectorAll('.cdot').forEach((dt, k) => dt.classList.toggle('on', k === hallIdx));
+        slides.forEach((sl, k) => { sl.classList.toggle('on', k === hallIdx); sl.setAttribute('aria-hidden', k === hallIdx ? 'false' : 'true'); });
+        // the live table behind the card re-skins the moment the hall changes
+        if (settings.hall !== h.id) { settings.hall = h.id; saveSettings(); actions.previewHall(h.id); }
+        refreshPlay();
+      }
+      root.querySelector('#carPrev').onclick = () => click(() => setHall(hallIdx - 1));
+      root.querySelector('#carNext').onclick = () => click(() => setHall(hallIdx + 1));
+      root.querySelectorAll('.cdot').forEach((dt) => { dt.onclick = () => click(() => setHall(+dt.dataset.i)); });
+
+      const seg = (list, cur, attr) => `<div class="seg">${list.map((o) => `<button class="segbtn ${String(o.v) === String(cur) ? 'sel' : ''}" data-${attr}="${o.v}">${o.t}</button>`).join('')}</div>`;
+      function renderOpts() {
+        if (mode === 'quick') {
+          opts.innerHTML = `
+            <div class="optrow"><span class="optlab">Game</span>${seg(kinds.map((k) => ({ v: k, t: GAMES[k].name })), settings.kind, 'k')}</div>
+            <div class="optrow"><span class="optlab">Rival</span>${seg(opps, settings.opp, 'o')}</div>`;
+          opts.querySelectorAll('[data-k]').forEach((b) => { b.onclick = () => click(() => { settings.kind = b.dataset.k; saveSettings(); renderOpts(); }); });
+          opts.querySelectorAll('[data-o]').forEach((b) => { b.onclick = () => click(() => { settings.opp = b.dataset.o; saveSettings(); renderOpts(); }); });
+        } else if (mode === 'circuit') {
+          opts.innerHTML = `<div class="optrow"><span class="optlab">Next rival</span><div class="optline">${nr ? `<b>Face ${esc(nr.name)} · ${HALL_BY_ID[nr.hall].name}</b><span>${KIND_LABEL[nr.kind] || ''} · three stars for a clean win</span>` : `<b>All fifteen rivals beaten</b><span>Replay any hall to chase three stars</span>`}</div><span class="optstat">${profile.totalStars('circuit')} of 45</span><button class="mini-link" id="mBrowse">All rivals ›</button></div>`;
+        } else if (mode === 'tricks') {
+          const fu = CHALLENGES.find((c) => !(profile.data.challenges[c.id] > 0));
+          opts.innerHTML = `<div class="optrow"><span class="optlab">Next shot</span><div class="optline">${fu ? `<b>Shot ${String(CHALLENGES.indexOf(fu) + 1).padStart(2, '0')} · ${esc(fu.name)}</b><span>One setup, one solution</span>` : `<b>Every shot solved</b><span>Replay any of them for three stars</span>`}</div><span class="optstat">${profile.totalStars('challenges')} of ${CHALLENGES.length * 3}</span><button class="mini-link" id="mBrowse">All shots ›</button></div>`;
+        } else if (mode === 'daily') {
+          opts.innerHTML = `<div class="optrow"><span class="optlab">Today</span><div class="optline"><b>Same rack for everyone, at ${dailyHall.name}</b><span>${todayDone ? `Today's best ${d.todayBest.toLocaleString()}` : 'Not played yet today'} · streak ${d.streak}</span></div><span class="optstat">${d.streak} day streak</span></div>`;
+        } else if (mode === 'blitz') {
+          opts.innerHTML = `<div class="optrow"><span class="optlab">The clock</span><div class="optline"><b>60 seconds, one rack after another</b><span>Streaks pay double</span></div><span class="optstat">best ${profile.data.blitz.best.toLocaleString()}</span></div>`;
+        } else if (mode === 'online') {
+          opts.innerHTML = `<div class="optrow"><span class="optlab">Two players</span><div class="optline"><b>A private table for two</b><span>Host one and share the code, or join a friend's</span></div></div>`;
+        }
+        const br = opts.querySelector('#mBrowse');
+        if (br) br.onclick = () => click(() => show(mode === 'circuit' ? 'circuit' : 'tricks'));
+        refreshPlay();
+      }
+      function refreshPlay() {
+        const hall = HALLS[hallIdx];
+        let top = 'Play', s = '';
+        if (mode === 'quick') s = `${(GAMES[settings.kind] || GAMES.eight).name} · ${oppLabel()} · ${hall.name}`;
+        else if (mode === 'circuit') s = nr ? `The Circuit · ${nr.name} at ${HALL_BY_ID[nr.hall].name}` : 'The Circuit · chase the stars';
+        else if (mode === 'tricks') { const fu = CHALLENGES.find((c) => !(profile.data.challenges[c.id] > 0)); s = fu ? `Trick shot ${String(CHALLENGES.indexOf(fu) + 1).padStart(2, '0')} · ${fu.name}` : 'Trick shots · all solved'; }
+        else if (mode === 'daily') s = `Daily Run · today at ${dailyHall.name}`;
+        else if (mode === 'blitz') s = `Blitz · 60 seconds · ${hall.name}`;
+        else if (mode === 'online') { top = 'Go online'; s = 'Private table · host or join with a code'; }
+        playTop.textContent = top;
+        root.querySelector('#mSum').textContent = s;
+      }
+      root.querySelectorAll('[data-mode]').forEach((b) => {
+        b.onclick = () => click(() => { mode = b.dataset.mode; root.querySelectorAll('[data-mode]').forEach((x) => x.classList.toggle('sel', x === b)); renderOpts(); });
+      });
+      playBtn.onclick = () => click(() => {
+        if (mode === 'quick') return actions.startQuick({ kind: settings.kind, opp: settings.opp, hall: settings.hall });
+        if (mode === 'circuit') return nr ? actions.startRival(nr.idx) : show('circuit');
+        if (mode === 'tricks') { const fu = CHALLENGES.find((c) => !(profile.data.challenges[c.id] > 0)); return fu ? actions.startChallenge(fu.id) : show('tricks'); }
+        if (mode === 'daily') return actions.startDaily();
+        if (mode === 'blitz') return actions.startBlitz(settings.hall);
+        if (mode === 'online') return show('online');
+      });
+      root.querySelectorAll('[data-a]').forEach((b) => { b.onclick = () => click(() => show(b.dataset.a)); });
+      setHall(hallIdx);
+      renderOpts();
     });
   }
   const oppLabel = () => (settings.opp === '2p' ? 'Two players' : settings.opp === 'demo' ? 'AI vs AI' : LEVELS[+settings.opp].name);
@@ -230,7 +377,10 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
   }
   function how() {
     const step = (n, t, p) => `<div class="howstep"><span class="n">${n}</span><div><b>${t}</b><p>${p}</p></div></div>`;
+    const nextLesson = LESSONS.find((l) => !profile.data.lessons[l.id]);
+    const lessonsDone = LESSONS.filter((l) => profile.data.lessons[l.id]).length;
     mount(`${backBtn()}<div class="scr-title">How to play</div><p class="scr-sub">Pool here is shot with a real stroke. Three moves cover almost everything.</p>
+      ${nextLesson ? `<button class="mbtn primary lessoncard" id="lessonCard"><span class="num">${ICON.book}</span><div class="tt"><b>Learn the basics</b><span>${lessonsDone} of ${LESSONS.length} done · next: ${esc(nextLesson.name)}. Aim, power, cut, draw and English, one shot at a time.</span></div><span class="go">›</span></button>` : ''}
       <div class="howsteps">
         ${step(1, 'Aim', 'Move the mouse, or drag on touch, to swing the cue. The line is honest: the ghost ball shows contact, the short line shows where the object ball goes, and the stub shows where the cue ball drifts after. <kbd>Shift</kbd>, the wheel, the arrow keys or the fine-aim buttons trim it.')}
         ${step(2, 'Shoot', 'Press, pull back, and push forward. Your push speed is the shot speed, so a real stroke plays better than a click. Pull the power gauge on the right instead if you prefer, then release. <kbd>Space</kbd> fires at the gauge power.')}
@@ -245,7 +395,11 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
       <li><b>Ball in hand</b>After a scratch or a foul, drag the ghost cue ball anywhere legal and tap Place cue ball. Green means legal, red means it overlaps a ball or a rail.</li>
       <li><b>Online</b>Host a private table and send the code, or join with one. Both players see each other's cue. A shot clock keeps things moving, and if the connection drops you have thirty seconds to come back.</li>
       <li><b>Chalk</b>You earn Chalk for winning and for skilled shots. Levels unlock cues, chalks and ball sets in the Locker. Nothing is for sale.</li>
-      <li><b>Keys</b><kbd>P</kbd> pause · <kbd>M</kbd> mute · <kbd>R</kbd> replay your last shot · <kbd>F</kbd> fullscreen. Gamepads work too: left stick aims, right stick strokes, triggers set power.</li></ul>`, (root) => wireBack(root));
+      <li><b>Keys</b><kbd>P</kbd> pause · <kbd>M</kbd> mute · <kbd>R</kbd> replay your last shot · <kbd>F</kbd> fullscreen. Gamepads work too: left stick aims, right stick strokes, triggers set power.</li></ul>`, (root) => {
+      wireBack(root);
+      const lc = root.querySelector('#lessonCard');
+      if (lc) lc.onclick = () => click(() => actions.startChallenge(nextLesson.id));
+    });
   }
 
   // ---------------------------------------------------------------- profile
@@ -328,8 +482,19 @@ export function createUI({ profile, settings, saveSettings, actions, audio }) {
     sheet.innerHTML = html;
     modal.classList.remove('hidden');
     if (wire) wire(sheet);
+    // keyboard and gamepad users land on the primary action, not behind the sheet
+    const first = sheet.querySelector('.btn.primary:not([disabled]), .btn:not([disabled])');
+    if (first) first.focus({ preventScroll: true });
   }
   function closeSheet() { modal.classList.add('hidden'); sheet.innerHTML = ''; }
+  // keep Tab inside an open sheet so focus never wanders into the table behind it
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab' || modal.classList.contains('hidden')) return;
+    const f = [...sheet.querySelectorAll('button:not([disabled]), input, a[href]')].filter((el) => el.offsetParent !== null);
+    if (!f.length) return;
+    if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+  });
 
   function pause({ onResume, onRestart, onQuit }) {
     openSheet(`<div class="kick">Paused</div><h2>Take five</h2>
