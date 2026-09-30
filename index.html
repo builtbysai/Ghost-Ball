@@ -2,14 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>Ghost Ball</title>
 <meta name="description" content="A browser pool game with real spin and throw physics, five halls from pool's history, a career Circuit, trick shots and a daily run. Nothing to buy, nothing to wait for.">
-<meta name="theme-color" content="#0b0d10">
+<meta name="theme-color" content="#0e0b08">
 <meta name="color-scheme" content="dark">
 <link rel="icon" type="image/svg+xml" href="./assets/icon.svg">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./assets/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./src/styles.css">
 </head>
 <body>
@@ -37,12 +40,16 @@
 <div id="banner" class="hidden" role="status" aria-live="polite"><b></b><span></span></div>
 <div id="hint" class="hidden"></div>
 
-<div id="spinWidget" class="hidden" aria-label="Cue ball spin">
-  <button class="jumpbtn" id="jumpBtn" aria-label="Cue elevation for jump shots. Tap to cycle." title="Jump (J)">JUMP <b>OFF</b></button>
-  <div class="ball"><i class="dot"></i></div>
-  <div class="nudge"><button id="nudgeL" aria-label="Nudge aim left">&#9664;</button><span>SPIN</span><button id="nudgeR" aria-label="Nudge aim right">&#9654;</button></div>
+<div id="spinWidget" class="hidden" aria-label="Cue ball spin and English">
+  <div class="spinTop">
+    <button class="jumpbtn" id="jumpBtn" aria-label="Cue elevation for jump shots. Tap to cycle." title="Jump (J)">JUMP <b>OFF</b></button>
+    <div class="ball"><i class="shine"></i><i class="ring r1"></i><i class="ring r2"></i><i class="dot"></i></div>
+    <div class="spinMeta"><span class="spinCap">ENGLISH</span><span class="spinSub">strike point</span></div>
+  </div>
+  <div class="nudge"><button id="nudgeL" aria-label="Nudge aim left">&#8249;</button><span>FINE AIM</span><button id="nudgeR" aria-label="Nudge aim right">&#8250;</button></div>
 </div>
 <div id="powerStrip" class="hidden" aria-label="Shot power">
+  <div class="pCap">POWER</div>
   <div class="track"><div class="fill"></div><div class="segs"></div><div class="handle"><em>POWER</em></div></div>
 </div>
 <button id="btnPlace" class="hidden">PLACE CUE BALL</button>
@@ -51,7 +58,7 @@
   <div class="menuL" id="menuPanel"></div>
 </div>
 
-<div class="overlay hidden" id="modal"><div class="sheet cut" id="modalSheet"></div></div>
+<div class="overlay hidden" id="modal"><div class="sheet" id="modalSheet"></div></div>
 
 <script type="module" src="./src/main.js"></script>
 </body>

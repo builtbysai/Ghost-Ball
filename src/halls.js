@@ -27,7 +27,7 @@ function cone(ctx, x, top, w0, w1, bottom, rgb, a) {
   ctx.fill();
 }
 
-export const DISPLAY_FONT = '"Bahnschrift","DIN Condensed","Avenir Next Condensed","Arial Narrow",system-ui,sans-serif';
+export const DISPLAY_FONT = '"Barlow Condensed","Bahnschrift","DIN Condensed","Avenir Next Condensed","Arial Narrow",system-ui,sans-serif';
 
 export const HALLS = [
   {
@@ -55,11 +55,19 @@ export const HALLS = [
       ctx.strokeStyle = 'rgba(216,199,154,0.14)'; ctx.lineWidth = 2;
       for (let x = 30; x < W; x += 150) ctx.strokeRect(x, H * 0.77, 120, H * 0.19);
       ctx.fillStyle = 'rgba(216,199,154,0.18)'; ctx.fillRect(0, H * 0.74, W, 3);
-      // framed picture and sconces
+      // framed picture: a quiet silhouette print, a moon over rooftops, and its sconces
       ctx.fillStyle = 'rgba(20,12,6,0.9)'; ctx.fillRect(W * 0.5 - 90, H * 0.04, 180, 98);
       ctx.strokeStyle = 'rgba(216,199,154,0.5)'; ctx.lineWidth = 4; ctx.strokeRect(W * 0.5 - 90, H * 0.04, 180, 98);
+      ctx.fillStyle = '#d8c79a'; ctx.fillRect(W * 0.5 - 78, H * 0.04 + 12, 156, 74);
+      ctx.fillStyle = '#2c3a2e'; ctx.fillRect(W * 0.5 - 74, H * 0.04 + 16, 148, 66);
+      ctx.fillStyle = '#e8dcc0'; ctx.beginPath(); ctx.arc(W * 0.5 + 38, H * 0.04 + 34, 11, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#1a241b';
+      for (const [rx, rw, rh] of [[-70, 34, 18], [-30, 26, 26], [6, 40, 15], [52, 24, 22]]) ctx.fillRect(W * 0.5 + rx, H * 0.04 + 82 - rh, rw, rh);
       for (const sx of [0.09, 0.91]) { glow(ctx, W * sx, H * 0.26, 200, '255,190,110', 0.30); ctx.fillStyle = '#e9c98a'; ctx.beginPath(); ctx.arc(W * sx, H * 0.26, 6, 0, TAU); ctx.fill(); }
       glow(ctx, W / 2, H * 0.5, Math.max(W, H) * 0.6, '255,214,150', 0.16);
+      const v = ctx.createRadialGradient(W / 2, H * 0.42, Math.min(W, H) * 0.3, W / 2, H * 0.42, Math.max(W, H) * 0.78);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(4,6,3,0.55)');
+      ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
     },
   },
   {
@@ -124,6 +132,9 @@ export const HALLS = [
       const g = ctx.createLinearGradient(0, H * 0.965, 0, H);
       g.addColorStop(0, 'rgba(90,176,255,0.55)'); g.addColorStop(1, 'rgba(90,176,255,0)');
       ctx.fillStyle = g; ctx.fillRect(0, H * 0.965, W, H * 0.035);
+      const v = ctx.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.3, W / 2, H * 0.45, Math.max(W, H) * 0.75);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(1,2,5,0.6)');
+      ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
     },
   },
   {

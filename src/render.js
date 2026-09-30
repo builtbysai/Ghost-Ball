@@ -114,6 +114,12 @@ export class Renderer {
     const ctx = this.layer.getContext('2d');
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.hall.paint(ctx, this.w, this.h);
+    if (this.menuMode) {
+      // the room falls off into darkness behind the menu card
+      const sh = ctx.createLinearGradient(0, 0, this.w * 0.62, 0);
+      sh.addColorStop(0, 'rgba(5,4,2,0.62)'); sh.addColorStop(0.55, 'rgba(5,4,2,0.34)'); sh.addColorStop(1, 'rgba(5,4,2,0)');
+      ctx.fillStyle = sh; ctx.fillRect(0, 0, this.w * 0.62, this.h);
+    }
     const { cx, cy, s, rot } = this.view, d = this.dpr;
     ctx.setTransform(d, 0, 0, d, 0, 0);
     ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(s, -s);
@@ -156,6 +162,15 @@ export class Renderer {
     hi.addColorStop(0, rl.hi); hi.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = hi; ctx.fillRect(-OUT_X, OUT_Y - 0.16, OUT_X * 2, 0.16);
     ctx.restore();
+    // beveled cushion shoulder: a lit top face stepping down to a dark apron line
+    ctx.save();
+    rrect(ctx, -(HALF_L + CW + 0.008), -(HALF_W + CW + 0.008), (HALF_L + CW + 0.008) * 2, (HALF_W + CW + 0.008) * 2, 0.055);
+    ctx.strokeStyle = 'rgba(255,240,210,0.20)'; ctx.lineWidth = 0.006; ctx.stroke();
+    rrect(ctx, -(HALF_L + CW + 0.02), -(HALF_W + CW + 0.02), (HALF_L + CW + 0.02) * 2, (HALF_W + CW + 0.02) * 2, 0.06);
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 0.004; ctx.stroke();
+    rrect(ctx, -OUT_X + 0.004, -OUT_Y + 0.004, (OUT_X - 0.004) * 2, (OUT_Y - 0.004) * 2, 0.115);
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 0.005; ctx.stroke();
+    ctx.restore();
     ctx.save();
     if (hall.led) { ctx.shadowColor = rl.trim; ctx.shadowBlur = 0.05; }
     ctx.strokeStyle = rl.trim; ctx.lineWidth = hall.led ? 0.006 : 0.004; ctx.globalAlpha = hall.led ? 0.95 : 0.75;
@@ -195,6 +210,20 @@ export class Renderer {
     const lg = ctx.createRadialGradient(0, 0.05, 0.05, 0, 0.05, lp.r);
     lg.addColorStop(0, `rgba(${lp.rgb},${lp.a})`); lg.addColorStop(0.6, `rgba(${lp.rgb},${lp.a * 0.2})`); lg.addColorStop(1, 'rgba(0,0,0,0.24)');
     ctx.fillStyle = lg; ctx.fillRect(-HALF_L, -HALF_W, HALF_L * 2, HALF_W * 2);
+    // a real table hangs three lamps: two softer pools flank the center light
+    for (const lx of [-0.78, 0.78]) {
+      const pg2 = ctx.createRadialGradient(lx, 0.03, 0.04, lx, 0.03, lp.r * 0.72);
+      pg2.addColorStop(0, `rgba(${lp.rgb},${lp.a * 0.42})`); pg2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = pg2;
+      ctx.save(); ctx.translate(lx, 0.03); ctx.scale(1.5, 1); ctx.beginPath(); ctx.arc(0, 0, lp.r * 0.72, 0, TAU); ctx.fill(); ctx.restore();
+    }
+    // directional nap: cloth brushes one way, and fast balls polish lanes to the pockets
+    ctx.save(); ctx.globalAlpha = 0.05; ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 700; i++) { const y = -HALF_W + rand() * HALF_W * 2; ctx.fillRect(-HALF_L + rand() * HALF_L * 1.4, y, 0.1 + rand() * 0.3, 0.0008); }
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = 0.035; ctx.fillStyle = '#ffffff';
+    for (const p of table.pockets) { ctx.beginPath(); ctx.ellipse(p.mx * 0.55, p.my * 0.55, 0.34, 0.1, Math.atan2(p.my, p.mx), 0, TAU); ctx.fill(); }
+    ctx.restore();
     ctx.globalAlpha = hall.spot;
     ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 0.0025;
     ctx.beginPath(); ctx.moveTo(HEAD_X, -HALF_W); ctx.lineTo(HEAD_X, HALF_W); ctx.stroke();
@@ -215,12 +244,21 @@ export class Renderer {
       const pg = ctx.createLinearGradient(cx - r, cy + r, cx + r, cy - r);
       pg.addColorStop(0, hall.plate); pg.addColorStop(0.5, hall.plateDark); pg.addColorStop(1, hall.plate);
       ctx.fillStyle = pg; ctx.fill();
+      // leather rim: a dark rolled edge with one warm highlight where the lamp catches it
+      ctx.beginPath(); ctx.arc(cx, cy, r + 0.002, 0, TAU);
+      ctx.strokeStyle = 'rgba(12,8,5,0.9)'; ctx.lineWidth = 0.009; ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, r + 0.0065, Math.PI * 0.95, Math.PI * 1.55);
+      ctx.strokeStyle = 'rgba(255,214,160,0.35)'; ctx.lineWidth = 0.0035; ctx.stroke();
       ctx.fillStyle = '#050403';
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill();
       if (tips.length === 2) { ctx.beginPath(); ctx.moveTo(tips[0][0], tips[0][1]); ctx.lineTo(tips[1][0], tips[1][1]); ctx.lineTo(cx, cy); ctx.closePath(); ctx.fill(); }
       const hg = ctx.createRadialGradient(cx, cy, 0.005, cx, cy, r);
       hg.addColorStop(0, 'rgba(0,0,0,0)'); hg.addColorStop(1, 'rgba(60,45,35,0.55)');
       ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill();
+      // depth: the well falls away, darkest at the heart, a whisper of cloth at the throat
+      const dg = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      dg.addColorStop(0, 'rgba(0,0,0,0.88)'); dg.addColorStop(0.72, 'rgba(0,0,0,0.45)'); dg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill();
     }
     for (const k of table.knuckles) {
       ctx.beginPath(); ctx.arc(k.x, k.y, k.r * 1.05, 0, TAU);
@@ -230,9 +268,16 @@ export class Renderer {
     ctx.strokeStyle = 'rgba(255,255,255,0.20)'; ctx.lineWidth = 0.0025;
     for (const w of table.walls) { ctx.beginPath(); ctx.moveTo(w.ax, w.ay); ctx.lineTo(w.bx, w.by); ctx.stroke(); }
 
-    // ---- diamond sights
-    ctx.fillStyle = hall.sight;
-    const dm = (x, y) => { ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.globalAlpha = 0.92; ctx.fillRect(-0.0085, -0.0085, 0.017, 0.017); ctx.globalAlpha = 0.3; ctx.fillStyle = '#000'; ctx.fillRect(-0.0085, -0.0085, 0.006, 0.017); ctx.restore(); ctx.fillStyle = hall.sight; };
+    // ---- diamond sights: warm metal with a soft halo, not flat marks
+    const dm = (x, y) => {
+      ctx.save(); ctx.translate(x, y);
+      ctx.rotate(Math.PI / 4); ctx.globalAlpha = 0.16; ctx.fillStyle = hall.sight; ctx.fillRect(-0.016, -0.016, 0.032, 0.032);
+      ctx.rotate(-Math.PI / 4);
+      ctx.beginPath(); ctx.arc(0, 0, 0.0115, 0, TAU); ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill();
+      ctx.rotate(Math.PI / 4); ctx.globalAlpha = 0.95; ctx.fillStyle = hall.sight; ctx.fillRect(-0.0085, -0.0085, 0.017, 0.017);
+      ctx.globalAlpha = 0.35; ctx.fillStyle = '#fff'; ctx.fillRect(-0.0085, -0.0085, 0.017, 0.006);
+      ctx.restore();
+    };
     const railMid = HALF_W + CW + RW / 2, railMidX = HALF_L + CW + RW / 2;
     for (let k = 1; k < 8; k++) if (k !== 4) { const x = -HALF_L + k * HALF_L / 4; dm(x, railMid); dm(x, -railMid); }
     for (let k = 1; k < 4; k++) { const y = -HALF_W + k * HALF_W / 2; dm(railMidX, y); dm(-railMidX, y); }
@@ -261,7 +306,7 @@ export class Renderer {
     this.worldTransform(ctx);
     this.drawMotes(ctx, f.time);
     if (f.marks) this.drawMarks(ctx, f.marks, f.time);
-    if (f.guide && f.showGuide) this.drawGuide(ctx, f.guide, f.assist);
+    if (f.guide && f.showGuide) this.drawGuide(ctx, f.guide, f.assist, f.time);
     if (f.placeGhost) this.drawPlaceZone(ctx, f.placeGhost);
     if (f.call) this.drawCall(ctx, f.call, f.time);
 
@@ -370,24 +415,63 @@ export class Renderer {
     ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(x, y, R * 1.08, 0, TAU); ctx.fill();
   }
 
-  drawGuide(ctx, g, assist) {
+  drawGuide(ctx, g, assist, time = 0) {
     const acc = this.hall.accent;
     ctx.save();
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    const path = (pts, w, color, dash, alpha = 1) => {
+    const stroke = (pts, w, color, alpha = 1) => {
       if (!pts || pts.length < 2) return;
       ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
       for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-      ctx.lineWidth = w; ctx.strokeStyle = color; ctx.globalAlpha = alpha;
-      ctx.setLineDash(dash || []); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+      ctx.lineWidth = w; ctx.strokeStyle = color; ctx.globalAlpha = alpha; ctx.stroke(); ctx.globalAlpha = 1;
     };
-    path(g.cuePath, 0.0036, '#ffffff', [0.02, 0.014], 0.85);
+    // cue line: a soft underglow with a bright core, solid like a beam of chalk light
+    stroke(g.cuePath, 0.0075, '#ffffff', 0.16);
+    stroke(g.cuePath, 0.0032, '#ffffff', 0.9);
     if (g.ghost) {
+      // ghost ball: brass guarantee ring, white hairline, struck-center dot
       ctx.beginPath(); ctx.arc(g.ghost.x, g.ghost.y, R, 0, TAU);
-      ctx.lineWidth = 0.003; ctx.strokeStyle = '#fff'; ctx.globalAlpha = 0.8; ctx.stroke(); ctx.globalAlpha = 1;
-      if (g.objPath) path(g.objPath, 0.0042, acc, null, 0.95);
+      ctx.lineWidth = 0.0042; ctx.strokeStyle = acc; ctx.globalAlpha = 0.95; ctx.stroke();
+      ctx.beginPath(); ctx.arc(g.ghost.x, g.ghost.y, R * 0.8, 0, TAU);
+      ctx.lineWidth = 0.0016; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.65; ctx.stroke();
+      ctx.beginPath(); ctx.arc(g.ghost.x, g.ghost.y, 0.0045, 0, TAU);
+      ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.9; ctx.fill(); ctx.globalAlpha = 1;
+      if (g.objPath && g.objPath.length >= 2) {
+        // object ball wears a fine target ring while it is the first contact
+        const o = g.objPath[0];
+        ctx.beginPath(); ctx.arc(o.x, o.y, R * 1.04, 0, TAU);
+        ctx.lineWidth = 0.0018; ctx.strokeStyle = acc; ctx.globalAlpha = 0.55; ctx.stroke();
+        ctx.globalAlpha = 1;
+        stroke(g.objPath, 0.004, acc, 0.95);
+        // arrowhead at the departure end
+        const a = g.objPath[g.objPath.length - 2], b = g.objPath[g.objPath.length - 1];
+        const dx = b.x - a.x, dy = b.y - a.y, dl = Math.hypot(dx, dy) || 1, ux = dx / dl, uy = dy / dl;
+        const L = 0.021, W = 0.0105;
+        ctx.beginPath();
+        ctx.moveTo(b.x + ux * 0.004, b.y + uy * 0.004);
+        ctx.lineTo(b.x - ux * L + -uy * W, b.y - uy * L + ux * W);
+        ctx.lineTo(b.x - ux * L * 0.55, b.y - uy * L * 0.55);
+        ctx.lineTo(b.x - ux * L - -uy * W, b.y - uy * L - ux * W);
+        ctx.closePath(); ctx.fillStyle = acc; ctx.globalAlpha = 0.95; ctx.fill();
+        ctx.globalAlpha = 1;
+        // pocket read: if the departure line runs into a pocket, say so quietly
+        if (this.table) {
+          for (const p of this.table.pockets) {
+            const vx = p.mx - b.x, vy = p.my - b.y;
+            const ahead = vx * ux + vy * uy;
+            if (ahead < 0 || ahead > 0.85) continue;
+            const perp = Math.abs(vx * -uy + vy * ux);
+            if (perp > 0.085) continue;
+            const pulse = 0.5 + 0.5 * Math.sin(time * 4.5);
+            ctx.beginPath(); ctx.arc(p.x, p.y, 0.055 + pulse * 0.009, 0, TAU);
+            ctx.lineWidth = 0.005; ctx.strokeStyle = acc; ctx.globalAlpha = 0.35 + pulse * 0.4; ctx.stroke();
+            ctx.globalAlpha = 1;
+            break;
+          }
+        }
+      }
     }
-    if (assist === 'full') path(g.cueAfter, 0.003, '#ffffff', [0.012, 0.012], 0.55);
+    if (assist === 'full') stroke(g.cueAfter, 0.0026, '#ffffff', 0.5);
     ctx.restore();
   }
 
@@ -411,7 +495,15 @@ export class Renderer {
       ctx.lineWidth = sel ? 0.012 : 0.006; ctx.strokeStyle = sel ? '#ffffff' : this.hall.accent;
       ctx.globalAlpha = sel ? 1 : 0.55 + pulse * 0.3;
       ctx.stroke();
-      if (sel) { ctx.globalAlpha = 0.3; ctx.fillStyle = this.hall.accent; ctx.fill(); }
+      if (sel) {
+        ctx.globalAlpha = 0.3; ctx.fillStyle = this.hall.accent; ctx.fill();
+        // the called pocket plants a small flag: everyone at the table can see the call
+        const fx = p.mx + (p.x - p.mx) * 0.9, fy = p.my + (p.y - p.my) * 0.9;
+        ctx.globalAlpha = 1; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.004;
+        ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(fx, fy + 0.075); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(fx, fy + 0.075); ctx.lineTo(fx + 0.042, fy + 0.062); ctx.lineTo(fx, fy + 0.049); ctx.closePath();
+        ctx.fillStyle = this.hall.accent; ctx.fill();
+      }
       ctx.restore();
     }
   }
@@ -435,6 +527,14 @@ export class Renderer {
     ctx.fillStyle = cyl(buttW, '#5a4a44', rc.butt, '#050303'); seg(0.735, len, jointW, buttW); ctx.fill();
     const w0 = jointW + (0.93 - 0.735) / (len - 0.735) * (buttW - jointW), w1 = jointW + (1.16 - 0.735) / (len - 0.735) * (buttW - jointW);
     ctx.fillStyle = rc.wrap; ctx.globalAlpha = 0.9; seg(0.93, 1.16, w0, w1); ctx.fill(); ctx.globalAlpha = 1;
+    // the wrap is wound, not painted: diagonal thread shading over the grip
+    ctx.save();
+    seg(0.93, 1.16, w0, w1); ctx.clip();
+    ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = 0.0016;
+    for (let x = 0.9; x < 1.19; x += 0.014) { ctx.beginPath(); ctx.moveTo(-x, -0.02); ctx.lineTo(-x - 0.014, 0.02); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    for (let x = 0.907; x < 1.19; x += 0.014) { ctx.beginPath(); ctx.moveTo(-x, -0.02); ctx.lineTo(-x - 0.014, 0.02); ctx.stroke(); }
+    ctx.restore();
     ctx.fillStyle = rc.ring; seg(1.16, 1.17, buttW * 0.93, buttW * 0.94); ctx.fill();
     // power readout on the shaft: a bright stripe grows toward the butt
     if (c.power > 0.02) {
