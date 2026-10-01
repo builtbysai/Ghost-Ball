@@ -22,7 +22,7 @@ function chooseView(next){view=next;table.setView(view);ambient.setView(view);
   setText('gameView',view==='flat'?'2.5D VIEW':'2D VIEW');
   resize();}
 function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
-function openSetup(){show('backdrop');show('setupSheet');$('closeSetup').focus();}
+function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';show('backdrop');show('setupSheet');$('closeSetup').focus();}
 function closeSetup(){hide('setupSheet');if($('settingsSheet').hidden)hide('backdrop');$('openSetup').focus();}
 function openSettings(){hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('motionToggle').checked=motion;}
 function closeSettings(){hide('settingsSheet');hide('backdrop');}

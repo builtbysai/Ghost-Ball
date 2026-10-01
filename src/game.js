@@ -42,8 +42,8 @@ export class Game {
  placeCue(x,y){if(!this.ballInHand)return false;const placed=this.sim.placeCue(x,y);if(placed){this.ballInHand=false;this.notify('Cue ball placed. Line up your shot.');}return placed;}
  update(dt,{audio=null,haptics=false}={}){
    if(!this.sim.moving){this.timer+=dt;
-     if(this.kind==='attract'&&this.timer>1.8){this.timer=0;if(this.sim.cue()?.pocketed){this.sim=new Simulation(rack());this.break=true;}
-       const shot=this.break?{angle:0,power:.83}:chooseShot(this.sim,'open','club');this.beginShot(shot.angle,shot.power);}
+     if(this.kind==='attract'&&this.timer>1.8){this.timer=0;if(this.sim.cue()?.pocketed||this.sim.balls.filter(b=>b.id!==0&&!b.pocketed).length<4||this.sim.balls.find(b=>b.id===8)?.pocketed){this.sim=new Simulation(rack());this.break=true;}
+       const shot=this.break?{angle:0,power:.83}:chooseShot(this.sim,'open',this.turn===0?'club':'rookie');this.beginShot(shot.angle,shot.power);}
      else if(this.isAI()&&!this.over&&this.kind==='match'&&this.timer>1.05){this.timer=0;
        if(this.ballInHand){const cue=this.sim.cue();for(const [x,y] of [[240,250],[320,220],[360,300],[210,150]])if(this.sim.placeCue(x,y)){this.ballInHand=false;break;}if(cue?.pocketed)this.sim.placeCue(230,240);}
        const shot=this.break?{angle:0,power:.82}:chooseShot(this.sim,this.group,this.difficulty);this.beginShot(shot.angle,shot.power);}
@@ -62,7 +62,7 @@ export class Game {
      if(event.type!=='settled'&&this.kind!=='attract')audio?.play(event);
    }
  }
- resolve(){const shot=this.turnShot;if(!shot)return;this.turnShot=null;if(this.kind==='attract')return;
+ resolve(){const shot=this.turnShot;if(!shot)return;this.turnShot=null;if(this.kind==='attract'){this.turn=1-this.turn;this.timer=0;this.break=false;return;}
    if(this.kind==='practice'){
      if(shot.pots.includes(0)){this.sim.placeCue(240,245);this.notify('Scratch. Tap an open spot to place the cue ball.');this.ballInHand=true;}
      else if(shot.pots.length)this.notify(`${shot.pots.filter(id=>id!==0).length} pocketed. Nice touch.`);
