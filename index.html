@@ -1,266 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#17100b">
-<title>Ghost Ball — a pool game</title>
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="src/ui/tokens.css">
-<link rel="stylesheet" href="src/ui/screens.css">
-<link rel="stylesheet" href="src/ui/hud.css">
-</head>
-<body>
-
-<!-- ============ MENU ============ -->
-<section id="screen-menu" class="screen">
-  <canvas id="menu-cv" aria-hidden="true"></canvas>
-  <div class="menu-shade"></div>
-  <div class="menu-col">
-    <header class="wordmark">
-      <h1 id="menu-wordmark">GHOST BALL</h1>
-      <p class="wordmark-sub" id="menu-hall-line">The Parlor · 1893</p>
-    </header>
-
-    <div class="menu-actions">
-      <button id="play-btn" class="btn-primary" type="button">PLAY</button>
-      <p id="play-summary" class="play-summary">8-Ball · Club Pro · The Parlor</p>
-    </div>
-
-    <div class="pickers">
-      <div class="picker">
-        <span class="picker-label" id="lbl-game">Game</span>
-        <div class="seg" id="pick-game" role="group" aria-labelledby="lbl-game">
-          <button type="button" data-game="8ball" class="on">8-Ball</button>
-          <button type="button" data-game="9ball">9-Ball</button>
-        </div>
-      </div>
-      <div class="picker">
-        <span class="picker-label" id="lbl-opp">Opponent</span>
-        <div class="seg" id="pick-opp" role="group" aria-labelledby="lbl-opp">
-          <button type="button" data-opp="rookie">Rookie</button>
-          <button type="button" data-opp="club" class="on">Club Pro</button>
-          <button type="button" data-opp="champ">Champion</button>
-          <button type="button" data-opp="two">2 Players</button>
-        </div>
-      </div>
-      <div class="picker">
-        <span class="picker-label" id="lbl-view">View</span>
-        <div class="seg" id="pick-view" role="group" aria-labelledby="lbl-view">
-          <button type="button" data-view="2d" class="on">2D</button>
-          <button type="button" data-view="3d">3D</button>
-        </div>
-      </div>
-      <div class="picker">
-        <span class="picker-label" id="lbl-hall">Hall</span>
-        <div class="seg seg-halls" id="pick-hall" role="group" aria-labelledby="lbl-hall"></div>
-      </div>
-    </div>
-
-    <nav class="menu-links">
-      <button type="button" id="link-exhibition" class="text-link">Exhibition</button>
-      <span class="link-dot" aria-hidden="true">·</span>
-      <button type="button" id="link-practice" class="text-link">Practice</button>
-      <span class="link-dot" aria-hidden="true">·</span>
-      <button type="button" id="link-how" class="text-link">How to play</button>
-      <span class="link-dot" aria-hidden="true">·</span>
-      <button type="button" id="link-settings" class="text-link">Settings</button>
-    </nav>
-  </div>
-</section>
-
-<!-- ============ MATCH ============ -->
-<section id="screen-match" class="screen hidden">
-  <div id="stage">
-    <canvas id="cv2d"></canvas>
-    <div id="cv3d-wrap" class="hidden"></div>
-
-    <div id="hud">
-      <div id="hud-top">
-        <div class="pcard" id="card-a">
-          <span class="p-disc" aria-hidden="true"></span>
-          <span class="p-meta"><span class="p-name">You</span><span class="p-sub">Table open</span></span>
-          <span class="tray" aria-hidden="true"></span>
-        </div>
-        <div id="hud-center">
-          <span id="hud-game-label">8-BALL</span>
-          <span id="hud-turn-label">Your shot</span>
-        </div>
-        <div class="pcard" id="card-b">
-          <span class="p-disc" aria-hidden="true"></span>
-          <span class="p-meta"><span class="p-name">Club Pro</span><span class="p-sub">Table open</span></span>
-          <span class="tray" aria-hidden="true"></span>
-        </div>
-        <button id="pause-btn" type="button" aria-label="Pause">II</button>
-      </div>
-
-      <div id="banner" class="hidden" role="status"></div>
-      <div id="spectate-tag" class="hidden">Spectating</div>
-
-      <div id="edge-controls">
-        <div id="power-gauge" aria-hidden="true">
-          <div id="power-fill"></div>
-          <span id="power-num">0</span>
-          <span class="edge-label">POWER</span>
-        </div>
-        <div id="aim-cluster">
-          <div id="aim-strip" aria-hidden="true"><span class="edge-label">FINE AIM</span></div>
-          <button id="spin-btn" type="button" aria-label="Spin">
-            <span id="spin-btn-dot"></span>
-          </button>
-        </div>
-      </div>
-
-      <div id="spin-pad" class="hidden">
-        <div id="spin-ball"><span id="spin-dot"></span></div>
-        <p class="spin-caption">Strike point · double-tap centers</p>
-      </div>
-
-      <button id="place-btn" class="btn-primary hidden" type="button">PLACE CUE BALL</button>
-      <button id="rerack-btn" class="btn-quiet hidden" type="button">Re-rack</button>
-    </div>
-  </div>
-</section>
-
-<!-- ============ SETTINGS ============ -->
-<section id="screen-settings" class="screen hidden">
-  <div class="sheet-page">
-    <h2 class="screen-title">Settings</h2>
-
-    <div class="set-group">
-      <span class="picker-label" id="lbl-set-view">View</span>
-      <div class="seg" id="set-view" role="group" aria-labelledby="lbl-set-view">
-        <button type="button" data-view="2d">2D top-down</button>
-        <button type="button" data-view="3d">3D</button>
-      </div>
-    </div>
-
-    <div class="set-group">
-      <span class="picker-label" id="lbl-set-camera">3D camera</span>
-      <div class="seg" id="set-camera" role="group" aria-labelledby="lbl-set-camera">
-        <button type="button" data-camera="elevated">Elevated</button>
-        <button type="button" data-camera="overhead">Overhead</button>
-      </div>
-      <p class="set-note">Drag off the table in 3D to look around; the camera comes home when the shot rolls.</p>
-    </div>
-
-    <div class="set-group">
-      <span class="picker-label" id="lbl-set-guide">Aim guide</span>
-      <div class="seg" id="set-guide" role="group" aria-labelledby="lbl-set-guide">
-        <button type="button" data-guide="full">Full path</button>
-        <button type="button" data-guide="line">Guide line</button>
-        <button type="button" data-guide="none">None</button>
-      </div>
-    </div>
-
-    <div class="set-group">
-      <span class="picker-label" id="lbl-set-hand">Stroke hand</span>
-      <div class="seg" id="set-hand" role="group" aria-labelledby="lbl-set-hand">
-        <button type="button" data-hand="right">Right</button>
-        <button type="button" data-hand="left">Left</button>
-      </div>
-      <p class="set-note">Swaps the power and fine-aim edges.</p>
-    </div>
-
-    <div class="set-group">
-      <label class="set-row" for="set-sfx"><span>Effects volume</span>
-        <input id="set-sfx" type="range" min="0" max="100" step="1" value="80"></label>
-      <label class="set-row" for="set-music"><span>Music volume</span>
-        <input id="set-music" type="range" min="0" max="100" step="1" value="40"></label>
-      <div class="set-row"><span>Mute all sound</span>
-        <button id="set-mute" type="button" class="switch" aria-pressed="false">Off</button></div>
-      <p class="set-note">Sound stops the moment you leave this page. Nothing plays after the app closes.</p>
-    </div>
-
-    <div class="set-group danger-zone">
-      <button id="btn-reset-progress" type="button" class="btn-danger-quiet">Reset progress</button>
-    </div>
-
-    <button id="btn-settings-back" type="button" class="btn-primary">BACK</button>
-  </div>
-</section>
-
-<!-- ============ EXHIBITION SETUP ============ -->
-<section id="screen-exhibition" class="screen hidden">
-  <div class="sheet-page">
-    <h2 class="screen-title">Exhibition</h2>
-    <p class="screen-sub">Two seats. Any mix of people and AI. AI against AI plays itself; sit back and watch.</p>
-
-    <div class="picker">
-      <span class="picker-label" id="lbl-left">Left seat</span>
-      <div class="seg" id="pick-left" role="group" aria-labelledby="lbl-left">
-        <button type="button" data-side="human">Human</button>
-        <button type="button" data-side="rookie">Rookie AI</button>
-        <button type="button" data-side="club" class="on">Club Pro AI</button>
-        <button type="button" data-side="champ">Champion AI</button>
-      </div>
-    </div>
-    <div class="picker">
-      <span class="picker-label" id="lbl-right">Right seat</span>
-      <div class="seg" id="pick-right" role="group" aria-labelledby="lbl-right">
-        <button type="button" data-side="human">Human</button>
-        <button type="button" data-side="rookie" class="on">Rookie AI</button>
-        <button type="button" data-side="club">Club Pro AI</button>
-        <button type="button" data-side="champ">Champion AI</button>
-      </div>
-    </div>
-
-    <button id="btn-exh-start" type="button" class="btn-primary">START EXHIBITION</button>
-    <button id="btn-exh-back" type="button" class="btn-quiet">Back</button>
-  </div>
-</section>
-
-<!-- ============ HOW TO PLAY ============ -->
-<section id="screen-how" class="screen hidden">
-  <div class="sheet-page">
-    <h2 class="screen-title">How to play</h2>
-    <ol class="how-steps">
-      <li><strong>Aim.</strong> Move on the cloth to swing the cue around the cue ball. Drag the FINE AIM edge for thin cuts.</li>
-      <li><strong>Pull.</strong> Press and draw back. The cue follows your hand and the aim locks.</li>
-      <li><strong>Push.</strong> Push forward to strike: the speed of your push is the speed of the shot. Or let go, and the shot fires from how far you drew.</li>
-    </ol>
-    <p class="how-line">Tap the cue-ball button to move the strike point: high follows, low draws, sides bend the rebound. Double-tap centers it.</p>
-    <p class="how-line">After your group is cleared, call the pocket for the 8 ball by tapping it. A foul hands your opponent the cue ball.</p>
-    <p class="how-line">Keys: arrows fine-aim, Space pulls and pushes, Esc cancels a pull or pauses. A gamepad works too: left stick aims, right stick is the cue.</p>
-    <button id="btn-how-play" type="button" class="btn-primary">PLAY</button>
-    <button id="btn-how-back" type="button" class="btn-quiet">Back</button>
-  </div>
-</section>
-
-<!-- ============ PAUSE SHEET ============ -->
-<div id="sheet-pause" class="sheet-wrap hidden">
-  <div class="sheet">
-    <h2 class="sheet-title">Paused</h2>
-    <button id="btn-resume" type="button" class="btn-primary">RESUME</button>
-    <div id="pace-row" class="picker hidden">
-      <span class="picker-label" id="lbl-pace">Exhibition pace</span>
-      <div class="seg" id="pick-pace" role="group" aria-labelledby="lbl-pace">
-        <button type="button" data-pace="1" class="on">1x</button>
-        <button type="button" data-pace="2">2x</button>
-      </div>
-    </div>
-    <button id="btn-pause-settings" type="button" class="btn-quiet">Table settings</button>
-    <button id="btn-restart" type="button" class="btn-quiet">Restart rack</button>
-    <button id="btn-quit" type="button" class="btn-quiet">Quit to menu</button>
-  </div>
-</div>
-
-<!-- ============ RESULTS SHEET ============ -->
-<div id="sheet-results" class="sheet-wrap hidden">
-  <div class="sheet">
-    <p id="result-kicker" class="sheet-kicker">8-BALL · THE PARLOR</p>
-    <h2 id="result-title">Victory</h2>
-    <p id="result-reason" class="sheet-reason"></p>
-    <div id="result-stats" class="stat-ledger"></div>
-    <button id="btn-rematch" type="button" class="btn-primary">REMATCH</button>
-    <button id="btn-results-menu" type="button" class="btn-quiet">Menu</button>
-  </div>
-</div>
-
-<script type="module" src="src/app/boot.js"></script>
-</body>
-</html>
+<!doctype html>
+<html lang="en"><head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="theme-color" content="#0b1510"><meta name="description" content="Ghost Ball. A beautifully tactile billiards clubhouse.">
+ <title>Ghost Ball | The Clubhouse</title><link rel="stylesheet" href="src/style.css">
+</head><body>
+<main id="app">
+ <div class="room" aria-hidden="true"><div class="room-wall"></div><div class="frames"><div class="art">THE PARLOR</div><div class="art badge-art">1893</div></div><div class="wainscot"></div><div class="room-floor"></div><div class="room-lamp"><span></span></div><div class="light-beam"></div></div>
+ <div class="ambient" id="ambient"><canvas id="attractCanvas" aria-label="Live billiards exhibition table"></canvas></div>
+ <header class="masthead"><div class="identity"><small>A MEMBERS' BILLIARD HALL</small><div class="wordmark">GH<span class="word-ball"></span>ST BALL</div></div><div class="header-right"><span class="live-pill"><i></i> LIVE TABLE</span><button class="round icon-button" id="menuBtn" aria-label="Open menu">☰</button></div></header>
+ <section class="room-details" aria-label="Featured room"><small id="roomEyebrow">ROOM 01 · ESTABLISHED 1893</small><h1 id="roomName">The Parlor</h1><p id="roomDescription">Walnut rails · sage baize · classic pockets</p><div class="room-switch"><button id="prevRoom" aria-label="Previous table">↑</button><span id="roomCount">01 / 03</span><button id="nextRoom" aria-label="Next table">↓</button></div></section>
+ <section class="lobby-panel" id="lobby"><div class="lobby-inner">
+   <nav class="modes" aria-label="Available game modes"><button class="mode active" data-mode="match">QUICK MATCH</button><button class="mode" data-mode="practice">PRACTICE</button><button disabled title="Planned: online multiplayer">ONLINE <sup>SOON</sup></button><button disabled title="Planned: club circuit">CIRCUIT <sup>SOON</sup></button></nav>
+   <button class="match-selection" id="openSetup" aria-haspopup="dialog"><span><small>TONIGHT'S MATCH</small><strong id="matchSummary">8-Ball <em>vs</em> Rookie</strong></span><span class="change-label">CHANGE ↗</span></button>
+   <div class="actions"><button id="playBtn" class="primary"><span><strong id="playText">Break at The Parlor</strong><small id="playSubtitle">CASUAL 8-BALL · NO ENTRY FEE</small></span><span class="arrow">→</span></button><button id="watchBtn" class="secondary" aria-label="Watch a live AI exhibition"><span class="eye">◉</span><small>WATCH</small></button></div>
+   <div class="bottom-note">NO STORE · NO CURRENCY · PURE POOL</div>
+ </div></section>
+ <section class="backdrop" id="backdrop" hidden></section>
+ <section class="sheet" id="setupSheet" aria-label="Match setup" role="dialog" aria-modal="true" hidden><div class="grab"></div><header><span><small>MATCH SETUP</small><h2>Choose the frame.</h2></span><button id="closeSetup" class="close-sheet">DONE</button></header>
+  <div class="setting"><label>GAME</label><div class="choice-row"><button class="selected">8-BALL</button><button disabled>9-BALL <small>SOON</small></button><button disabled>STRAIGHT <small>SOON</small></button></div></div>
+  <div class="setting"><label>OPPONENT</label><div class="choice-row" id="rivals"><button class="selected" data-rival="rookie">ROOKIE</button><button data-rival="club">CLUB PRO</button><button data-rival="local">2 PLAYERS</button></div></div>
+  <div class="setting"><label>TABLE VIEW</label><div class="choice-row" id="lobbyViews"><button data-view="flat">TOP DOWN / 2D</button><button data-view="perspective" class="selected">ELEVATED / 2.5D</button></div></div>
+  <p class="footnote">Casual 8-ball is the first playable ruleset. Tournament called-shot rules and more formats are on the roadmap.</p>
+ </section>
+ <section class="club-menu" id="clubMenu" aria-label="Club menu" hidden><header><div><small>GHOST BALL</small><h2>The Clubhouse</h2></div><button id="closeMenu" aria-label="Close menu" class="round">×</button></header><div class="menu-items"><button id="menuPractice"><span>◌</span> Practice <small>WORKSHOP</small></button><button disabled><span>✧</span> Challenges <small>COMING LATER</small></button><button disabled><span>◎</span> Locker <small>COMING LATER</small></button><button id="menuSettings"><span>⚙</span> Settings <small>CONTROLS & AUDIO</small></button></div><footer>NO STORE. NO CURRENCY. EVERYTHING EARNED BY PLAY.</footer></section>
+ <section class="settings-sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="Settings" hidden><header><h2>Preferences</h2><button id="closeSettings" class="close-sheet">DONE</button></header><label class="setting-line">Sound effects <input id="soundToggle" type="checkbox" checked></label><label class="setting-line">Motion and impact effects <input id="motionToggle" type="checkbox" checked></label><div class="setting"><label>DEFAULT VIEW</label><div id="settingsViews" class="choice-row"><button data-view="flat">TOP DOWN / 2D</button><button data-view="perspective">ELEVATED / 2.5D</button></div></div><p class="footnote">Keyboard: arrow keys or A/D to aim, Space to shoot, R to re-rack, Escape to leave.</p></section>
+ <section class="game-screen" id="gameScreen" aria-label="Pool table" hidden><div class="game-top"><button id="leaveGame" class="circle-control" aria-label="Return to Clubhouse">←</button><div class="scoreboard"><small id="roundLabel">THE PARLOR · CASUAL 8-BALL</small><strong id="turnLabel">YOUR BREAK</strong></div><button id="gameView" class="view-control">2D VIEW</button></div>
+  <div class="score-row"><span id="playerOne">YOU <small>OPEN TABLE</small></span><span class="separator">◆</span><span id="playerTwo">ROOKIE <small>OPEN TABLE</small></span></div>
+  <div class="table-play-area" id="tableArea"><canvas id="gameCanvas" aria-label="Interactive pool playing surface; drag to aim or place cue ball on fouls"></canvas><div class="guide-badge" id="guideBadge">DRAG ANYWHERE TO AIM</div></div>
+  <div class="status" id="status" role="status" aria-live="polite">Take your time. Line up your break.</div>
+  <div class="game-controls"><div class="control-top"><span class="control-title">SHOT CONTROL</span><button id="rerack" aria-label="Rack a new table">↻ RE-RACK</button></div>
+   <div class="control-main"><div class="spin-control"><span class="control-eyebrow">ENGLISH</span><label class="english-wrap" aria-label="Left or right cue-ball spin"><input id="spin" type="range" min="-100" max="100" value="0" step="5"><span id="spinLabel">CENTER</span></label></div>
+     <div class="aim-control"><label class="control-eyebrow" for="aimRange">FINE AIM</label><div class="aim-buttons"><button id="aimLeft" aria-label="Rotate aim left">↶</button><input id="aimRange" aria-label="Aim direction in degrees" type="range" min="-180" max="180" step=".25" value="0"><button id="aimRight" aria-label="Rotate aim right">↷</button></div><button class="shoot" id="shootBtn">TAKE SHOT <span>→</span></button></div>
+     <div class="power-control"><label for="powerRange">POWER</label><input type="range" id="powerRange" aria-label="Shot power; release to shoot" min="8" max="100" value="50"><output id="powerValue">50%</output></div></div>
+   </div>
+ </section>
+</main><script type="module" src="src/main.js"></script></body></html>
