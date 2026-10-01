@@ -114,3 +114,5 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
 requestAnimationFrame(frame);
 new ResizeObserver(resize).observe($('attractCanvas').parentElement);
 new ResizeObserver(resize).observe($('tableArea'));
+// Prior deployments were cache-first; ship a no-cache worker to clear stale copies.
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(()=>{});
