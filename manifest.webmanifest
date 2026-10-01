@@ -1,14 +1,14 @@
 {
   "name": "Ghost Ball",
   "short_name": "Ghost Ball",
-  "description": "A browser pool game with real spin and throw physics, five halls, a career Circuit, trick shots and a daily run.",
-  "start_url": "./",
+  "description": "A pool game. Your stroke speed is the shot.",
+  "start_url": "./index.html",
   "scope": "./",
-  "display": "fullscreen",
-  "orientation": "landscape",
-  "background_color": "#0b0d10",
-  "theme_color": "#0b0d10",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#17100b",
+  "theme_color": "#17100b",
   "icons": [
-    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
 }

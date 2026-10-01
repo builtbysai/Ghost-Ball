@@ -1,21 +1,33 @@
-// Network-first with a cache fallback: players always get the latest files when
-// online (the request revalidates, so a fresh deploy is never masked by the HTTP
-// cache), and the game still opens offline after the first visit.
-const CACHE = 'ghost-ball-v5';
-
-self.addEventListener('install', () => self.skipWaiting());
+// Ghost Ball service worker. Versioned cache; bump VERSION on every ship.
+const VERSION = 'gb-rebuild-v4';
+const CORE = [
+  './', './index.html', './manifest.webmanifest', './assets/icon.svg',
+  './src/ui/tokens.css', './src/ui/screens.css', './src/ui/hud.css',
+  './src/app/boot.js'
+];
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
+});
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then((keys) =>
+    Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)))
+  ).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', (e) => {
-  const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
-  e.respondWith(
-    fetch(req, { cache: 'no-cache' })
-      .then((res) => {
-        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET') return;
+  if (url.origin === location.origin) {
+    e.respondWith(caches.match(e.request).then((hit) =>
+      hit || fetch(e.request).then((res) => {
+        const copy = res.clone();
+        caches.open(VERSION).then((c) => c.put(e.request, copy));
         return res;
-      })
-      .catch(() => caches.match(req).then((hit) => hit || caches.match('./index.html'))),
-  );
+      })));
+  }
+  // Cross-origin (fonts, three.js CDN): network first, cache fallback.
+  e.respondWith(fetch(e.request).then((res) => {
+    const copy = res.clone();
+    caches.open(VERSION).then((c) => c.put(e.request, copy));
+    return res;
+  }).catch(() => caches.match(e.request)));
 });

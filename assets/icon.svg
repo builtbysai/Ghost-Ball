@@ -1,1 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#0b0d10"/><circle cx="196" cy="256" r="104" fill="none" stroke="#f2f4f7" stroke-width="12" stroke-dasharray="26 22" opacity=".85"/><circle cx="330" cy="256" r="104" fill="url(#b)"/><circle cx="330" cy="256" r="104" fill="url(#h)"/><circle cx="360" cy="222" r="14" fill="#d1352b"/><defs><radialGradient id="b" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#ddd7c8"/><stop offset="1" stop-color="#8f8878"/></radialGradient><radialGradient id="h" cx=".7" cy=".75" r=".7"><stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="24" fill="#17100b"/>
+  <circle cx="64" cy="64" r="40" fill="#2e6b4f"/>
+  <circle cx="64" cy="64" r="30" fill="#f2ead9"/>
+  <circle cx="64" cy="64" r="13" fill="#17100b"/>
+  <text x="64" y="70" font-family="Georgia,serif" font-size="17" fill="#f2ead9" text-anchor="middle" font-weight="bold">8</text>
+  <circle cx="52" cy="50" r="6" fill="#ffffff" opacity="0.85"/>
+</svg>

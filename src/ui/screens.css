@@ -1,0 +1,220 @@
+/* Menu, sub-screens, sheets. Tokens only (tokens.css). Reference sizes
+   (1280x800, 390x844, 460px embed) fit with no scrolling; short viewports
+   get the compact media queries below, and every column can scroll as a
+   last resort so no control is ever clipped out of reach. */
+
+/* ---------- menu ---------- */
+#screen-menu { background: var(--walnut-900); }
+#menu-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.menu-shade {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 50% 42%, transparent 40%, rgba(10, 6, 3, 0.55) 100%),
+    linear-gradient(180deg, rgba(10, 6, 3, 0.45), transparent 30%, transparent 62%, rgba(10, 6, 3, 0.6));
+}
+.menu-col {
+  position: relative; z-index: 2;
+  height: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: var(--s6) var(--gutter) var(--s5);
+  display: flex; flex-direction: column; align-items: stretch;
+  overflow-y: auto;
+}
+.wordmark { text-align: center; margin-top: var(--s2); }
+.wordmark h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--t-wordmark);
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  color: var(--bone);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6);
+}
+.wordmark-sub {
+  margin: var(--s1) 0 0;
+  font-size: var(--t-small);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--brass-bright);
+}
+.menu-actions { margin-top: auto; }
+#play-btn { min-height: 64px; font-size: var(--t-h2); }
+.play-summary {
+  margin: var(--s2) 0 0;
+  text-align: center;
+  font-size: var(--t-small);
+  color: var(--bone-dim);
+  letter-spacing: 0.06em;
+}
+.pickers { margin-top: var(--s3); }
+.pickers .picker:first-child { margin-top: var(--s2); }
+.menu-links {
+  margin-top: var(--s5);
+  display: flex; justify-content: center; align-items: center; gap: var(--s2);
+}
+.text-link {
+  min-height: var(--touch-min);
+  padding: 0 var(--s2);
+  border: none; background: none;
+  color: var(--bone-dim);
+  font-size: var(--t-small);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.text-link:active { color: var(--brass-bright); }
+.link-dot { color: var(--brass-dim); }
+
+/* ---------- sub-screens (settings / exhibition / how) ---------- */
+.sheet-page {
+  height: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: var(--s6) var(--gutter) var(--s5);
+  display: flex; flex-direction: column;
+  overflow-x: hidden; overflow-y: auto;
+}
+.screen-title {
+  margin: 0 0 var(--s2);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--t-h1);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.screen-sub { margin: 0 0 var(--s3); color: var(--bone-dim); font-size: var(--t-small); }
+.set-group { margin-top: var(--s5); }
+.set-note { margin: var(--s2) 0 0; font-size: var(--t-small); color: var(--bone-dim); }
+.set-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s4);
+  min-height: var(--touch-min);
+  font-size: var(--t-body);
+}
+.set-row input[type="range"] { flex: 0 0 46%; accent-color: var(--brass); height: var(--touch-min); }
+.switch {
+  min-width: 72px; min-height: 40px;
+  border: 1px solid var(--walnut-line); border-radius: var(--r-sm);
+  background: var(--walnut-800); color: var(--bone-dim);
+  font-weight: 600; cursor: pointer;
+}
+.switch[aria-pressed="true"] { color: var(--brass-bright); border-color: var(--brass-dim); }
+.danger-zone { margin-top: auto; padding-top: var(--s4); }
+.sheet-page .btn-primary { margin-top: var(--s4); }
+#screen-exhibition .btn-primary, #screen-how .btn-primary { margin-top: var(--s6); }
+
+.how-steps { margin: var(--s3) 0; padding-left: var(--s5); }
+.how-steps li { margin-bottom: var(--s3); }
+.how-steps strong { color: var(--brass-bright); font-weight: 600; }
+.how-line { margin: var(--s2) 0; color: var(--bone-dim); font-size: var(--t-small); }
+
+/* ---------- compact settings so it fits without scrolling ---------- */
+#screen-settings .sheet-page { padding-top: var(--s4); padding-bottom: var(--s4); }
+#screen-settings .screen-title { font-size: var(--t-h2); margin-bottom: var(--s1); }
+#screen-settings .set-group { margin-top: var(--s2); }
+#screen-settings .set-group label.picker-label { margin-bottom: var(--s1); }
+#screen-settings .set-note { margin-top: var(--s1); }
+#screen-settings .set-row { min-height: var(--s5); gap: var(--s3); }
+#screen-settings .btn-primary { margin-top: var(--s2); }
+#screen-settings .danger-zone { padding-top: var(--s1); }
+
+/* ---------- sheets (pause / results) ---------- */
+.sheet-wrap {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(10, 6, 3, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--gutter);
+}
+.sheet {
+  width: min(420px, 100%);
+  max-height: calc(100% - var(--s4));
+  overflow-y: auto;
+  background: var(--walnut-800);
+  border: 1px solid var(--walnut-line);
+  border-top: 2px solid var(--brass-dim);
+  border-radius: var(--r-lg);
+  padding: var(--s5);
+  box-shadow: var(--shadow-2);
+}
+#result-stats { margin: var(--s3) 0; }
+#result-stats > div { display: flex; justify-content: space-between; padding: var(--s1) 0; color: var(--bone-dim); }
+#result-stats > div b { color: var(--bone); }
+.sheet-title {
+  margin: 0 0 var(--s4);
+  font-family: var(--font-display);
+  font-size: var(--t-h2);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.sheet-kicker {
+  margin: 0;
+  text-align: center;
+  font-size: var(--t-kicker);
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  color: var(--brass-bright);
+}
+#result-title {
+  margin: var(--s2) 0 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: var(--t-display);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+#result-title.defeat { color: var(--bone-dim); }
+.sheet-reason { margin: var(--s2) 0 0; text-align: center; color: var(--bone-dim); min-height: 1.45em; }
+.stat-ledger { margin: var(--s4) 0; }
+.stat-ledger .row {
+  display: flex; justify-content: space-between;
+  padding: var(--s1) 0;
+  border-bottom: 1px solid var(--walnut-700);
+  font-size: var(--t-small);
+}
+.stat-ledger .row span:first-child { color: var(--bone-dim); }
+.stat-ledger .row span:last-child { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 480px) {
+  :root { --gutter: var(--s4); }
+  .wordmark h1 { font-size: 28px; }
+  .menu-col { padding-top: var(--s5); }
+  .sheet-page { padding-top: var(--s5); }
+  .set-group { margin-top: var(--s4); }
+  .menu-links { gap: var(--s1); }
+  .text-link { padding: 0 var(--s1); font-size: 10px; letter-spacing: 0.04em; white-space: nowrap; }
+  .menu-hall-line { font-size: 10px; letter-spacing: 0.12em; }
+}
+
+/* Short viewports (landscape phones, short windows): compress the menu
+   and sub-screens so every control stays on screen; the columns scroll
+   only below these heights. */
+@media (max-height: 700px) {
+  .menu-col, .sheet-page { padding-top: var(--s4); padding-bottom: var(--s3); }
+  .wordmark { margin-top: 0; }
+  .wordmark h1 { font-size: 26px; }
+  #play-btn { min-height: 52px; font-size: var(--t-h3); }
+  .pickers { margin-top: var(--s2); }
+  .picker { margin-top: var(--s2); }
+  .picker-label { margin-bottom: var(--s1); }
+  .seg button { min-height: 40px; }
+  .menu-links { margin-top: var(--s3); }
+  #screen-exhibition .btn-primary, #screen-how .btn-primary { margin-top: var(--s4); }
+  #screen-settings .sheet-page { padding-top: var(--s3); padding-bottom: var(--s3); }
+}
+@media (max-height: 480px) {
+  .menu-col, .sheet-page { padding-top: var(--s3); }
+  .wordmark h1 { font-size: 22px; }
+  .wordmark-sub { display: none; }
+  #play-btn { min-height: 48px; }
+  .seg { flex-wrap: nowrap; }
+  .seg button { min-height: 34px; padding: 0 var(--s1); font-size: 11px; }
+  .picker-label { font-size: 10px; margin-bottom: 2px; }
+  .menu-links { margin-top: var(--s2); }
+}
+.play-summary { text-shadow: 0 1px 6px rgba(23,16,11,.9), 0 0 2px rgba(23,16,11,.9); }
