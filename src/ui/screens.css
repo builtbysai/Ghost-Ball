@@ -208,13 +208,17 @@
   #screen-settings .sheet-page { padding-top: var(--s3); padding-bottom: var(--s3); }
 }
 @media (max-height: 480px) {
-  .menu-col, .sheet-page { padding-top: var(--s3); }
-  .wordmark h1 { font-size: 22px; }
+  .menu-col, .sheet-page { padding-top: var(--s2); padding-bottom: var(--s2); }
+  .wordmark { margin-top: 0; }
+  .wordmark h1 { font-size: 20px; }
   .wordmark-sub { display: none; }
-  #play-btn { min-height: 48px; }
+  .play-summary { font-size: 11px; margin-top: 2px; }
+  #play-btn { min-height: 42px; margin-top: var(--s2); }
+  .pickers { margin-top: var(--s1); gap: var(--s1); }
+  .picker { margin-top: var(--s1); }
   .seg { flex-wrap: nowrap; }
-  .seg button { min-height: 34px; padding: 0 var(--s1); font-size: 11px; }
+  .seg button { min-height: 30px; padding: 0 var(--s1); font-size: 11px; }
   .picker-label { font-size: 10px; margin-bottom: 2px; }
-  .menu-links { margin-top: var(--s2); }
+  .menu-links { margin-top: var(--s1); }
 }
 .play-summary { text-shadow: 0 1px 6px rgba(23,16,11,.9), 0 0 2px rgba(23,16,11,.9); }

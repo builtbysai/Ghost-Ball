@@ -77,9 +77,46 @@ export class Render3D {
   _home() {
     const portrait = this.cssH > this.cssW;
     const az = portrait ? Math.PI / 2 : 0;
-    return this._preset === 'overhead'
-      ? { az, el: 1.47, dist: portrait ? 3.6 : 3.05 }
-      : { az, el: 1.08, dist: portrait ? 3.55 : 2.75 };
+    const el = this._preset === 'overhead' ? 1.47 : 1.08;
+    const fallback = this._preset === 'overhead'
+      ? (portrait ? 3.6 : 3.05)
+      : (portrait ? 3.55 : 2.75);
+    return { az, el, dist: this.camera ? this._fitDist(az, el, fallback) : fallback };
+  }
+
+  /**
+   * Smallest camera distance at which the whole table (rails included)
+   * projects inside the frame at the home azimuth/elevation. Fixed
+   * distances cropped the rails and foot pockets on portrait phones:
+   * at 390x844 the old 3.55m left ~20% of the table outside the frustum.
+   * Scans outward in 0.05m steps; cheap and runs on resize only.
+   */
+  _fitDist(az, el, fallback) {
+    const T = THREE;
+    if (!T || !this.camera) return fallback;
+    const cam = this.camera;
+    const hx = HALF_L + 0.17, hz = HALF_W + 0.17;
+    const corners = [];
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      corners.push(new T.Vector3(sx * hx, 0, sz * hz));
+      corners.push(new T.Vector3(sx * hx, 0.09, sz * hz));
+    }
+    const v = new T.Vector3();
+    for (let dist = 1.8; dist <= 7.0; dist += 0.05) {
+      cam.position.set(
+        Math.sin(az) * Math.cos(el) * dist,
+        Math.sin(el) * dist,
+        Math.cos(az) * Math.cos(el) * dist);
+      cam.lookAt(0, 0, 0);
+      cam.updateMatrixWorld();
+      let fits = true;
+      for (const c of corners) {
+        v.copy(c).project(cam);
+        if (Math.abs(v.x) > 0.96 || Math.abs(v.y) > 0.96 || v.z > 1) { fits = false; break; }
+      }
+      if (fits) return dist;
+    }
+    return 7.0;
   }
 
   _init() {
@@ -431,7 +468,10 @@ export class Render3D {
       Math.cos(az) * Math.cos(el) * dist);
     this.camera.lookAt(0, -0.02, 0);
     this.camera.updateMatrixWorld();
-    if (this._lampGroup) this._lampGroup.visible = el < 1.30;
+    // The shade hangs over table center; from the high home angles it lands
+    // mid-frame as a black blob over the head rail, so it only shows when
+    // the player orbits down to a low, dramatic angle.
+    if (this._lampGroup) this._lampGroup.visible = el < 0.95;
     // CSS px per meter at table center, from the camera right vector.
     const e = this.camera.matrixWorld.elements;
     const rx = e[0], rz = e[2];

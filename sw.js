@@ -1,5 +1,5 @@
 // Ghost Ball service worker. Versioned cache; bump VERSION on every ship.
-const VERSION = 'gb-rebuild-v4';
+const VERSION = 'gb-rebuild-v5';
 const CORE = [
   './', './index.html', './manifest.webmanifest', './assets/icon.svg',
   './src/ui/tokens.css', './src/ui/screens.css', './src/ui/hud.css',

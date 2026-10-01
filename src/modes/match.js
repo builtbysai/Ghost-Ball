@@ -295,7 +295,7 @@ export function createMatch(deps) {
     if (cue && cue.pocketed) { cue.pocketed = false; cue.x = kitchen ? HEAD_X : HEAD_X; cue.y = 0; }
     pendingPlace = { x: HEAD_X, y: 0, valid: true };
     hud.showPlacing(true);
-    hud.setTurn(`${playerCards()[turn].name} · Place the cue ball`);
+    hud.setTurn('Place the cue ball');
     hud.banner(kitchen ? 'Ball in hand — behind the head string' : 'Ball in hand', { tone: 'info' });
   }
   function placeValid(x, y) {
