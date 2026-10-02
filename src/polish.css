@@ -79,6 +79,13 @@
  #gameScreen .match-hud{grid-template-columns:30px minmax(0,1fr) minmax(95px,130px) minmax(0,1fr)}
  #gameScreen .table-play-area{max-height:none}
 }
+/* Short landscape lobby cannot intercept room switching on the left. */
+@media (max-height:480px) and (orientation:landscape){
+ .lobby-panel{pointer-events:none}
+ .lobby-inner{pointer-events:auto;margin-left:auto;margin-right:0;width:min(68%,490px)}
+ .room-details{z-index:7}
+ .room-switch{z-index:8}
+}
 @media (max-height:440px) and (orientation:landscape){
  #gameScreen{grid-template-rows:43px minmax(0,1fr)}
  #gameScreen .match-hud{grid-template-columns:29px minmax(0,1fr) 94px minmax(0,1fr)}
