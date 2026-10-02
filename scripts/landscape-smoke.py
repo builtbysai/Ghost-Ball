@@ -17,7 +17,7 @@ def module_data(name, cache=None):
     return url
 def html_source():
     doc=(root/'index.html').read_text()
-    for style in ['style.css','landscape.css']:
+    for style in ['style.css','landscape.css','transition.css','feel.css']:
         doc=doc.replace(f'<link rel="stylesheet" href="src/{style}">',f'<style>{(root/"src"/style).read_text()}</style>')
     doc=doc.replace('<link rel="manifest" href="manifest.webmanifest">','')
     doc=doc.replace('<script type="module" src="src/main.js"></script>',f'<script type="module">import "{module_data("main.js")}";</script>')
@@ -30,7 +30,17 @@ with sync_playwright() as p:
         page.on('pageerror',lambda e:err.append(str(e)))
         page.set_content(html_source(),wait_until='load')
         page.locator('#playBtn').click(force=True)
-        page.wait_for_timeout(1650)
+        page.wait_for_timeout(540)
+        entering=page.evaluate("""() => ({
+         flight:document.querySelectorAll('.table-flight').length,
+         glow:document.querySelectorAll('.flight-stage').length,
+         transform:document.querySelector('.table-flight')?.style.transform||''
+        })""")
+        assert entering['flight']==1 and entering['glow']==1 and 'scale(' in entering['transform'],f'entrance did not render {entering}'
+        if (w,h)==(844,390):
+            screenshot=root/'screenshots'/'flight-mid-844x390.png';screenshot.parent.mkdir(exist_ok=True);page.screenshot(path=str(screenshot))
+        page.wait_for_timeout(1250)
+        assert page.locator('.table-flight').count()==0 and page.locator('.flight-stage').count()==0,'flight did not clean up'
         before=page.evaluate('({canvas:document.querySelector("#gameCanvas").getBoundingClientRect().toJSON(), track:document.querySelector("#powerTrack").getBoundingClientRect().toJSON(), aim:document.querySelector("#aimWheel").getBoundingClientRect().toJSON(), hud:document.querySelector(".match-hud").getBoundingClientRect().toJSON(), over: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight, gate:document.querySelector("#rotateGate")!==null, view:document.querySelector("#gameView")!==null})')
         assert not before['over'],f'overflow {w}x{h}'
         assert not before['gate'] and not before['view']
@@ -52,7 +62,16 @@ with sync_playwright() as p:
             bar=before['track'];x=bar['x']+bar['width']/2;y=bar['y']+20
             page.mouse.move(x,y);page.mouse.down();page.mouse.up();page.wait_for_timeout(100)
             assert page.locator('#gameScreen').get_attribute('data-shots')=='0','short tap fired a shot'
-            page.mouse.move(x,y);page.mouse.down();page.mouse.move(x,y+bar['height']*.62,steps=9);page.mouse.up();page.wait_for_timeout(120)
+            page.mouse.move(x,y);page.mouse.down();page.mouse.move(x,y+bar['height']*.82,steps=9)
+            charged=page.evaluate("""() => ({
+             tension:Number(powerTrack.style.getPropertyValue('--tension')),
+             visible:powerValue.textContent,armed:powerTrack.classList.contains('armed'),
+             shots:gameScreen.dataset.shots
+            })""")
+            assert charged['tension']>=.68 and charged['armed'] and charged['visible'].endswith('%') and charged['shots']=='0',charged
+            if (w,h)==(844,390):
+                page.screenshot(path=str(root/'screenshots'/'loaded-cue-844x390.png'))
+            page.mouse.up();page.wait_for_timeout(120)
             assert page.locator('#gameScreen').get_attribute('data-shots')=='1','pull did not fire shot'
             if (w,h)==(844,390):
                 page.locator('#rerack').click()
