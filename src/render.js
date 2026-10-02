@@ -5,9 +5,9 @@ import {cueGeometry,strokeCharge} from './cue-feel.js';
 const TAU=Math.PI*2;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const halls=[
- {name:'The Parlor',felt:'#315f4e',feltLight:'#467a65',rail:'#633f26',wood:'#ab7544',wall:'#102017',year:'1893',detail:'Walnut rails · sage baize · classic pockets'},
- {name:'The Observatory',felt:'#1e7499',feltLight:'#3daccb',rail:'#60472b',wood:'#ad8554',wall:'#111924',year:'1911',detail:'Oak rails · midnight cloth · tight pockets'},
- {name:'The Foundry',felt:'#38654b',feltLight:'#54816a',rail:'#40302b',wood:'#805a42',wall:'#1d1b17',year:'1927',detail:'Ash rails · tournament green · fast cloth'},
+ {name:'The Parlor',felt:'#315d4a',feltLight:'#56816c',rail:'#54351f',wood:'#a46d3d',wall:'#102017',aura:'#254536',year:'1893',detail:'Walnut rails · sage baize · leather pockets'},
+ {name:'The Observatory',felt:'#176a8e',feltLight:'#3a98b2',rail:'#3c3029',wood:'#725b46',wall:'#111924',aura:'#224565',year:'1911',detail:'Smoked oak · ocean cloth · silver sights'},
+ {name:'The Foundry',felt:'#3e6651',feltLight:'#6e8f70',rail:'#302b29',wood:'#665748',wall:'#1d1b17',aura:'#3b4940',year:'1927',detail:'Dark ash · copper trim · olive baize'},
 ];
 export {halls};
 function polygon(g,vertices){g.beginPath();g.moveTo(...vertices[0]);for(let i=1;i<vertices.length;i++)g.lineTo(...vertices[i]);g.closePath();}
