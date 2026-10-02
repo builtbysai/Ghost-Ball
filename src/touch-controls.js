@@ -8,34 +8,72 @@ export function wheelAngle(startAngle,deltaY,sensitivity=.004){return Math.atan2
  * A pointer gesture is separate from keyboard operation; this eliminates
  * accidental shots caused by changing a native slider.
  */
-export function bindPower({track,handle,canShoot,onPower,onShoot,onCancel=()=>{},minimumTravel=22}){
+export function bindPower({track,handle,canShoot,onPower,onShoot,onCancel=()=>{},onProgress=()=>{},onPullStart=()=>{},onPullEnd=()=>{},minimumTravel=22}){
  let pointer=null,startY=0,current=0,travel=1;
- const draw=p=>{current=p;if(p>0)onPower(Math.max(.08,p));track.style.setProperty('--pull',`${Math.round(p*100)}%`);track.style.setProperty('--pull-y',`${Math.max(0,(track.clientHeight-44)*p)}px`);track.setAttribute('aria-valuenow',String(Math.round(Math.max(.08,p)*100)));};
- draw(0);
- function down(e){if(pointer!==null||!canShoot())return;
-   const rect=track.getBoundingClientRect(),h=handle.getBoundingClientRect();
-   // Start in the thumb's generous touch target, not anywhere on the track.
-   if(e.clientY>h.bottom+16||e.clientY<h.top-16)return;
-   pointer=e.pointerId;startY=e.clientY;travel=Math.max(42,rect.height-h.height-9);draw(0);track.setPointerCapture?.(pointer);e.preventDefault();}
- function move(e){if(e.pointerId!==pointer)return;draw(pullPower(startY,e.clientY,travel));e.preventDefault();}
- function finish(e,cancel=false){if(e.pointerId!==pointer)return;const moved=e.clientY-startY;
-   if(!cancel)move(e);const valid=!cancel&&moved>=minimumTravel&&current>=.08&&canShoot();
-   pointer=null;try{track.releasePointerCapture?.(e.pointerId);}catch{}
-   if(valid)onShoot();else onCancel();draw(0);e.preventDefault();}
+ const draw=(p,notify=true)=>{
+  current=clamp(p,0,1);
+  if(notify&&p>0)onPower(Math.max(.08,current));
+  onProgress(current);
+  track.style.setProperty('--pull',`${Math.round(current*100)}%`);
+  track.style.setProperty('--pull-y',`${Math.max(0,(track.clientHeight-handle.clientHeight-9)*current)}px`);
+  track.style.setProperty('--charge',current.toFixed(3));
+  track.setAttribute('aria-valuenow',String(Math.round(Math.max(.08,current)*100)));
+ };
+ draw(0,false);
+ function down(e){
+  if(pointer!==null||!canShoot())return;
+  const h=handle.getBoundingClientRect();
+  if(e.clientY>h.bottom+16||e.clientY<h.top-16)return;
+  pointer=e.pointerId;startY=e.clientY;
+  travel=Math.max(42,track.clientHeight-handle.clientHeight-9);
+  draw(0,false);onPullStart();track.setPointerCapture?.(pointer);e.preventDefault();
+ }
+ function move(e){
+  if(e.pointerId!==pointer)return;
+  draw(pullPower(startY,e.clientY,travel));e.preventDefault();
+ }
+ function finish(e,cancel=false){
+  if(e.pointerId!==pointer)return;
+  const moved=e.clientY-startY;
+  if(!cancel)move(e);
+  const valid=!cancel&&moved>=minimumTravel&&current>=.08&&canShoot();
+  pointer=null;
+  try{track.releasePointerCapture?.(e.pointerId);}catch{}
+  // Returning false from onShoot intentionally holds the selected strength
+  // and the visibly retracted cue until the separate Shoot button is pressed.
+  if(valid){
+   const retained=onShoot()===false;
+   onPullEnd({retained,committed:true});
+   if(!retained)draw(0,false);
+  }else{
+   onCancel();onPullEnd({retained:false,committed:false});draw(0,false);
+  }
+  e.preventDefault();
+ }
  track.addEventListener('pointerdown',down);
  track.addEventListener('pointermove',move);
  track.addEventListener('pointerup',e=>finish(e));
  track.addEventListener('pointercancel',e=>finish(e,true));
- track.addEventListener('lostpointercapture',()=>{if(pointer!==null){pointer=null;draw(0);onCancel();}});
- track.addEventListener('keydown',e=>{if(!canShoot())return;
-   const old=current;
-   if(['ArrowDown','ArrowRight'].includes(e.key))draw(clamp(old+.05,.08,1));
-   else if(['ArrowUp','ArrowLeft'].includes(e.key))draw(clamp(old-.05,.08,1));
-   else if(e.key==='Home')draw(.08);
-   else if(e.key==='End')draw(1);
-   else if(e.key==='Enter'||e.key===' '){onPower(Math.max(.08,current));onShoot();draw(0);}
-   else return;e.preventDefault();});
- return {reset:()=>draw(0),isDragging:()=>pointer!==null};
+ track.addEventListener('lostpointercapture',()=>{
+  if(pointer!==null){pointer=null;onCancel();onPullEnd({retained:false,committed:false});draw(0,false);}
+ });
+ track.addEventListener('keydown',e=>{
+  if(!canShoot())return;
+  const old=current;
+  if(['ArrowDown','ArrowRight'].includes(e.key))draw(clamp(old+.05,.08,1));
+  else if(['ArrowUp','ArrowLeft'].includes(e.key))draw(clamp(old-.05,.08,1));
+  else if(e.key==='Home')draw(.08);
+  else if(e.key==='End')draw(1);
+  else if(e.key==='Enter'||e.key===' '){
+   onPower(Math.max(.08,current));
+   const retained=onShoot()===false;
+   onPullEnd({retained,committed:true});
+   if(!retained)draw(0,false);
+  }
+  else return;
+  e.preventDefault();
+ });
+ return {reset:()=>draw(0,false),isDragging:()=>pointer!==null,getProgress:()=>current};
 }
 export function bindAimWheel({element,canAim,getAngle,setAngle}){
  let pointer=null,lastY=0;
