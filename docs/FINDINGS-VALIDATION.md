@@ -57,12 +57,13 @@ _Initial control-feel pass shipped to `main` in [PR #13](https://github.com/buil
 **Exit:** A player can aim and power shots consistently without accidental firing and can understand why a shot travelled as it did.
 
 ### P1.1: Off-screen full pull and ball-in-hand refinement (October 2)
+_Shipped on `main` in [PR #14](https://github.com/builtbysai/Ghost-Ball/pull/14). Physical Android gesture testing remains open._
 
 - [x] Fix the user-reproduced 100%-power issue: deliberately pulling to the rail's far end commits before a finger can leave the physical screen. Also accept aligned maximum-power releases past the track, without opening the sideways firing lane. Generic OS `pointercancel` does not fire.
 - [x] Convert foul placement into a contextual, table-first workflow: visible valid-area outline and ghost cue ball, nearby legal snap, tap to preview plus explicit PLACE/RESET tools, or drag to release directly.
 - [x] Offset the ghost gently during touch drags, suppress duplicate cue balls, hide irrelevant spin/aim tools, and expose keyboard arrow nudging plus Enter confirmation.
 - [x] Add isolated input/placement unit tests and extend landscape and foul-placement browser tests across normal and rotated phones.
-- [ ] Complete PR acceptance checks and visually review the smallest generated screenshots before merging.
+- [x] PR #14 merged: JavaScript syntax, unit, responsive pointer/placement tests, real HTTP smoke, and screenshot visual review completed.
 - [ ] Test actual Android gesture cancellation at the physical edge, under display cutouts and app navigation; browser automation cannot conclusively establish touch-controller behavior.
 
 **Exit:** A maximum charged shot cannot be stranded by leaving the rail; interrupted lateral drags remain safe. On fouls, both a deliberate tap-and-confirm and touch drag finish only at a visibly legal spot, without obstructing the table.
