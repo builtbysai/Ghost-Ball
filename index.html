@@ -2,7 +2,7 @@
 <html lang="en"><head>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
  <meta name="theme-color" content="#0b1510"><meta name="description" content="Ghost Ball. A beautifully tactile billiards clubhouse.">
- <title>Ghost Ball | The Clubhouse</title> <script type="importmap">{"imports":{"./src/audio.js":"./src/audio.js?v=ghostball-20261002-hotfix","./src/cue-feel.js":"./src/cue-feel.js?v=ghostball-20261002-hotfix","./src/game.js":"./src/game.js?v=ghostball-20261002-hotfix","./src/physics.js":"./src/physics.js?v=ghostball-20261002-hotfix","./src/random.js":"./src/random.js?v=ghostball-20261002-hotfix","./src/render.js":"./src/render.js?v=ghostball-20261002-hotfix","./src/table-finishes.js":"./src/table-finishes.js?v=ghostball-20261002-hotfix","./src/table-transition.js":"./src/table-transition.js?v=ghostball-20261002-hotfix","./src/touch-controls.js":"./src/touch-controls.js?v=ghostball-20261002-hotfix"}}</script><link rel="stylesheet" href="src/style.css?v=ghostball-20261002-hotfix"><link rel="stylesheet" href="src/landscape.css?v=ghostball-20261002-hotfix"><link rel="stylesheet" href="src/transition.css?v=ghostball-20261002-hotfix"><link rel="stylesheet" href="src/feel.css?v=ghostball-20261002-hotfix"><link rel="stylesheet" href="src/polish.css?v=ghostball-20261002-hotfix"><link rel="manifest" href="manifest.webmanifest">
+ <title>Ghost Ball | The Clubhouse</title> <script type="importmap">{"imports":{"./src/audio.js":"./src/audio.js?v=ghostball-20261002-ui-7","./src/cue-feel.js":"./src/cue-feel.js?v=ghostball-20261002-ui-7","./src/game.js":"./src/game.js?v=ghostball-20261002-ui-7","./src/physics.js":"./src/physics.js?v=ghostball-20261002-ui-7","./src/random.js":"./src/random.js?v=ghostball-20261002-ui-7","./src/render.js":"./src/render.js?v=ghostball-20261002-ui-7","./src/table-finishes.js":"./src/table-finishes.js?v=ghostball-20261002-ui-7","./src/table-transition.js":"./src/table-transition.js?v=ghostball-20261002-ui-7","./src/touch-controls.js":"./src/touch-controls.js?v=ghostball-20261002-ui-7"}}</script><link rel="stylesheet" href="src/style.css?v=ghostball-20261002-ui-7"><link rel="stylesheet" href="src/landscape.css?v=ghostball-20261002-ui-7"><link rel="stylesheet" href="src/transition.css?v=ghostball-20261002-ui-7"><link rel="stylesheet" href="src/feel.css?v=ghostball-20261002-ui-7"><link rel="stylesheet" href="src/polish.css?v=ghostball-20261002-ui-7"><link rel="stylesheet" href="src/responsive-ui.css?v=ghostball-20261002-ui-7"><link rel="manifest" href="manifest.webmanifest">
 </head><body>
 <main id="app">
  <div class="room" aria-hidden="true"><div class="room-wall"></div><div class="frames"><div class="art" id="roomArt">THE PARLOR</div><div class="art badge-art" id="roomPlaque">1893</div></div><div class="wainscot"></div><div class="room-floor"></div><div class="room-lamp"><span></span></div><div class="light-beam"></div></div>
@@ -22,16 +22,28 @@
   <p class="footnote">Casual 8-ball is the first playable ruleset. Tournament called-shot rules and more formats are on the roadmap.</p>
  </section>
  <section class="club-menu" id="clubMenu" aria-label="Club menu" hidden><header><div><small>GHOST BALL</small><h2>The Clubhouse</h2></div><button id="closeMenu" aria-label="Close menu" class="round">×</button></header><div class="menu-items"><button id="menuPractice"><span>◌</span> Practice <small>WORKSHOP</small></button><button disabled><span>✧</span> Challenges <small>COMING LATER</small></button><button disabled><span>◎</span> Locker <small>COMING LATER</small></button><button id="menuSettings"><span>⚙</span> Settings <small>CONTROLS & AUDIO</small></button></div></section>
- <section class="settings-sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="Settings" hidden>
-  <header><div><small class="prefs-eyebrow">ROOM PREFERENCES</small><h2>Preferences</h2></div><button id="closeSettings" class="close-sheet">DONE</button></header>
-  <div class="prefs-current">CURRENT CAMERA <strong>TOP-DOWN · 2D</strong></div>
-  <div class="prefs-grid">
-    <div class="prefs-section"><h3>Controls</h3><p class="prefs-hint">Drag the cue stick to aim. Pull down and release the power track to shoot.</p></div>
-    <div class="prefs-section"><h3>Audio & feel</h3><label class="setting-line">Sound effects <input id="soundToggle" type="checkbox" checked></label><label class="setting-line">Impact effects <input id="motionToggle" type="checkbox" checked></label></div>
+ <section class="settings-sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="Game preferences" hidden>
+  <div class="prefs-panel">
+   <header class="prefs-heading"><div><small>GHOST BALL / GAME OPTIONS</small><h2>Preferences</h2></div><button id="closeSettings" class="close-sheet">DONE <span aria-hidden="true">✓</span></button></header>
+   <div class="prefs-body">
+    <div class="prefs-column">
+     <fieldset class="prefs-block"><legend>Controls</legend>
+       <span class="prefs-label">Power rail</span>
+       <div class="prefs-segment" role="group" aria-label="Power bar position"><button type="button" data-power-side="left" aria-pressed="true">Left</button><button type="button" data-power-side="right" aria-pressed="false">Right</button></div>
+       <p class="prefs-description">Grab the cue to aim. Pull the power bar and release to shoot.</p>
+     </fieldset>
+     <div class="prefs-block prefs-readonly"><h3>Table view</h3><div class="prefs-readonly-line"><span>Top-down 2D</span><strong>ACTIVE</strong></div></div>
+    </div>
+    <div class="prefs-column">
+      <div class="prefs-block"><h3>Audio & feel</h3>
+       <label class="prefs-switch"><span>Sound effects</span><input id="soundToggle" type="checkbox" checked><i aria-hidden="true"></i></label>
+       <label class="prefs-switch"><span>Impact feedback</span><input id="motionToggle" type="checkbox" checked><i aria-hidden="true"></i></label>
+      </div>
+      <div class="prefs-block prefs-readonly"><h3>Orientation</h3><div class="prefs-readonly-line"><span>Landscape layout</span><strong>ACTIVE</strong></div></div>
+    </div>
+   </div>
+   <p class="prefs-footer">Changes apply immediately.</p>
   </div>
-  <div class="prefs-section"><h3>View <small>CAMERA OPTIONS COMING SOON</small></h3><div class="prefs-options"><span class="current-option">Top-down <small>ACTIVE</small></span><button disabled title="Coming soon">Elevated <small>SOON</small></button><button disabled title="Coming soon">Surface <small>SOON</small></button></div></div>
-  <div class="prefs-section"><h3>Device orientation <small>MORE OPTIONS COMING SOON</small></h3><div class="prefs-options"><button disabled title="Coming soon">Auto <small>SOON</small></button><span class="current-option">Landscape <small>PREFERRED</small></span><button disabled title="Coming soon">Portrait <small>SOON</small></button></div></div>
-  <p class="prefs-hint">Only the top-down table is available in this release. The layout adapts to your screen without an orientation prompt.</p>
  </section>
  <section class="game-screen" id="gameScreen" aria-label="Landscape pool game" hidden>
    <header class="match-hud">
@@ -61,4 +73,4 @@
    <section class="spin-sheet" id="spinSheet" role="dialog" aria-modal="true" aria-label="Cue ball spin" hidden><div class="spin-head"><h2>Cue-ball spin</h2><button id="spinDone" aria-label="Done adjusting spin">DONE</button></div><p>Drag the red contact point to adjust spin.</p><div class="spin-ball" id="spinBall" role="img" aria-label="Drag to choose side spin, follow or draw"><i id="spinDot"></i></div><div id="spinLabel" class="spin-description">CENTER</div><button id="spinReset">RESET TO CENTER</button></section>
  </section>
  <div id="updateNotice" class="update-notice" role="status" aria-live="polite" hidden><span>New version ready</span><button id="applyUpdate">RELOAD</button></div>
-</main><script type="module" src="src/main.js?v=ghostball-20261002-hotfix"></script></body></html>
+</main><script type="module" src="src/main.js?v=ghostball-20261002-ui-7"></script></body></html>
