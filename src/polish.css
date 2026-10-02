@@ -1,4 +1,16 @@
 /* Cohesive landscape match, reliable desktop lobby and reduced clubhouse chrome. */
+/* A shot should visibly load like a compressed spring, not just move a label. */
+.shot-rail .power-track::before{content:'';position:absolute;z-index:2;inset:3px;border-radius:9px;
+ pointer-events:none;transform-origin:top center;transform:scaleY(var(--tension,0));
+ opacity:var(--tension,0);background:linear-gradient(#fff4c047,#ffba5760 66%,#ff934633);
+ box-shadow:inset 0 0 15px #ffe3a66b;will-change:transform,opacity}
+.shot-rail .power-track.charging .pull-handle{
+ box-shadow:inset 0 1px 4px #fff9,0 0 var(--glow,4px) #f5c979ad,0 4px 10px #000b}
+.shot-rail .power-track.armed .pull-handle{border-color:#fff6d7;
+ box-shadow:inset 0 1px 5px #fff,0 0 var(--glow,17px) #ffd983ba,0 4px 10px #000b}
+.shot-rail .power-track.charging + .power-readout{color:#fff5d7;
+ text-shadow:0 0 12px #ffc274b8}
+
 .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .game-screen{grid-template-rows:clamp(48px,10dvh,76px) minmax(0,1fr);min-width:0;min-height:0}
 .match-hud{grid-template-columns:clamp(30px,4vw,42px) minmax(0,1fr) minmax(100px,154px) minmax(0,1fr);max-width:1560px;gap:clamp(4px,.8vw,12px)}
