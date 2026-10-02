@@ -1,4 +1,5 @@
 import {Simulation,rack,POCKETS,TABLE} from './physics.js';
+import {createRandom} from './random.js';
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 const allowed=(id,group)=>id!==0&&(id===8?group==='eight':group==='open'||(group==='solids'?id<=7:id>=9));
 function segmentClear(x1,y1,x2,y2,balls,exclude){
@@ -10,7 +11,7 @@ function segmentClear(x1,y1,x2,y2,balls,exclude){
  });
 }
 /** A transparent geometry-based CPU: evaluate ghost-ball cut angles and obstructed paths. */
-export function chooseShot(sim,group='open',difficulty='rookie'){
+export function chooseShot(sim,group='open',difficulty='rookie',random=createRandom(1)){
  const cue=sim.cue();if(!cue||cue.pocketed)return {angle:0,power:.58};
  let choices=[];
  for(const ball of sim.balls){if(ball.pocketed||!allowed(ball.id,group))continue;
@@ -26,27 +27,43 @@ export function chooseShot(sim,group='open',difficulty='rookie'){
    }
  }
  choices.sort((a,b)=>a.cost-b.cost);
- const best=choices[0];if(best)return {angle:best.angle+(difficulty==='rookie'?(Math.random()-.5)*.055:(Math.random()-.5)*.017),power:best.power};
+ const best=choices[0];if(best)return {angle:best.angle+(difficulty==='rookie'?(random()-.5)*.055:(random()-.5)*.017),power:best.power};
  const nearest=sim.balls.filter(b=>!b.pocketed&&allowed(b.id,group)).sort((a,b)=>dist(a.x,a.y,cue.x,cue.y)-dist(b.x,b.y,cue.x,cue.y))[0];
- return nearest?{angle:Math.atan2(nearest.y-cue.y,nearest.x-cue.x)+(Math.random()-.5)*.045,power:.52}:{angle:0,power:.5};
+ return nearest?{angle:Math.atan2(nearest.y-cue.y,nearest.x-cue.x)+(random()-.5)*.045,power:.52}:{angle:0,power:.5};
 }
 export class Game {
- constructor({kind='attract',players='cpu',difficulty='rookie',notify=()=>{}}={}){
-  this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;this.reset();}
- reset(){this.sim=new Simulation(rack(Math.random()*100|0));this.turn=0;this.groups=[null,null];this.break=true;this.foul=false;this.ballInHand=false;this.over=false;this.winner=null;this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;
+ constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),notify=()=>{}}={}){
+  this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;
+  this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
+ reset(){this.rackSeed=this.random()*100000|0;this.sim=new Simulation(rack(this.rackSeed));this.turn=0;this.groups=[null,null];this.break=true;this.foul=false;this.ballInHand=false;this.over=false;this.winner=null;this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;
+  this.history=[];
   this.notify('A fresh rack. Take your time.');}
  get group(){const group=this.groups[this.turn];if(!group)return 'open';return this.sim.balls.some(b=>!b.pocketed&&(group==='solids'?b.id<8&&b.id>0:b.id>8))?group:'eight';}
  isAI(){return this.kind==='attract'||(this.players==='cpu'&&this.turn===1);}
- beginShot(angle,power,english=0){if(this.over||this.ballInHand||!this.sim.strike(angle,power,english))return false;
+  beginShot(angle,power,english=0){if(this.over||this.ballInHand||!this.sim.strike(angle,power,english))return false;
+  // Pre-strike state is obtained from the new sim snapshot; the velocities are
+  // replaced by zeros for deterministic playback/bug reports without a giant log.
+  this.history.push({angle,power,english,turn:this.turn,shot:this.shots+1});
   this.turnShot={first:null,pots:[],rail:false};this.shots++;this.notify('');return true;}
- placeCue(x,y){if(!this.ballInHand)return false;const placed=this.sim.placeCue(x,y);if(placed){this.ballInHand=false;this.notify('Cue ball placed. Line up your shot.');}return placed;}
+ placeCue(x,y){if(!this.ballInHand)return false;const placed=this.sim.placeCue(x,y);if(placed){this.history.push({kind:'placement',x,y});this.ballInHand=false;this.notify('Cue ball placed. Line up your shot.');}return placed;}
+ spotEight(){
+   const eight=this.sim.balls.find(b=>b.id===8);if(!eight)return false;
+   // Standard spot, then search nearby along the lengthwise centerline to
+   // avoid placing a spotted eight inside another stationary ball.
+   const xs=[790];for(let offset=28;offset<=196;offset+=28)xs.push(790-offset,790+offset);
+   for(const y of [250,222,278,194,306])for(const x of xs){
+     if(x<30||x>970||this.sim.balls.some(b=>b!==eight&&!b.pocketed&&dist(b.x,b.y,x,y)<TABLE.radius*2+2))continue;
+     Object.assign(eight,{pocketed:false,x,y,vx:0,vy:0,spin:0,slipX:0,slipY:0});return true;
+   }
+   return false;
+ }
  update(dt,{audio=null,haptics=false}={}){
    if(!this.sim.moving){this.timer+=dt;
      if(this.kind==='attract'&&this.timer>1.8){this.timer=0;if(this.sim.cue()?.pocketed||this.sim.balls.filter(b=>b.id!==0&&!b.pocketed).length<4||this.sim.balls.find(b=>b.id===8)?.pocketed){this.sim=new Simulation(rack());this.break=true;}
-       const shot=this.break?{angle:0,power:.83}:chooseShot(this.sim,'open',this.turn===0?'club':'rookie');this.beginShot(shot.angle,shot.power);}
+       const shot=this.break?{angle:0,power:.83}:chooseShot(this.sim,'open',this.turn===0?'club':'rookie',this.random);this.beginShot(shot.angle,shot.power);}
      else if(this.isAI()&&!this.over&&this.kind==='match'&&this.timer>1.05){this.timer=0;
        if(this.ballInHand){const cue=this.sim.cue();for(const [x,y] of [[240,250],[320,220],[360,300],[210,150]])if(this.sim.placeCue(x,y)){this.ballInHand=false;break;}if(cue?.pocketed)this.sim.placeCue(230,240);}
-       const shot=this.break?{angle:0,power:.82}:chooseShot(this.sim,this.group,this.difficulty);this.beginShot(shot.angle,shot.power);}
+       const shot=this.break?{angle:0,power:.82}:chooseShot(this.sim,this.group,this.difficulty,this.random);this.beginShot(shot.angle,shot.power);}
    }
    this.fx=this.fx.filter(effect=>(effect.life-=dt*1.8)>0);
  }
@@ -77,7 +94,7 @@ export class Game {
    // v0: Casual 8-ball (no manual called pockets); authoritative official rules are a later milestone.
    let foul=scratch||(!this.break&&(shot.first===null||(this.group==='eight'?shot.first!==8:this.groups[this.turn]?!allowed(shot.first,this.group):shot.first===8)));
    if(!this.break&&!foul&&shot.first!==null&&!shot.rail&&!shot.pots.length)foul=true;
-   if(eight&&this.break){const b=this.sim.balls.find(b=>b.id===8);Object.assign(b,{pocketed:false,x:790,y:250,vx:0,vy:0});}
+   if(eight&&this.break)this.spotEight();
    if(!this.break&&!foul&&!this.groups[this.turn]&&pocket.length){const pick=pocket[0];this.groups[this.turn]=pick<=7?'solids':'stripes';this.groups[1-this.turn]=pick<=7?'stripes':'solids';}
    const mine=!this.groups[this.turn]?pocket.length>0:pocket.some(id=>allowed(id,this.group));
    const wasBreak=this.break;this.break=false;

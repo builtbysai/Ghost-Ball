@@ -1,4 +1,4 @@
-// v0.1 transitional service worker: retire all caches from the previous Ghost Ball.
+// v0.2 transitional service worker: retire all caches from the previous Ghost Ball.
 // Intentionally no fetch handler. New code uses network until offline/update UX ships.
 self.addEventListener('install',event=>{event.waitUntil(self.skipWaiting());});
 self.addEventListener('activate',event=>{

@@ -35,3 +35,13 @@ Pool offers fast-to-understand goals and long-term competence through positionin
 ## Differentiation
 
 Ghost Ball isn't another coin economy. The room is a place, practice is immediately available, and the dynamic lobby is a playable exhibition. Earnable, non-pay-to-win cosmetics and a compact skill circuit are later work, following game-feel and rule fidelity.
+
+## v0.2 shot feel and mobile input decision (2026-10-01)
+
+The 2010 Mathavan et al. cushion-impact paper reports restitution around 0.98 and sliding friction around 0.14 under its experimental assumptions, and emphasizes the influence of spin on the rebound. These values do not directly translate to pixel-unit browser physics, so Ghost Ball uses **documented tunable, approximate coefficients** until video or instrumented fixtures exist. Collision impulses are symmetric; cue slip transitions into rolling; side spin has bounded cushion influence. The pocket representation has open rail mouths and small jaw guards, but still needs genuine pocket-shelf geometry and measurement.
+
+- https://journals.sagepub.com/doi/10.1243/09544062JMES1964
+- https://support.miniclip.com/hc/en-us/articles/35451942766865-Basic-Controls-Improving-your-skills-8-Ball-Pool
+- https://support.miniclip.com/hc/en-us/articles/6630561650833--Settings-Guideline
+
+Miniclip documents separate aim, fine-aim controls, power bar, spin and configurable settings, including orientation on supported screens. We keep these jobs independent. On a tall phone, rotating the *table* upright uses the available vertical space instead of shrinking the balls to fit the viewport width. Power-release shooting requires explicit opt-in to protect users who explore the power range before shooting. The game shows a placement preview and rejects illegal ball-in-hand locations.
