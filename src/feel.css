@@ -30,18 +30,18 @@
 .shot-rail .power-fill{
  background:linear-gradient(to bottom,rgba(248,224,173,.68),rgba(228,164,83,.66) 66%,rgba(255,234,172,.9));
  border-bottom:2px solid #fff3c8;
- box-shadow:0 0 calc(3px + 12px * var(--tension)) rgba(255,209,124,.63);
+ box-shadow:0 0 var(--glow,3px) rgba(255,209,124,.63);
 }
 .shot-rail .pull-handle{
  z-index:2;border:2px solid #efd8b2;border-radius:10px;
  background:linear-gradient(#ffebc4,#d8a467 34%,#8a5731 57%,#e0ac70 87%,#67482e);
  box-shadow:inset 0 1px 3px #fff9,0 4px 9px #000c;
- transform:scaleY(calc(1 - .08 * var(--tension)));
+ transform:scaleY(var(--handle-scale,1));
  transform-origin:50% 40%;
 }
 .shot-rail .power-track.charging{
  border-color:#f3ce8d;
- box-shadow:inset 0 0 0 3px #121c29,0 0 calc(3px + 16px * var(--tension)) rgba(246,193,105,.36),0 7px 19px #000a;
+ box-shadow:inset 0 0 0 3px #121c29,0 0 var(--glow,3px) rgba(246,193,105,.36),0 7px 19px #000a;
 }
 .shot-rail .power-track.armed{border-color:#ffe5ac}
 .shot-rail .power-track.releasing .pull-handle{
