@@ -37,7 +37,8 @@ function matchTurn(event){
  const local=current.players==='local',human=event.turn===0;
  const who=local?`PLAYER ${event.turn+1}`:human?'YOU':'RIVAL';
  if(event.type==='foul'){
-  tableToast(`FOUL · ${who} HAS BALL IN HAND`,'foul');
+  const label=local?`${who} HAS BALL IN HAND`:human?'BALL IN HAND':'RIVAL HAS BALL IN HAND';
+  tableToast(`FOUL · ${label}`,'foul');
   audio.play({type:'foul'});
  }else if(event.type==='turn'){
   tableToast(local?`${who} TO SHOOT`:human?'YOUR TURN':'RIVAL TURN');
@@ -107,7 +108,7 @@ function turnUI(){if(!current)return;
  for(const id of ['spinButton','aimLeft','aimRight'])$(id).disabled=toolsDisabled;
  $('powerTrack').classList.toggle('is-disabled',toolsDisabled);
  $('powerTrack').setAttribute('aria-disabled',String(!canAct()));$('aimWheel').setAttribute('aria-disabled',String(!canAct()));
- const help=current.ballInHand&&!current.over&&!current.isAI()?'DRAG TO PLACE · GREEN SHOWS A CLEAR SPOT':'';
+ const help=current.ballInHand&&!current.over&&!current.isAI()?'PLACE CUE BALL':'';
  setText('guideBadge',help);
  $('guideBadge').classList.toggle('is-visible',Boolean(help));
  $('guideBadge').style.opacity=busy?'0':'.95';
