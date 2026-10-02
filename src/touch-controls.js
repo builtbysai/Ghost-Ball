@@ -17,8 +17,8 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
    if(current>0)onPower(Math.max(.08,current));
    track.style.setProperty('--pull',Math.round(current*100)+'%');
    track.style.setProperty('--tension',current.toFixed(3));
-   track.style.setProperty('--glow',(3+14*current).toFixed(1)+'px');
-   track.style.setProperty('--handle-scale',(1-.08*current).toFixed(3));
+   track.style.setProperty('--glow',(4+27*current).toFixed(1)+'px');
+   track.style.setProperty('--handle-scale',(1-.16*current).toFixed(3));
    track.style.setProperty('--pull-y',Math.max(0,(track.clientHeight-44)*current)+'px');
    track.classList.toggle('charging',current>.025);
    track.setAttribute('aria-valuenow',String(Math.round(Math.max(.08,current)*100)));
