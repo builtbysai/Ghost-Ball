@@ -104,6 +104,25 @@ with sync_playwright() as p:
                 touch('touchEnd',y+bar['height']*.62)
                 page.wait_for_timeout(100)
                 assert page.locator('#gameScreen').get_attribute('data-shots')=='1','touch pull did not fire'
+                # In manual mode, releasing the pull must hold the strength and
+                # visible cue position until Shoot is deliberately pressed.
+                page.locator('#rerack').click()
+                page.locator('#inGameSettings').click()
+                page.locator('#releaseToggle').uncheck()
+                page.locator('#closeSettings').click()
+                page.mouse.move(x,y);page.mouse.down()
+                page.mouse.move(x,y+bar['height']*.71,steps=8);page.mouse.up()
+                held=page.evaluate("""() => ({
+                    shots:gameScreen.dataset.shots,
+                    tension:Number(powerTrack.style.getPropertyValue('--tension')),
+                    held:powerTrack.classList.contains('held'),
+                    label:powerValue.textContent
+                })""")
+                assert held['shots']=='0' and held['held'] and held['tension']>.55 and 'READY' in held['label'], held
+                page.screenshot(path=str(root/'screenshots'/'manual-armed-844x390.png'))
+                page.locator('#shootBtn').click()
+                assert page.locator('#gameScreen').get_attribute('data-shots')=='1','manual shoot did not fire'
+                assert not page.locator('#powerTrack').evaluate("(e)=>e.classList.contains('held')"),'manual cue remained stuck
         else:
             assert not before['gate'] and not before['view'],'obsolete view/orientation controls remain'
         screenshot=root/'screenshots'/f'landscape-{w}x{h}.png';screenshot.parent.mkdir(exist_ok=True);page.screenshot(path=str(screenshot))
