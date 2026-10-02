@@ -138,3 +138,22 @@
 #app .room-switch{pointer-events:auto}
 #app .lobby-inner button:not(:disabled),#app .hud-menu{touch-action:manipulation}
 #app .power-track{min-width:40px}
+
+/* Larger usable mobile hit targets without creating a scrolling HUD. */
+@media(max-height:480px) and (orientation:landscape){
+ #app .modes{padding:3px 0}
+ #app .modes button{min-height:34px;display:flex;align-items:center;padding:2px 0 7px}
+ #app .actions button{height:44px}
+}
+@media(max-width:820px) and (orientation:portrait){
+ #app:not(.entering-match):not(.leaving-match) .room-details{right:22px}
+ #app .room-switch{left:auto;right:6px;top:-16px;gap:7px}
+ #app .room-switch button{width:44px;height:44px}
+ #app .header-right .round{width:44px;height:44px}
+}
+/* Release notices appear only if an updated worker becomes available midmatch. */
+.update-notice[hidden]{display:none!important}
+.update-notice{position:absolute;top:max(8px,env(safe-area-inset-top));left:50%;z-index:60;transform:translateX(-50%);
+ display:flex;align-items:center;gap:12px;padding:9px 12px;background:#111e2fe8;border:1px solid #d7c09075;
+ border-radius:10px;box-shadow:0 6px 20px #0008;color:#f2e7d5;font-size:11px}
+.update-notice button{border:1px solid #d6bd88;background:#ddc18d;color:#13283b;border-radius:5px;padding:6px 9px;font-size:10px;font-weight:800}
