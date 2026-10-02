@@ -76,6 +76,7 @@ function turnUI(){if(!current)return;
  for(const [i,id,clock] of [[0,'oneCard','clockOne'],[1,'twoCard','clockTwo']]){
   $(id).style.setProperty('--turn-progress',current.turn===i?pct:'100%');
   $(clock).textContent=String(seconds);$(clock).hidden=current.kind!=='match'||current.turn!==i||current.ballInHand||current.over;
+  $(clock).classList.toggle('clock-warning',current.kind==='match'&&current.turn===i&&seconds<=10&&!current.ballInHand&&!current.over);
  }
  $('oneCard').classList.toggle('playing',current.turn===0);$('twoCard').classList.toggle('playing',current.turn===1);
  const toolsDisabled=!canAct();
@@ -93,6 +94,8 @@ function begin(kind){
  angle=0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  current=new Game({kind,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',notify,onPocket:animatePocket});
  if(kind==='attract'){current.turn=0;notify('An exhibition between our house rivals.');}
+ let needsHint=false;try{needsHint=localStorage.getItem('ghostball-controls-taught')!=='yes';}catch{}
+ if(kind==='match'&&needsHint)show('controlsHint');else hide('controlsHint');
  active='transition';show('gameScreen');$('lobby').setAttribute('aria-hidden','true');
  $('gameScreen').classList.add('entering');$('app').classList.add('entering-match');
  applyRoom();turnUI();resize();
@@ -111,7 +114,7 @@ function begin(kind){
 }
 function finishLobby(){
  active='lobby';current=null;placement=null;pointerMode=null;shotMotion=null;pullProgress=0;tensionLevel=0;
- hide('spinShade');hide('spinSheet');hide('pauseMenu');hide('gameScreen');
+ hide('spinShade');hide('spinSheet');hide('pauseMenu');hide('gameScreen');hide('controlsHint');
  $('gameScreen').classList.remove('entering','leaving');$('app').classList.remove('entering-match','leaving-match');
  $('ambient').style.visibility='';$('lobby').removeAttribute('aria-hidden');resize();$('menuBtn').focus();
  if(updateWaiting)window.location.reload();
@@ -200,6 +203,7 @@ function fire(){
  audio.unlock();
  if(current.beginShot(shotAngle,strength,spin)){
   powerControl.reset();$('powerTrack').classList.remove('held');
+  if(!$('controlsHint').hidden){hide('controlsHint');savePreference('ghostball-controls-taught','yes');}
   shotMotion=motion&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches
    ?{cue:{x:strikingCue.x,y:strikingCue.y},angle:shotAngle,power:strength,start:performance.now()}:null;
   placement=null;
@@ -230,7 +234,7 @@ $('playAgain').onclick=()=>{if(active==='game'&&current?.over)resetMatch();};
 $('resultMenu').onclick=quitToLobby;
 $('closeSettings').onclick=closeSettings;
  all('[data-power-side]').forEach(b=>b.onclick=()=>{powerSide=b.dataset.powerSide;savePreference('ghostball-power-side',powerSide);syncPowerSide();});
-$('soundToggle').onchange=event=>{audio.enabled=event.target.checked;savePreference('ghostball-sound',audio.enabled?'on':'off');};
+$('soundToggle').onchange=event=>{audio.enabled=event.target.checked;if(audio.enabled)audio.unlock();else audio.suspend();savePreference('ghostball-sound',audio.enabled?'on':'off');};
 $('motionToggle').onchange=event=>{motion=event.target.checked;savePreference('ghostball-motion',motion?'on':'off');};
 $('openSetup').onclick=openSetup;$('closeSetup').onclick=closeSetup;$('backdrop').onclick=()=>{closeSetup();closeSettings();};
 $('prevRoom').onclick=()=>{room=(room-1+halls.length)%halls.length;applyRoom();};
@@ -309,7 +313,9 @@ window.addEventListener('keydown',e=>{
   if(e.code==='Space'){e.preventDefault();fire();}
   if(e.key.toLowerCase()==='r'){pauseMatch();}
 });
-try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';}catch{}
+window.addEventListener('pagehide',()=>audio.suspend());
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)audio.suspend();else audio.resume();});
+ try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';}catch{}
  syncPowerSide();
 syncSpin();
 applyRoom();refreshMenu();hide('gameScreen');
