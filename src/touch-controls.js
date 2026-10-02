@@ -51,3 +51,20 @@ export function bindAimWheel({element,canAim,getAngle,setAngle}){
    else return;e.preventDefault();});
 }
 export function spinFromPoint(x,y,rect){const rx=(x-(rect.left+rect.width/2))/(rect.width*.42),ry=(y-(rect.top+rect.height/2))/(rect.height*.42),d=Math.hypot(rx,ry)||1,s=Math.min(1,1/d);return {x:Math.round(rx*s*100)/100 || 0,y:Math.round(-ry*s*100)/100 || 0};}
+
+// Aiming is only acquired on the visible shaft, never on the guide line ahead
+// of the cue ball. Pixel-space hit testing keeps the touch target consistent
+// regardless of perspective or viewport size.
+export const wrapAngle = radians => Math.atan2(Math.sin(radians),Math.cos(radians));
+export function cueShaftHit(point,ball,tip,butt,tolerance=26){
+ const dx=butt.x-tip.x,dy=butt.y-tip.y,den=dx*dx+dy*dy;
+ if(den<1)return false;
+ const t=((point.x-tip.x)*dx+(point.y-tip.y)*dy)/den;
+ const cx=tip.x+Math.max(0,Math.min(1,t))*dx,cy=tip.y+Math.max(0,Math.min(1,t))*dy;
+ const behind=(point.x-ball.x)*(butt.x-ball.x)+(point.y-ball.y)*(butt.y-ball.y);
+ return t>=-.03&&t<=1.08&&behind>0&&Math.hypot(point.x-cx,point.y-cy)<=tolerance;
+}
+export function rearAimAngle(cue,point){
+ const dx=cue.x-point.x,dy=cue.y-point.y;
+ return Math.hypot(dx,dy)<2?null:Math.atan2(dy,dx);
+}
