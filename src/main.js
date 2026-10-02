@@ -230,7 +230,10 @@ function updatePlacementTools(){
  $('spinButton').hidden=enabled;
  $('aimWheel').closest('.aim-wheel-control').hidden=enabled;
  $('placeCueConfirm').disabled=!enabled||!placement?.candidate;
- if(enabled)setText('placementStatus',!placement?.candidate?'FIND OPEN SPACE':placement.legal?'READY':'SNAPS TO OPEN');
+ if(enabled){
+  const status=!placement?.candidate?'FIND OPEN SPACE':placement.legal?'READY':'SNAPS TO OPEN';
+  if($('placementStatus').textContent!==status)setText('placementStatus',status);
+ }
 }
 function previewPlacement(clientX,clientY,canvasOffset=0){
  if(!current||(!current.ballInHand&&pointerMode!=='break-place')||current.sim.moving)return;
