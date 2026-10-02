@@ -30,9 +30,9 @@ with sync_playwright() as p:
         page.on('pageerror',lambda e:err.append(str(e)))
         page.set_content(html_source(),wait_until='load')
         page.locator('#playBtn').click(force=True)
-        page.wait_for_timeout(300)
-        before=page.evaluate('({canvas:document.querySelector("#gameCanvas").getBoundingClientRect().toJSON(), track:document.querySelector("#powerTrack").getBoundingClientRect().toJSON(), aim:document.querySelector("#aimWheel").getBoundingClientRect().toJSON(), hud:document.querySelector(".match-hud").getBoundingClientRect().toJSON(), over: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight, gate:getComputedStyle(document.querySelector("#rotateGate")).display, view:document.querySelector("#gameView").textContent})')
-        assert not before['over'],f'overflow {w}x{h}'
+        page.wait_for_timeout(1650)
+        before=page.evaluate('({canvas:document.querySelector("#gameCanvas").getBoundingClientRect().toJSON(), track:document.querySelector("#powerTrack").getBoundingClientRect().toJSON(), aim:document.querySelector("#aimWheel").getBoundingClientRect().toJSON(), hud:document.querySelector(".match-hud").getBoundingClientRect().toJSON(), over: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight, gate:document.querySelector("#rotateGate")!==null, view:document.querySelector("#gameView")!==null})')
+        assert not before['over'],f'overflow {w}x{h}'\n        assert not before['gate'] and not before['view']
         if w>h:
             assert before['canvas']['y']+before['canvas']['height'] < h+1,f'clipped table {w}x{h}'
             screenshot=root/'screenshots'/f'preview-{w}x{h}.png';screenshot.parent.mkdir(exist_ok=True);page.screenshot(path=str(screenshot))
@@ -65,7 +65,7 @@ with sync_playwright() as p:
                 page.wait_for_timeout(100)
                 assert page.locator('#gameScreen').get_attribute('data-shots')=='1','touch pull did not fire'
         else:
-            assert before['gate']=='grid','portrait rotation hint missing'
+            assert not before['gate'] and not before['view'],'obsolete view/orientation controls remain'
         screenshot=root/'screenshots'/f'landscape-{w}x{h}.png';screenshot.parent.mkdir(exist_ok=True);page.screenshot(path=str(screenshot))
         assert not err,f'browser errors: {err}'
         print((w,h), 'summary', {'canvas':[round(before['canvas'][k]) for k in ['x','y','width','height']], 'track':[round(before['track'][k]) for k in ['width','height']], 'aim':[round(before['aim'][k]) for k in ['width','height']], 'scroll':before['over'], 'rotate':before['gate'],'view':before['view'],'shots':page.evaluate('document.querySelector("#turnLabel").textContent')}, 'errors',err)
