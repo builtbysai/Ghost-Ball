@@ -291,7 +291,9 @@ function onPull(amount){
  if(stage>=2&&tensionLevel<2)audio.play({type:'draw',power:amount});
  tensionLevel=stage;
  $('powerTrack').classList.toggle('armed',amount>=.68);
- if(amount>.005)setText('powerValue',Math.round(Math.max(.08,amount)*100)+'%');
+ $('powerTrack').classList.toggle('max-charged',amount>=.96);
+ if(amount>=.96)setText('powerValue','MAX');
+ else if(amount>.005)setText('powerValue',Math.round(Math.max(.08,amount)*100)+'%');
  else setText('powerValue','PULL ↓');
 }
 function setPower(n){power=clamp(Number(n)/100,.08,1);setText('powerValue',`${Math.round(power*100)}%`);}
