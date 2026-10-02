@@ -1,6 +1,6 @@
 # Ghost Ball rebuild roadmap
 
-Status: 2026-10-01 · v0.2 shot feel and portrait-table pass. This document describes current implementation versus planned work; it is not a promise that future features already exist.
+Status: 2026-10-01 · v0.3 optional WebGL2 presentation pass. This document describes current implementation versus planned work; it is not a promise that future features already exist.
 
 ## Product principles
 
@@ -44,8 +44,10 @@ Remaining work:
 
 ## Phase 2 — Table presentation and quality
 
-- [ ] True WebGL 3D renderer (prefer lazily loaded Three.js) that uses *exactly the same* `Simulation` world, with pre-rendered textures, shadows, camera presets, context-loss fallback and GPU budget.
-- [ ] Proper camera unprojection for true 3D ray-to-table input and overhead quick-toggle; side-by-side collision parity tests.
+- [x] Optional dependency-free WebGL2 scene on the **existing** simulation: geometrically dimensional table/rails/legs and textured spheres, simple lighting and contact shadows. Dynamically imported only when chosen; no GPU context on lobby. Context loss/unavailability returns to 2.5D; canvas resolution budget capped at 1.3 megapixels.
+- [ ] Visual calibration and graphics QA on genuine mobile/desktop GPUs: shader compilation, ball numbering/orientation, true soft lighting/contact shadows, GPU timing and adaptive quality. Current automated graphics validation uses a mock context because local Chromium WebGL was disabled.
+- [x] Camera-to-world ray-on-felt input and portrait table mapping for 3D, with pure-math round-trip and GPU matrix parity tests.
+- [ ] Genuine mobile/desktop WebGL visual comparisons, overhead 3D camera quick-toggle and touch field testing before marking the 3D experience production-polished.
 - [ ] Responsive layout validation on devices with large safe-area insets, foldables, landscape and reduced-motion modes; automated screenshot comparisons.
 - [ ] Accessible labels, contrast, keyboard-only e2e, gamepad, screen-reader game status, focus trap/restore for dialogs.
 - [ ] Consolidate audio preferences with intentional global mute, separate effects and music when music exists, lifecycle and no autoplay.
@@ -60,4 +62,4 @@ Remaining work:
 
 ## Release gates
 
-Never ship incomplete modes as functional buttons. Before merge: Node tests, real browser smoke test, portrait and landscape viewport overflow review, mobile touch test, 2D/2.5D shot parity, reduced-motion, proper Pages asset base, no browser console errors and manually observed complete rack and scratch flows. Production publish only after the branch meets those gates.
+Never ship incomplete modes as functional buttons. Before merge: Node tests, DOM browser smoke at portrait and landscape sizes, simulation parity, correct Pages asset base, and no JavaScript errors. Hardware-GPU visuals, Android touch and full rules fidelity are separate **release gates for promoting 3D out of preview**, not claims established by the mocked WebGL2 browser harness.

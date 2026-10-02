@@ -45,3 +45,10 @@ The 2010 Mathavan et al. cushion-impact paper reports restitution around 0.98 an
 - https://support.miniclip.com/hc/en-us/articles/6630561650833--Settings-Guideline
 
 Miniclip documents separate aim, fine-aim controls, power bar, spin and configurable settings, including orientation on supported screens. We keep these jobs independent. On a tall phone, rotating the *table* upright uses the available vertical space instead of shrinking the balls to fit the viewport width. Power-release shooting requires explicit opt-in to protect users who explore the power range before shooting. The game shows a placement preview and rejects illegal ball-in-hand locations.
+
+
+## v0.3 view architecture (2026-10-01)
+
+The official three.js renderer documentation confirms that modern WebGLRenderer targets WebGL2 and requires explicit resource disposal; three.js performance guidance recommends avoiding uncontrolled high-DPI framebuffers. Ghost Ball has no build system or external runtime dependencies, so this milestone implements a small self-contained WebGL2 pipeline rather than adding a CDN availability dependency. Source: https://threejs.org/docs/pages/WebGLRenderer.html and https://threejs.org/manual/pages/responsive.html.
+
+The existing 240 Hz simulation owns all ball state. Pure `camera3d.js` maps world ball centers and screen-space ray intersections to the same 1000×500 physics coordinates; `render3d.js` owns only graphics resources. The transparent 2D overlay renders readable guide lines and receives pointer input. WebGL is lazily initialized for an opt-in third view, capped at ~1.3 million framebuffer pixels and only renders while in active 3D gameplay. Context creation failure or loss returns to 2.5D without resetting the match. Hardware shader/performance evaluation remains an explicit prerequisite before defaulting users to 3D.
