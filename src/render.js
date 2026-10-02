@@ -184,15 +184,34 @@ export class TableRenderer{
    for(const effect of fx){const [sx,sy]=this.project(effect.x,effect.y);g.beginPath();g.arc(sx,sy,(1-effect.life)*28,0,TAU);g.strokeStyle=`rgba(239,207,139,${effect.life*.65})`;g.lineWidth=2;g.stroke();}
   }finally{this.project=ownProject;}
  }
- drawBall(ball){const g=this.g,[sx,sy,k]=this.project(ball.x,ball.y),r=Math.max(3,TABLE.radius*this.bw/1000*k),side=1+.02*(1-this.blend);
+ drawBall(ball){
+  const g=this.g,[sx,sy,k]=this.project(ball.x,ball.y),r=Math.max(3,TABLE.radius*this.bw/1000*k),side=1+.02*(1-this.blend);
   g.save();g.globalAlpha=ball.opacity??1;g.translate(sx,sy);g.scale(1,side);
-  g.beginPath();g.ellipse(1.5,3,r*1.06,r*.72,0,0,TAU);g.fillStyle='rgba(0,0,0,.32)';g.fill();
-  g.beginPath();g.arc(0,0,r,0,TAU);g.clip();const shade=g.createRadialGradient(-r*.38,-r*.52,r*.1,0,0,r*1.5);
-  shade.addColorStop(0,'#fff9e9');shade.addColorStop(.24,ball.color);shade.addColorStop(.75,ball.color);shade.addColorStop(1,'#161713');g.fillStyle=shade;g.fillRect(-r,-r,r*2,r*2);
-  if(ball.id>=9){g.save();g.rotate(ball.rotation*.17);g.fillStyle='#f7f4e9';g.fillRect(-r,-r*.4,2*r,r*.8);g.restore();}
-  if(ball.id){g.beginPath();g.arc(-r*.12,-r*.12,r*.39,0,TAU);g.fillStyle='#f6f3e8';g.fill();g.fillStyle='#181512';g.font=`bold ${Math.max(5,r*.65)}px system-ui`;g.textAlign='center';g.textBaseline='middle';g.fillText(String(ball.id),-r*.12,-r*.09);}
-  g.restore();}
- drawAim(sim,{angle,power}){const g=this.g,cue=sim.cue();if(!cue)return;
+  g.beginPath();g.ellipse(1.3,Math.max(2,r*.27),r*1.07,r*.79,0,0,TAU);
+  g.fillStyle='rgba(0,4,8,.36)';g.fill();
+  g.beginPath();g.arc(0,0,r,0,TAU);g.clip();
+  const striped=ball.id>=9,base=striped?'#eeeae2':ball.color;
+  const shade=g.createRadialGradient(-r*.34,-r*.43,r*.06,r*.12,r*.15,r*1.55);
+  shade.addColorStop(0,'#fffdf2');shade.addColorStop(.24,base);shade.addColorStop(.69,base);shade.addColorStop(1,'#1a1b1b');
+  g.fillStyle=shade;g.fillRect(-r,-r,2*r,2*r);
+  if(striped){
+   g.save();g.rotate((ball.rotation||0)*.13);
+   g.fillStyle=ball.color;g.fillRect(-r,-r*.46,2*r,r*.92);
+   g.fillStyle='#111a1a38';g.fillRect(-r,-r*.47,2*r,r*.065);g.fillRect(-r,r*.405,2*r,r*.065);
+   g.restore();
+  }
+  const glare=g.createRadialGradient(-r*.5,-r*.62,0,-r*.32,-r*.4,r*.89);
+  glare.addColorStop(0,'#ffffff60');glare.addColorStop(1,'#ffffff00');
+  g.fillStyle=glare;g.fillRect(-r,-r,2*r,2*r);
+  if(ball.id){
+   g.beginPath();g.ellipse(-r*.08,-r*.09,r*.41,r*.39,0,0,TAU);
+   g.fillStyle='#f9f5ec';g.fill();
+   g.fillStyle='#1d1b19';g.font=`800 ${Math.max(5,r*.68)}px system-ui`;
+   g.textAlign='center';g.textBaseline='middle';g.fillText(String(ball.id),-r*.08,-r*.075);
+  }
+  g.restore();
+ }
+ drawAim(sim,{angle,power,drawback=0}){const g=this.g,cue=sim.cue();if(!cue)return;
   const dx=Math.cos(angle),dy=Math.sin(angle),r=TABLE.radius;let limit=1300,target=null;
   for(const ball of sim.balls){if(ball.id===0||ball.pocketed)continue;
     const rx=ball.x-cue.x,ry=ball.y-cue.y,t=rx*dx+ry*dy,perp2=rx*rx+ry*ry-t*t;
@@ -204,13 +223,27 @@ export class TableRenderer{
   g.save();g.beginPath();g.moveTo(sx,sy);g.lineTo(ex,ey);g.lineWidth=1.8;g.strokeStyle='rgba(253,254,252,.97)';g.stroke();
   g.beginPath();g.arc(ex,ey,Math.max(5,r*this.bw/1000),0,TAU);g.strokeStyle='rgba(242,217,160,.65)';g.stroke();
   if(target&&limit<rail){const [tx,ty]=this.project(target.x,target.y);g.beginPath();g.moveTo(tx,ty);g.lineTo(tx+(tx-ex)*2.4,ty+(ty-ey)*2.4);g.setLineDash([3,5]);g.strokeStyle='rgba(230,207,152,.45)';g.stroke();g.setLineDash([]);}
-  // Full-length cue. The shaft follows the same vector as the physical shot,
-  // with a short gap to the cue ball and a darker tapered butt at the rear.
-  const gap=r*1.45+power*28,reach=gap+355;
-  const [tipX,tipY]=this.project(cue.x-dx*gap,cue.y-dy*gap);
-  const [buttX,buttY]=this.project(cue.x-dx*reach,cue.y-dy*reach);
-  const [gripX,gripY]=this.project(cue.x-dx*(reach-110),cue.y-dy*(reach-110));
-  g.lineCap='round';g.beginPath();g.moveTo(buttX,buttY);g.lineTo(gripX,gripY);g.strokeStyle='#472816';g.lineWidth=7;g.stroke();
-  g.beginPath();g.moveTo(gripX,gripY);g.lineTo(tipX,tipY);g.strokeStyle='#e1b885';g.lineWidth=3.2;g.stroke();
-  g.beginPath();g.arc(tipX,tipY,2.3,0,TAU);g.fillStyle='#e6eff4';g.fill();g.restore();}
+  g.restore();this.drawCueStick(cue,angle,drawback);
+
+ // Both dragging hit targets and the graphic use cueGeometry, so the
+ // visible, pulled-back shaft stays touchable even at full power.
+ drawCueStick(cue,angle,drawback=0,forward=0,opacity=1){
+  const g=this.g,dx=Math.cos(angle),dy=Math.sin(angle);
+  const {gap,reach,grip}=cueGeometry(TABLE.radius,drawback);
+  const [tx,ty]=this.project(cue.x-dx*(gap-forward),cue.y-dy*(gap-forward));
+  const [bx,by]=this.project(cue.x-dx*(reach-forward),cue.y-dy*(reach-forward));
+  const [gx,gy]=this.project(cue.x-dx*(grip-forward),cue.y-dy*(grip-forward));
+  g.save();g.lineCap='round';g.globalAlpha=opacity;
+  g.beginPath();g.moveTo(bx+1.3,by+2);g.lineTo(tx+1.3,ty+2);
+  g.lineWidth=7;g.strokeStyle='#0b181980';g.stroke();
+  g.beginPath();g.moveTo(bx,by);g.lineTo(gx,gy);
+  g.strokeStyle='#4b2e1b';g.lineWidth=7;g.stroke();
+  g.beginPath();g.moveTo(bx,by);g.lineTo(gx,gy);
+  g.strokeStyle='#b08250';g.lineWidth=1.3;g.stroke();
+  g.beginPath();g.moveTo(gx,gy);g.lineTo(tx,ty);
+  g.strokeStyle='#e8c89c';g.lineWidth=3.4;g.stroke();
+  g.beginPath();g.arc(tx,ty,2.4,0,TAU);g.fillStyle='#d7e7ef';g.fill();
+  g.restore();
+ }
+
 }
