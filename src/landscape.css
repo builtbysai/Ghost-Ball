@@ -26,8 +26,6 @@
 /* Reset legacy compact-screen positioning inherited from the old bottom HUD. */
 .game-screen .table-play-area{top:0;left:0;right:auto;bottom:auto}
 .game-screen .match-footer .status{position:static;top:auto;right:auto;bottom:auto;left:auto;width:auto;min-width:0}
-.game-screen .guide-badge{top:0;left:50%;opacity:0;pointer-events:none}
-.game-screen:not(.entering) .guide-badge.is-hint{opacity:.92;animation:cue-hint-out 3.5s both}
-@keyframes cue-hint-out{0%,50%{opacity:.92}100%{opacity:0}}
+.game-screen .guide-badge{display:none}
 .shot-rail .power-track.is-disabled,.aim-wheel[aria-disabled="true"]{opacity:.48;cursor:not-allowed}
 .opponent-card.playing .player-token{outline:2px solid #8ae5b4;outline-offset:2px}
