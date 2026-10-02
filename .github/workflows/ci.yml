@@ -30,21 +30,15 @@ jobs:
         env:
           CHROMIUM_BIN: /usr/bin/google-chrome
         run: python3 scripts/landscape-smoke.py
-      - name: Deployed site diagnostic
+      - name: Real HTTP module and cache-busting smoke
         if: github.event_name == 'pull_request'
-        run: python3 scripts/live-probe.py
+        env:
+          CHROMIUM_BIN: /usr/bin/google-chrome
+        run: python3 scripts/http-smoke.py
       - name: Save viewport screenshots
         if: always() && github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: ghost-ball-viewports
-          path: |
-            screenshots/
-            src/
-            tests/
-            scripts/
-            index.html
-            package.json
-            sw.js
-            manifest.webmanifest
+          path: screenshots/
           if-no-files-found: ignore
