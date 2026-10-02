@@ -65,7 +65,7 @@ with sync_playwright() as p:
         foul=page.evaluate('window.__ghostTest.simulateFoul()')
         assert foul=={'worked':True,'turn':0,'ballInHand':True},foul
         assert page.locator('#tableToast').is_visible(),'foul event toast missing'
-        assert page.locator('#guideBadge').is_visible(),'human placement guidance missing'
+        assert page.locator('#guideBadge').is_hidden(),'temporary foul cue must not overlap the placement hint'
         target=page.evaluate('window.__ghostTest.worldToScreen(718,250)')
         page.mouse.move(target['x'],target['y'])
         page.mouse.down()
@@ -74,6 +74,10 @@ with sync_playwright() as p:
         suggestion=state['placement']['suggestion']
         assert suggestion and suggestion['distance']<=48, 'nearby legal landing preview absent'
         page.screenshot(path=str(root/'screenshots'/f'foul-placement-{width}x{height}.png'))
+        page.wait_for_timeout(1800)
+        assert page.locator('#tableToast').is_hidden(),'temporary foul cue did not dismiss'
+        assert page.locator('#guideBadge').is_visible(),'placement hint did not return'
+        page.screenshot(path=str(root/'screenshots'/f'placement-hint-{width}x{height}.png'))
         page.mouse.up()
         after=page.evaluate('window.__ghostTest.snapshot()')
         assert not after['ballInHand'] and after['legal'], 'suggested location did not place cue legally'
