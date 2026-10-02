@@ -4,9 +4,12 @@
 export class Audio {
  constructor(){this.ctx=null;this.enabled=true;}
  unlock(){
+  if(!this.enabled)return;
   if(!this.ctx){const C=window.AudioContext||window.webkitAudioContext;if(C)this.ctx=new C();}
-  this.ctx?.resume();
+  this.resume();
  }
+ resume(){if(this.enabled&&this.ctx?.state==='suspended')this.ctx.resume().catch(()=>{});}
+ suspend(){if(this.ctx?.state==='running')this.ctx.suspend().catch(()=>{});}
  tone({frequency=200,end=75,volume=.1,length=.08,wave='triangle',delay=0}){
   if(!this.enabled||!this.ctx)return;
   const ctx=this.ctx,now=ctx.currentTime+delay,o=ctx.createOscillator(),gain=ctx.createGain();

@@ -12,7 +12,7 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 let room=1,mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
 let current=null,active='lobby',motion=true,placement=null,pointerMode=null;
 let settingsOrigin='lobby',updateWaiting=false,powerSide='left';
-let matchElapsed=0,shotRemaining=45,clockKey='',lastClockSecond=-1;
+let matchElapsed=0,lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
@@ -55,35 +55,47 @@ function ballSlots(container,player){
  container.setAttribute('aria-label',group?`${group}: ${models.filter(b=>!b.pocketed).length} balls remaining`:'Open table. Sample ball numbers, not assigned yet.');
 }
 function turnUI(){if(!current)return;
- const ai=current.isAI(),busy=current.sim.moving;
- setText('turnLabel',current.over?'RACK COMPLETE':current.kind==='practice'?'PRACTICE':current.kind==='attract'?'EXHIBITION':current.break?'THE BREAK':current.turn===0?'YOUR TURN':current.players==='local'?'PLAYER TWO':'RIVAL TURN');
+ const ai=current.isAI(),busy=current.sim.moving,practice=current.kind==='practice';
+ $('gameScreen').dataset.practice=String(practice);
+ $('twoCard').hidden=practice;
+ setText('turnLabel',current.over?'FINISHED':current.kind==='practice'?'PRACTICE':current.kind==='attract'?'EXHIBITION':current.break?'THE BREAK':current.turn===0?'YOUR TURN':current.players==='local'?'PLAYER TWO':'RIVAL TURN');
  const p1=current.groups[0]?.toUpperCase()||'OPEN',p2=current.groups[1]?.toUpperCase()||'OPEN';
- $('playerOne').innerHTML=`${current.kind==='attract'?'CLUB PRO':'YOU'} <small>${p1}</small>`;
+ $('playerOne').innerHTML=practice?`YOU <small>${current.shots} SHOTS · ${current.sim.balls.filter(b=>b.id!==0&&b.pocketed).length} POCKETED</small>`:`${current.kind==='attract'?'CLUB PRO':current.players==='local'?'PLAYER ONE':'YOU'} <small>${p1}</small>`;
  $('playerTwo').innerHTML=`${current.kind==='attract'?'ROOKIE':current.players==='local'?'PLAYER TWO':rival==='club'?'CLUB PRO':'ROOKIE'} <small>${p2}</small>`;
  const signature=current.groups.join(':')+':'+current.sim.balls.filter(b=>b.pocketed).map(b=>b.id).sort((a,b)=>a-b).join(',');
  if(signature!==lastScoreSignature){ballSlots($('ballsOne'),0);ballSlots($('ballsTwo'),1);lastScoreSignature=signature;}
  $('gameScreen').dataset.shots=String(current.shots);
- const seconds=Math.ceil(shotRemaining);const pct=current.kind==='match'?`${Math.max(0,shotRemaining/45)*100}%`:'100%';
+ const completed=current.over&&current.kind!=='attract';
+ $('matchResult').hidden=!completed;
+ if(completed){
+  const player=current.winner===0?(current.players==='local'?'PLAYER ONE':'YOU'):current.players==='local'?'PLAYER TWO':rival==='club'?'CLUB PRO':'ROOKIE';
+  setText('matchResultTitle',practice?'TABLE CLEARED':`${player} WINS`);
+  setText('matchResultDetail',practice?`${current.shots} SHOTS THIS SESSION`:`${current.shots} SHOTS · RACK COMPLETE`);
+ }
+ const seconds=Math.ceil(current.shotRemaining);const pct=current.kind==='match'?`${Math.max(0,current.shotRemaining/45)*100}%`:'100%';
  for(const [i,id,clock] of [[0,'oneCard','clockOne'],[1,'twoCard','clockTwo']]){
   $(id).style.setProperty('--turn-progress',current.turn===i?pct:'100%');
-  $(clock).textContent=String(seconds);$(clock).hidden=current.kind!=='match'||current.turn!==i;
+  $(clock).textContent=String(seconds);$(clock).hidden=current.kind!=='match'||current.turn!==i||current.ballInHand||current.over;
+  $(clock).classList.toggle('clock-warning',current.kind==='match'&&current.turn===i&&seconds<=10&&!current.ballInHand&&!current.over);
  }
  $('oneCard').classList.toggle('playing',current.turn===0);$('twoCard').classList.toggle('playing',current.turn===1);
  const toolsDisabled=!canAct();
  for(const id of ['spinButton','aimLeft','aimRight'])$(id).disabled=toolsDisabled;
  $('powerTrack').classList.toggle('is-disabled',toolsDisabled);
  $('powerTrack').setAttribute('aria-disabled',String(!canAct()));$('aimWheel').setAttribute('aria-disabled',String(!canAct()));
- const help=current.ballInHand?'DRAG THE WHITE BALL TO A CLEAR SPOT':current.over?'MATCH COMPLETE · PAUSE TO RESTART':'';
+ const help=current.ballInHand&&!current.over?'DRAG THE WHITE BALL TO A CLEAR SPOT':'';
  setText('guideBadge',help);
  $('guideBadge').classList.toggle('is-visible',Boolean(help));
  $('guideBadge').style.opacity=busy?'0':'.95';
 }
 function begin(kind){
  if(active!=='lobby')return;
- lastScoreSignature='';matchElapsed=0;shotRemaining=45;clockKey='';lastClockSecond=-1;$('collectedBalls').replaceChildren();hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
+ lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;$('collectedBalls').replaceChildren();hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  current=new Game({kind,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',notify,onPocket:animatePocket});
  if(kind==='attract'){current.turn=0;notify('An exhibition between our house rivals.');}
+ let needsHint=false;try{needsHint=localStorage.getItem('ghostball-controls-taught')!=='yes';}catch{}
+ if(kind==='match'&&needsHint)show('controlsHint');else hide('controlsHint');
  active='transition';show('gameScreen');$('lobby').setAttribute('aria-hidden','true');
  $('gameScreen').classList.add('entering');$('app').classList.add('entering-match');
  applyRoom();turnUI();resize();
@@ -102,7 +114,7 @@ function begin(kind){
 }
 function finishLobby(){
  active='lobby';current=null;placement=null;pointerMode=null;shotMotion=null;pullProgress=0;tensionLevel=0;
- hide('spinShade');hide('spinSheet');hide('pauseMenu');hide('gameScreen');
+ hide('spinShade');hide('spinSheet');hide('pauseMenu');hide('gameScreen');hide('controlsHint');
  $('gameScreen').classList.remove('entering','leaving');$('app').classList.remove('entering-match','leaving-match');
  $('ambient').style.visibility='';$('lobby').removeAttribute('aria-hidden');resize();$('menuBtn').focus();
  if(updateWaiting)window.location.reload();
@@ -123,7 +135,7 @@ function pauseMatch(){
 }
 function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('pauseButton').focus();turnUI();}
 function resetMatch(){
- if(!current)return;current.reset();lastScoreSignature='';shotRemaining=45;clockKey='';matchElapsed=0;lastClockSecond=-1;
+ if(!current)return;current.reset();lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;
  $('collectedBalls').replaceChildren();placement=null;angle=0;spin={x:0,y:0};syncAim();syncSpin();
  setPower(50);powerControl.reset();$('powerTrack').classList.remove('impact');turnUI();
 }
@@ -146,14 +158,13 @@ function animatePocket(event){
  }else if(event.id===0)ball.remove();
 }
 function updateClocks(elapsed){
- if(!current||current.over)return;matchElapsed+=elapsed;
- if(!current.sim.moving&&!current.ballInHand){
-  const key=`${current.turn}:${current.shots}:${current.break}`;
-  if(key!==clockKey){clockKey=key;shotRemaining=45;}
-  else if(current.kind==='match')shotRemaining=Math.max(0,shotRemaining-elapsed);
- }
+ if(!current)return;
+ matchElapsed+=elapsed;
  const whole=Math.floor(matchElapsed);
- if(whole!==lastClockSecond){lastClockSecond=whole;setText('matchTime',`${String(Math.floor(whole/60)).padStart(2,'0')}:${String(whole%60).padStart(2,'0')}`);}
+ if(whole!==lastClockSecond){
+  lastClockSecond=whole;
+  setText('matchTime',`${String(Math.floor(whole/60)).padStart(2,'0')}:${String(whole%60).padStart(2,'0')}`);
+ }
 }
 // Cue aiming is acquired on the stick behind the cue ball, not the guide in
 // front. Offset-preserving relative rotation avoids a jump when grabbed.
@@ -192,6 +203,7 @@ function fire(){
  audio.unlock();
  if(current.beginShot(shotAngle,strength,spin)){
   powerControl.reset();$('powerTrack').classList.remove('held');
+  if(!$('controlsHint').hidden){hide('controlsHint');savePreference('ghostball-controls-taught','yes');}
   shotMotion=motion&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches
    ?{cue:{x:strikingCue.x,y:strikingCue.y},angle:shotAngle,power:strength,start:performance.now()}:null;
   placement=null;
@@ -218,9 +230,11 @@ $('menuBtn').onclick=openMenu;$('closeMenu').onclick=()=>hide('clubMenu');
 $('menuPractice').onclick=()=>begin('practice');$('menuSettings').onclick=openSettings;
 $('pauseButton').onclick=pauseMatch;$('resumeMatch').onclick=resumeMatch;
 $('pauseSettings').onclick=openSettings;$('rerack').onclick=()=>{resetMatch();resumeMatch();};$('quitMatch').onclick=quitToLobby;
+$('playAgain').onclick=()=>{if(active==='game'&&current?.over)resetMatch();};
+$('resultMenu').onclick=quitToLobby;
 $('closeSettings').onclick=closeSettings;
  all('[data-power-side]').forEach(b=>b.onclick=()=>{powerSide=b.dataset.powerSide;savePreference('ghostball-power-side',powerSide);syncPowerSide();});
-$('soundToggle').onchange=event=>{audio.enabled=event.target.checked;savePreference('ghostball-sound',audio.enabled?'on':'off');};
+$('soundToggle').onchange=event=>{audio.enabled=event.target.checked;if(audio.enabled)audio.unlock();else audio.suspend();savePreference('ghostball-sound',audio.enabled?'on':'off');};
 $('motionToggle').onchange=event=>{motion=event.target.checked;savePreference('ghostball-motion',motion?'on':'off');};
 $('openSetup').onclick=openSetup;$('closeSetup').onclick=closeSetup;$('backdrop').onclick=()=>{closeSetup();closeSettings();};
 $('prevRoom').onclick=()=>{room=(room-1+halls.length)%halls.length;applyRoom();};
@@ -299,7 +313,9 @@ window.addEventListener('keydown',e=>{
   if(e.code==='Space'){e.preventDefault();fire();}
   if(e.key.toLowerCase()==='r'){pauseMatch();}
 });
-try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';}catch{}
+window.addEventListener('pagehide',()=>audio.suspend());
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)audio.suspend();else audio.resume();});
+ try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';}catch{}
  syncPowerSide();
 syncSpin();
 applyRoom();refreshMenu();hide('gameScreen');
@@ -318,7 +334,7 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
    const strike=shotMotion&&strokeTime<1?{...shotMotion,progress:Math.max(0,strokeTime)}:null;
    if(shotMotion&&strokeTime>=1){shotMotion=null;$('powerTrack').classList.remove('impact');}
    const cpuPose=g.isAI()?g.presentedCue:null;
-   const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over,aim:cpuPose||{angle,power,drawback:pullProgress,strike},placement,fx:motion?g.fx:[]};
+   const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over,aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike},placement,fx:motion?g.fx:[]};
    table.draw(g.sim,frame);uiTimer+=elapsed;if(uiTimer>.2){turnUI();uiTimer=0;}}
 }
 requestAnimationFrame(frame);

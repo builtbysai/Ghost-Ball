@@ -1,5 +1,6 @@
 import {Simulation,rack,POCKETS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
+export const SHOT_CLOCK_SECONDS=45;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 const allowed=(id,group)=>id!==0&&(id===8?group==='eight':group==='open'||(group==='solids'?id<=7:id>=9));
 function segmentClear(x1,y1,x2,y2,balls,exclude){
@@ -37,6 +38,7 @@ export class Game {
   this.onPocket=onPocket;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
  reset(){this.rackSeed=this.random()*100000|0;this.sim=new Simulation(rack(this.rackSeed));this.turn=0;this.groups=[null,null];this.break=true;this.foul=false;this.ballInHand=false;this.over=false;this.winner=null;this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;
   this.history=[];this.previewShot=null;this.activeStroke=null;
+  this.shotRemaining=SHOT_CLOCK_SECONDS;this.shotClockKey='';
   this.notify('A fresh rack. Take your time.');}
  get group(){const group=this.groups[this.turn];if(!group)return 'open';return this.sim.balls.some(b=>!b.pocketed&&(group==='solids'?b.id<8&&b.id>0:b.id>8))?group:'eight';}
  isAI(){return this.kind==='attract'||(this.players==='cpu'&&this.turn===1);}
@@ -46,7 +48,7 @@ export class Game {
   this.history.push({angle,power,spin:typeof spin==='number'?{x:spin,y:0}:{...spin},turn:this.turn,shot:this.shots+1});
   this.turnShot={first:null,pots:[],rail:false};this.shots++;this.notify('');return true;}
  placeBreakCue(x,y){if(!this.break||this.shots||this.sim.moving||this.over||x>265||!this.sim.placeCue(x,y))return false;this.history.push({kind:'break-placement',x,y});this.notify('Cue positioned. Line up your break.');return true;}
- placeCue(x,y){if(!this.ballInHand)return false;const placed=this.sim.placeCue(x,y);if(placed){this.history.push({kind:'placement',x,y});this.ballInHand=false;this.notify('Cue ball placed. Line up your shot.');}return placed;}
+ placeCue(x,y){if(!this.ballInHand)return false;const placed=this.sim.placeCue(x,y);if(placed){this.history.push({kind:'placement',x,y});this.ballInHand=false;this.shotClockKey='';this.notify('Cue ball placed. Line up your shot.');}return placed;}
  spotEight(){
    const eight=this.sim.balls.find(b=>b.id===8);if(!eight)return false;
    // Standard spot, then search nearby along the lengthwise centerline to
@@ -57,6 +59,16 @@ export class Game {
      Object.assign(eight,{pocketed:false,x,y,vx:0,vy:0,spin:0,slipX:0,slipY:0});return true;
    }
    return false;
+ }
+ /** A casual timed-out shot is a standard foul; the new player gets ball in hand. */
+ expireShotClock(){
+   if(this.kind!=='match'||this.over||this.sim.moving||this.ballInHand||this.turnShot)return false;
+   const offender=this.turn;
+   this.history.push({kind:'shot-clock-expired',turn:offender,shot:this.shots+1});
+   this.turn=1-offender;this.foul=true;this.ballInHand=true;this.previewShot=null;
+   this.timer=0;this.shotRemaining=SHOT_CLOCK_SECONDS;this.shotClockKey='';
+   this.notify(`Shot clock expired. Player ${this.turn+1} has ball in hand.`);
+   return true;
  }
  /** The CPU previews the real shot it will take, including cue motion. */
  get presentedCue(){
@@ -100,6 +112,15 @@ export class Game {
          }
          this.previewShot=null;this.timer=0;
        }
+     }
+   }
+   // The rule is owned by Game, not by a decorative HUD counter.
+   if(this.kind==='match'&&!this.over&&!this.sim.moving&&!this.ballInHand){
+     const key=`${this.turn}:${this.shots}:${this.break}`;
+     if(key!==this.shotClockKey){this.shotClockKey=key;this.shotRemaining=SHOT_CLOCK_SECONDS;}
+     else if(this.shotRemaining>0){
+       this.shotRemaining=Math.max(0,this.shotRemaining-dt);
+       if(this.shotRemaining===0)this.expireShotClock();
      }
    }
    this.fx=this.fx.filter(effect=>(effect.life-=dt*1.8)>0);
