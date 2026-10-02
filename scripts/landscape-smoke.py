@@ -41,6 +41,8 @@ with sync_playwright() as p:
             screenshot=root/'screenshots'/'flight-mid-844x390.png';screenshot.parent.mkdir(exist_ok=True);page.screenshot(path=str(screenshot))
         page.wait_for_timeout(1250)
         assert page.locator('.table-flight').count()==0 and page.locator('.flight-stage').count()==0,'flight did not clean up'
+        ready=page.evaluate("""() => ({entering:gameScreen.classList.contains('entering'),disabled:shootBtn.disabled,canvasDrawn:gameCanvas.width>1,turn:turnLabel.textContent})""")
+        assert not ready['entering'] and not ready['disabled'] and ready['canvasDrawn'] and not err,{'ready':ready,'errors':err}
         before=page.evaluate('({canvas:document.querySelector("#gameCanvas").getBoundingClientRect().toJSON(), track:document.querySelector("#powerTrack").getBoundingClientRect().toJSON(), aim:document.querySelector("#aimWheel").getBoundingClientRect().toJSON(), hud:document.querySelector(".match-hud").getBoundingClientRect().toJSON(), over: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight, gate:document.querySelector("#rotateGate")!==null, view:document.querySelector("#gameView")!==null})')
         assert not before['over'],f'overflow {w}x{h}'
         assert not before['gate'] and not before['view']
