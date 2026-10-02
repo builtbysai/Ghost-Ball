@@ -47,7 +47,7 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done}){
  const canvas=document.createElement('canvas');
  canvas.className='table-flight';canvas.setAttribute('aria-hidden','true');
  canvas.style.width=startBox.width+'px';canvas.style.height=startBox.height+'px';app.append(canvas);
- const flight=new TableRenderer(canvas,{view:'perspective',hall});flight.resize();
+ const flight=new TableRenderer(canvas,{view:'perspective',hall,cacheStatic:false});flight.resize();
  // Render the floating board at a higher pixel density when it is growing
  // toward the match layout; CSS-only scaling blurred the previous entrance.
  const targetPixels=gameRenderer.canvas.width/Math.max(1,startBox.width);
