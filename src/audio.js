@@ -26,6 +26,14 @@ export class Audio {
    this.tone({frequency:330,end:215,volume:.017,length:.055,wave:'sine'});
    return;
   }
+  if(event.type==='turn'){
+   this.tone({frequency:420,end:540,volume:.025,length:.075,wave:'sine'});
+   return;
+  }
+  if(event.type==='foul'){
+   this.tone({frequency:205,end:135,volume:.043,length:.16,wave:'triangle'});
+   return;
+  }
   if(event.type==='strike'){
    this.tone({frequency:207-p*73,end:76-p*19,volume:.052+.17*p,length:.081,wave:'triangle'});
    this.tone({frequency:620+p*190,end:270,volume:.027+.038*p,length:.021,wave:'sine'});
