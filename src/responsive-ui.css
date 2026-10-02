@@ -196,3 +196,54 @@
  left:30%;top:5px;transform:translateX(-50%);padding:4px 9px;
 }
 #gameScreen .table-toast{top:clamp(55px,20%,76px)}
+
+
+/* One-handed full pull: reaching the final rail travel commits the shot.
+   The highlight never occupies the table or changes the rail's hit target. */
+#gameScreen .power-track.max-charged{border-color:#fae0a0;box-shadow:0 0 0 2px #edcc8752,inset 0 0 0 4px #121a29,0 4px 12px #0009}
+#gameScreen .power-track.max-charged::after{
+ content:'MAX';position:absolute;bottom:4px;left:0;right:0;z-index:1;
+ font:900 clamp(7px,.83vw,10px)/1 system-ui;text-align:center;letter-spacing:.06em;
+ color:#f9e8b9;pointer-events:none;text-shadow:0 1px #000;
+}
+/* During ball-in-hand, the aiming rail turns into two deliberate actions.
+   No floating modal covers the cloth, pockets or the player's finger. */
+#gameScreen #placementTools[hidden],#gameScreen #spinButton[hidden],
+#gameScreen .aim-wheel-control[hidden]{display:none!important}
+#gameScreen .placement-tools{
+ width:100%;min-width:0;max-width:96px;min-height:0;
+ display:flex;flex-direction:column;align-items:stretch;justify-content:center;
+ gap:clamp(4px,1.15dvh,8px);padding:2px 0;
+ color:#e9efeb;text-align:center;
+}
+#gameScreen .placement-tools-title{
+ font:900 clamp(7px,.87vw,11px)/1.15 system-ui;letter-spacing:.055em;
+ color:#e9d39e;overflow-wrap:anywhere;
+}
+#gameScreen .placement-tools button{
+ display:flex;align-items:center;justify-content:center;gap:2px;
+ width:100%;min-width:0;min-height:clamp(31px,8dvh,44px);
+ padding:4px 2px;border:1px solid #dbc3919c;border-radius:8px;
+ font:900 clamp(8px,1vw,12px)/1.1 system-ui;letter-spacing:.02em;
+ touch-action:manipulation;
+}
+#gameScreen .placement-tools button span{font-size:clamp(12px,1.6vw,18px)}
+#gameScreen .placement-confirm{background:#edcb87;color:#16342f;box-shadow:0 2px 11px #0006}
+#gameScreen .placement-confirm:disabled{opacity:.35;cursor:not-allowed}
+#gameScreen .placement-reset{background:#173344;color:#e8e2cf}
+#gameScreen .placement-status{
+ font:700 clamp(6px,.85vw,9px)/1.2 system-ui;letter-spacing:.04em;
+ color:#bec9cd;white-space:normal;overflow-wrap:anywhere;
+}
+#gameScreen[data-placing="true"] .shot-rail{opacity:.26;pointer-events:none}
+#gameScreen[data-placing="true"] .guide-badge.is-visible{
+ left:30%;top:5px;transform:translateX(-50%);
+ max-width:65%;padding:4px 8px;letter-spacing:.035em;
+}
+@media(max-height:370px){
+ #gameScreen .placement-tools{gap:3px}
+ #gameScreen .placement-tools button{min-height:30px;padding:3px 1px}
+ #gameScreen .placement-tools-title{font-size:7px}
+ #gameScreen .placement-status{font-size:6px}
+}
+@media(prefers-reduced-motion:reduce){#gameScreen .power-track{transition:none}}
