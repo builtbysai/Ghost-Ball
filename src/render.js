@@ -1,4 +1,6 @@
-import {TABLE,POCKETS} from './physics.js';
+import {TABLE} from './physics.js';
+import {paintFrame,paintCloth,paintRailDetails,paintPockets,FINISHES} from './table-finishes.js';
+import {cueGeometry,strokeCharge} from './cue-feel.js';
 
 const TAU=Math.PI*2;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -46,30 +48,14 @@ export class TableRenderer{
  }
  clear(){this.g.clearRect(0,0,this.w,this.h);}
  draw(sim,{aim=null,interactive=false,placement=null,fx=[]}={}){
-  const g=this.g,h=halls[this.hall],P=(x,y)=>this.project(x,y),margin=TABLE.radius*1.8;
+  const g=this.g,h=halls[this.hall],finish=FINISHES[this.hall],P=(x,y)=>this.project(x,y),margin=TABLE.radius*1.8;
   this.clear();g.save();
-  const front=[P(-margin,-margin),P(TABLE.width+margin,-margin),P(TABLE.width+margin,TABLE.height+margin),P(-margin,TABLE.height+margin)];
-  if(this.blend<1&&!this.portrait){
-   const bl=front[3],br=front[2],leg=clamp(this.bw*.19,22,90);g.save();g.globalAlpha=1-this.blend;g.fillStyle='#382416';g.shadowColor='#0008';g.shadowBlur=15;g.shadowOffsetY=9;
-   for(const corner of [bl,br]){polygon(g,[[corner[0]-this.bw*.035,corner[1]-2],[corner[0]+this.bw*.035,corner[1]-2],[corner[0]+this.bw*.019,corner[1]+leg],[corner[0]-this.bw*.019,corner[1]+leg]]);g.fill();}
-   polygon(g,[[bl[0],bl[1]],[br[0],br[1]],[br[0]-this.bw*.006,br[1]+Math.max(9,this.bw*.044)],[bl[0]+this.bw*.006,bl[1]+Math.max(9,this.bw*.044)]]);
-   const apron=g.createLinearGradient(0,bl[1],0,bl[1]+this.bw*.045);apron.addColorStop(0,h.wood);apron.addColorStop(.25,h.rail);apron.addColorStop(1,'#21150d');g.fillStyle=apron;g.fill();g.restore();
-  }
-  g.save();g.shadowColor='rgba(0,0,0,.68)';g.shadowBlur=24;g.shadowOffsetY=25-14*this.blend;
-  polygon(g,front);const wood=g.createLinearGradient(0,this.top,0,this.top+this.bh);wood.addColorStop(0,h.wood);wood.addColorStop(.32,h.rail);wood.addColorStop(1,'#21160e');g.fillStyle=wood;g.fill();g.restore();
-  polygon(g,front);g.lineWidth=3;g.strokeStyle='#24180f';g.stroke();
-  const cloth=[P(0,0),P(1000,0),P(1000,500),P(0,500)];polygon(g,cloth);
-  const felt=g.createLinearGradient(0,this.top,0,this.top+this.bh);felt.addColorStop(0,h.feltLight);felt.addColorStop(1,h.felt);g.fillStyle=felt;g.fill();
-  g.save();polygon(g,cloth);g.clip();
-  const lamp=g.createRadialGradient(this.center,this.top+this.bh*.35,3,this.center,this.top+this.bh*.35,this.bw*.6);
-  lamp.addColorStop(0,'rgba(242,225,179,.16)');lamp.addColorStop(1,'rgba(5,17,13,.16)');g.fillStyle=lamp;g.fillRect(0,0,this.w,this.h);
-  g.restore();
-  g.strokeStyle='rgba(242,226,186,.15)';g.lineWidth=1;g.stroke();
-  // Rail sights and pocket wells are in world coordinates, for both views.
-  g.fillStyle='#dcc49a';for(const y of [-margin*.6,500+margin*.6])for(const x of [130,290,710,870]){const [sx,sy,k]=P(x,y);g.save();g.translate(sx,sy);g.rotate(Math.PI/4);g.globalAlpha=.66;g.fillRect(-2*k,-2*k,4*k,4*k);g.restore();}
-  POCKETS.forEach(([x,y],index)=>{const [sx,sy,k]=P(x,clamp(y,0,500));const r=(index===1||index===4?21:25)*this.bw/1000*k;
-    g.beginPath();g.ellipse(sx,sy,r,r*(.71+.29*this.blend),0,0,TAU);g.fillStyle='#080907';g.fill();g.strokeStyle='rgba(185,144,91,.42)';g.lineWidth=3;g.stroke();});
+  paintFrame(g,{P,h,finish,bw:this.bw,blend:this.blend,portrait:this.portrait,margin});
+  paintCloth(g,{P,h,finish,bw:this.bw,blend:this.blend});
+  paintRailDetails(g,{P,finish,bw:this.bw,margin});
+  paintPockets(g,{P,finish,bw:this.bw,blend:this.blend});
   if(interactive&&aim&&!sim.moving&&!sim.cue()?.pocketed)this.drawAim(sim,aim);
+  else if(aim?.strike&&aim.strike.progress<1)this.drawStroke(aim.strike);
   for(const ball of [...sim.balls].filter(b=>!b.pocketed).sort((a,b)=>a.y-b.y))this.drawBall(ball);
   if(placement){
     const [sx,sy,k]=P(placement.x,placement.y),r=Math.max(5,TABLE.radius*this.bw/1000*k);
@@ -113,13 +99,48 @@ export class TableRenderer{
   g.save();g.beginPath();g.moveTo(sx,sy);g.lineTo(ex,ey);g.lineWidth=1.8;g.strokeStyle='rgba(253,254,252,.97)';g.stroke();
   g.beginPath();g.arc(ex,ey,Math.max(5,r*this.bw/1000),0,TAU);g.strokeStyle='rgba(242,217,160,.65)';g.stroke();
   if(target&&limit<rail){const [tx,ty]=this.project(target.x,target.y);g.beginPath();g.moveTo(tx,ty);g.lineTo(tx+(tx-ex)*2.4,ty+(ty-ey)*2.4);g.setLineDash([3,5]);g.strokeStyle='rgba(230,207,152,.45)';g.stroke();g.setLineDash([]);}
-  // Full-length cue. The shaft follows the same vector as the physical shot,
-  // with a short gap to the cue ball and a darker tapered butt at the rear.
-  const gap=r*1.45+power*28,reach=gap+355;
-  const [tipX,tipY]=this.project(cue.x-dx*gap,cue.y-dy*gap);
-  const [buttX,buttY]=this.project(cue.x-dx*reach,cue.y-dy*reach);
-  const [gripX,gripY]=this.project(cue.x-dx*(reach-110),cue.y-dy*(reach-110));
-  g.lineCap='round';g.beginPath();g.moveTo(buttX,buttY);g.lineTo(gripX,gripY);g.strokeStyle='#472816';g.lineWidth=7;g.stroke();
-  g.beginPath();g.moveTo(gripX,gripY);g.lineTo(tipX,tipY);g.strokeStyle='#e1b885';g.lineWidth=3.2;g.stroke();
-  g.beginPath();g.arc(tipX,tipY,2.3,0,TAU);g.fillStyle='#e6eff4';g.fill();g.restore();}
+  g.restore();
+  this.drawCue(cue,angle,aim.drawback||0);
+ }
+ drawStroke({cue,angle,power,progress}){
+  // Replay one visible stroke from the pre-shot cue-ball position, even after
+  // the physics starts moving. Contact is already decided by the simulation.
+  const charge=strokeCharge(progress,power);
+  this.drawCue(cue,angle,charge,1-Math.max(0,progress-.68)/.32);
+  if(progress>.43&&progress<.93){
+    const [x,y]=this.project(cue.x,cue.y),r=TABLE.radius*this.bw/1000;
+    const t=(progress-.43)/.5;
+    const g=this.g;g.save();g.globalAlpha=(1-t)*.43;
+    g.beginPath();g.arc(x,y,r*(1.5+t*3.2),0,TAU);g.lineWidth=2;
+    g.strokeStyle='#fff0c7';g.stroke();g.restore();
+  }
+ }
+ drawCue(cue,angle,drawback=0,opacity=1){
+  const g=this.g,{tip,grip,butt}=cueGeometry(cue,angle,drawback);
+  const [tx,ty]=this.project(tip.x,tip.y),[gx,gy]=this.project(grip.x,grip.y),[bx,by]=this.project(butt.x,butt.y);
+  const width=clamp(this.bw/560, .56, 1.28);
+  g.save();g.globalAlpha=clamp(opacity,0,1);g.lineCap='round';
+  // Contact shadows and a slender taper communicate a polished physical cue.
+  g.shadowColor='rgba(0,0,0,.64)';g.shadowBlur=5*width;g.shadowOffsetY=2.8*width;
+  g.beginPath();g.moveTo(bx,by);g.lineTo(gx,gy);g.strokeStyle='#2b1a13';g.lineWidth=8.8*width;g.stroke();
+  g.shadowBlur=0;g.shadowOffsetY=0;
+  const wood=g.createLinearGradient(bx-3,by-4,gx+3,gy+4);
+  wood.addColorStop(0,'#231712');wood.addColorStop(.28,'#925f35');
+  wood.addColorStop(.72,'#b5844e');wood.addColorStop(1,'#3e2419');
+  g.beginPath();g.moveTo(bx,by);g.lineTo(gx,gy);g.strokeStyle=wood;g.lineWidth=6.4*width;g.stroke();
+  g.beginPath();g.moveTo(gx,gy);g.lineTo(tx,ty);g.strokeStyle='#e3c391';g.lineWidth=3.15*width;g.stroke();
+  g.beginPath();g.moveTo(gx,gy);g.lineTo(tx,ty);g.strokeStyle='rgba(255,246,207,.52)';g.lineWidth=.85*width;g.stroke();
+  const ring=this.project(cue.x-Math.cos(angle)*(cueGeometry(cue,angle,drawback).reach-92),cue.y-Math.sin(angle)*(cueGeometry(cue,angle,drawback).reach-92));
+  g.beginPath();g.moveTo(gx,gy);g.lineTo(...ring);g.strokeStyle='#ddc693';g.lineWidth=1.8*width;g.stroke();
+  g.beginPath();g.arc(tx,ty,2.3*width,0,TAU);g.fillStyle='#d7e8f0';g.fill();
+  if(drawback>.03){
+    const [cx,cy]=this.project(cue.x,cue.y);
+    const v=Math.min(1,drawback);g.beginPath();g.arc(cx,cy,Math.max(5,TABLE.radius*this.bw/1000)*(1.28+.22*v),0,TAU);
+    g.strokeStyle='rgba(243,213,140,'+(.15+.55*v)+')';g.lineWidth=(.9+1.1*v)*width;g.stroke();
+    g.beginPath();g.moveTo(tx,ty);g.lineTo(cx,cy);g.setLineDash([2.5,4]);
+    g.strokeStyle='rgba(255,226,170,'+(.15+.43*v)+')';g.lineWidth=1.1*width;g.stroke();g.setLineDash([]);
+  }
+  g.restore();
+ }
+
 }
