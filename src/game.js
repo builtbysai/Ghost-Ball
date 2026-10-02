@@ -36,7 +36,7 @@ export class Game {
   this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;
   this.onPocket=onPocket;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
  reset(){this.rackSeed=this.random()*100000|0;this.sim=new Simulation(rack(this.rackSeed));this.turn=0;this.groups=[null,null];this.break=true;this.foul=false;this.ballInHand=false;this.over=false;this.winner=null;this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;
-  this.history=[];
+  this.history=[];this.previewShot=null;this.activeStroke=null;
   this.notify('A fresh rack. Take your time.');}
  get group(){const group=this.groups[this.turn];if(!group)return 'open';return this.sim.balls.some(b=>!b.pocketed&&(group==='solids'?b.id<8&&b.id>0:b.id>8))?group:'eight';}
  isAI(){return this.kind==='attract'||(this.players==='cpu'&&this.turn===1);}
@@ -58,13 +58,49 @@ export class Game {
    }
    return false;
  }
+ /** The CPU previews the real shot it will take, including cue motion. */
+ get presentedCue(){
+   const shot=this.previewShot;
+   if(this.activeStroke&&this.activeStroke.elapsed<.18){
+     return {angle:this.activeStroke.angle,power:this.activeStroke.power,
+       strike:{...this.activeStroke,progress:Math.min(1,this.activeStroke.elapsed/.16)}};
+   }
+   if(!shot||this.sim.moving)return null;
+   const duration=this.kind==='attract'?2.4:1.35;
+   const ready=Math.min(1,this.timer/duration);
+   return {angle:shot.angle+.105*Math.sin(ready*Math.PI*1.7)*(1-ready),
+     power:shot.power,drawback:(.09+ready*.46)*(this.kind==='attract'?1:.65)};
+ }
  update(dt,{audio=null,haptics=false}={}){
+   if(this.activeStroke){this.activeStroke.elapsed+=dt;
+     if(this.activeStroke.elapsed>=.18)this.activeStroke=null;}
    if(!this.sim.moving){this.timer+=dt;
-     if(this.kind==='attract'&&this.timer>1.8){this.timer=0;if(this.sim.cue()?.pocketed||this.sim.balls.filter(b=>b.id!==0&&!b.pocketed).length<4||this.sim.balls.find(b=>b.id===8)?.pocketed){this.sim=new Simulation(rack());this.break=true;}
-       const shot=this.break?{angle:0,power:.83}:chooseShot(this.sim,'open',this.turn===0?'club':'rookie',this.random);this.beginShot(shot.angle,shot.power);}
-     else if(this.isAI()&&!this.over&&this.kind==='match'&&this.timer>1.05){this.timer=0;
-       if(this.ballInHand){const cue=this.sim.cue();for(const [x,y] of [[240,250],[320,220],[360,300],[210,150]])if(this.sim.placeCue(x,y)){this.ballInHand=false;break;}if(cue?.pocketed)this.sim.placeCue(230,240);}
-       const shot=this.break?{angle:0,power:.82}:chooseShot(this.sim,this.group,this.difficulty,this.random);if(this.beginShot(shot.angle,shot.power))audio?.play({type:'strike',power:shot.power});}
+     if(this.kind==='attract' && (this.sim.cue()?.pocketed ||
+         this.sim.balls.filter(b=>b.id!==0&&!b.pocketed).length<4 ||
+         this.sim.balls.find(b=>b.id===8)?.pocketed)){
+       this.sim=new Simulation(rack(this.random()*100000|0));
+       this.break=true;this.timer=0;this.previewShot=null;
+     }
+     if(this.isAI()&&!this.over){
+       if(this.kind==='match'&&this.ballInHand){
+         for(const [x,y] of [[240,250],[320,220],[360,300],[210,150]])
+           if(this.sim.placeCue(x,y)){this.ballInHand=false;break;}
+         this.previewShot=null;
+       }
+       if(!this.previewShot){
+         this.previewShot=this.break?{angle:0,power:this.kind==='attract'?.83:.82}:
+           chooseShot(this.sim,this.kind==='attract'?'open':this.group,
+             this.kind==='attract'?(this.turn===0?'club':'rookie'):this.difficulty,this.random);
+       }
+       if(this.timer>=(this.kind==='attract'?2.4:1.35)){
+         const shot=this.previewShot, cue=this.sim.cue();
+         if(cue&&!cue.pocketed&&this.beginShot(shot.angle,shot.power)){
+           this.activeStroke={cue:{x:cue.x,y:cue.y},angle:shot.angle,power:shot.power,elapsed:0};
+           if(this.kind==='match')audio?.play({type:'strike',power:shot.power});
+         }
+         this.previewShot=null;this.timer=0;
+       }
+     }
    }
    this.fx=this.fx.filter(effect=>(effect.life-=dt*1.8)>0);
  }
@@ -81,7 +117,7 @@ export class Game {
      if(event.type!=='settled'&&this.kind!=='attract')audio?.play(event);
    }
  }
- resolve(){const shot=this.turnShot;if(!shot)return;this.turnShot=null;if(this.kind==='attract'){this.turn=1-this.turn;this.timer=0;this.break=false;return;}
+ resolve(){const shot=this.turnShot;if(!shot)return;this.turnShot=null;if(this.kind==='attract'){this.turn=1-this.turn;this.timer=0;this.break=false;this.previewShot=null;return;}
    if(this.kind==='practice'){
      if(shot.pots.includes(0)){this.sim.placeCue(240,245);this.notify('Scratch. Tap an open spot to place the cue ball.');this.ballInHand=true;}
      else if(shot.pots.length)this.notify(`${shot.pots.filter(id=>id!==0).length} pocketed. Nice touch.`);
