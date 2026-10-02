@@ -63,13 +63,13 @@ export class Game {
    const shot=this.previewShot;
    if(this.activeStroke&&this.activeStroke.elapsed<.18){
      return {angle:this.activeStroke.angle,power:this.activeStroke.power,
-       strike:{...this.activeStroke,progress:Math.min(1,this.activeStroke.elapsed/.16)}};
+       strike:{...this.activeStroke,progress:Math.min(1,this.activeStroke.elapsed/.16)},showGuide:false};
    }
    if(!shot||this.sim.moving)return null;
    const duration=this.kind==='attract'?2.4:1.35;
    const ready=Math.min(1,this.timer/duration);
    return {angle:shot.angle+.105*Math.sin(ready*Math.PI*1.7)*(1-ready),
-     power:shot.power,drawback:(.09+ready*.46)*(this.kind==='attract'?1:.65)};
+     power:shot.power,drawback:(.09+ready*.46)*(this.kind==='attract'?1:.65),showGuide:false};
  }
  update(dt,{audio=null,haptics=false}={}){
    if(this.activeStroke){this.activeStroke.elapsed+=dt;
