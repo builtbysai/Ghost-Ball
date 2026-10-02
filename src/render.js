@@ -177,11 +177,13 @@ export class TableRenderer{
    g.setLineDash([6,6]);g.lineWidth=1.25;
    g.strokeStyle='rgba(196,229,207,.6)';g.stroke();g.setLineDash([]);
    if(placement&&!placement.legal){
-     for(const ball of sim.balls){
-       if(ball.pocketed||ball.id===0||Math.hypot(placement.x-ball.x,placement.y-ball.y)>90)continue;
+     const blockers=sim.balls.filter(ball=>!ball.pocketed&&ball.id!==0)
+       .map(ball=>({ball,distance:Math.hypot(placement.x-ball.x,placement.y-ball.y)}))
+       .filter(item=>item.distance<50).sort((a,b)=>a.distance-b.distance).slice(0,1);
+     for(const {ball} of blockers){
        const [x,y,k]=P(ball.x,ball.y),r=Math.max(5,26*this.bw/1000*k);
        g.beginPath();g.arc(x,y,r,0,TAU);g.lineWidth=1.35;
-       g.strokeStyle='rgba(250,144,108,.68)';g.stroke();
+       g.strokeStyle='rgba(250,165,124,.62)';g.stroke();
      }
    }
    g.restore();
