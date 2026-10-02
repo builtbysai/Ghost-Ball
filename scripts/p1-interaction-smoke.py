@@ -66,6 +66,9 @@ with sync_playwright() as p:
         assert foul=={'worked':True,'turn':0,'ballInHand':True},foul
         assert page.locator('#tableToast').is_visible(),'foul event toast missing'
         assert page.locator('#guideBadge').is_hidden(),'temporary foul cue must not overlap the placement hint'
+        assert page.locator('#placementTools').is_visible(),'ball-in-hand tools absent'
+        assert page.locator('#spinButton').is_hidden(),'spin controls must give way to placement'
+        assert page.locator('#placementTools').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'),'placement tools clipped'
         target=page.evaluate('window.__ghostTest.worldToScreen(718,250)')
         page.mouse.move(target['x'],target['y'])
         page.mouse.down()
@@ -104,6 +107,15 @@ with sync_playwright() as p:
         page.mouse.move(retry['x']+32,retry['y']+4,steps=6)
         page.mouse.up()
         assert not page.evaluate('window.__ghostTest.snapshot()')['ballInHand'], 'drag release remained stuck after cancellation'
+        again=page.evaluate('window.__ghostTest.simulateFoul()')
+        assert again['ballInHand']
+        page.locator('#gameCanvas').focus()
+        before=page.evaluate('window.__ghostTest.snapshot()')['placement']['candidate']
+        page.keyboard.press('ArrowRight')
+        afterNudge=page.evaluate('window.__ghostTest.snapshot()')['placement']['candidate']
+        assert afterNudge['x']>before['x'], 'keyboard placement nudge did not move'
+        page.keyboard.press('Enter')
+        assert not page.evaluate('window.__ghostTest.snapshot()')['ballInHand'],'keyboard Enter did not confirm placement'
         assert not errors,errors
         print(f'{width}x{height}: foul announcement and legal touch/click placement OK')
         context.close()
