@@ -30,6 +30,11 @@ jobs:
         env:
           CHROMIUM_BIN: /usr/bin/google-chrome
         run: python3 scripts/landscape-smoke.py
+      - name: Foul placement interaction and responsive screenshots
+        if: github.event_name == 'pull_request'
+        env:
+          CHROMIUM_BIN: /usr/bin/google-chrome
+        run: python3 scripts/p1-interaction-smoke.py
       - name: Real HTTP module and cache-busting smoke
         if: github.event_name == 'pull_request'
         env:

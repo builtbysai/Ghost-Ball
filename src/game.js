@@ -1,5 +1,6 @@
 import {Simulation,rack,POCKETS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
+import {nearbyLegalCuePlacement} from './placement-guide.js';
 export const SHOT_CLOCK_SECONDS=45;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 const allowed=(id,group)=>id!==0&&(id===8?group==='eight':group==='open'||(group==='solids'?id<=7:id>=9));
@@ -33,9 +34,9 @@ export function chooseShot(sim,group='open',difficulty='rookie',random=createRan
  return nearest?{angle:Math.atan2(nearest.y-cue.y,nearest.x-cue.x)+(random()-.5)*.045,power:.52}:{angle:0,power:.5};
 }
 export class Game {
- constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),notify=()=>{},onPocket=()=>{}}={}){
+ constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
   this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;
-  this.onPocket=onPocket;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
+  this.onPocket=onPocket;this.onTurn=onTurn;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
  reset(){this.rackSeed=this.random()*100000|0;this.sim=new Simulation(rack(this.rackSeed));this.turn=0;this.groups=[null,null];this.break=true;this.foul=false;this.ballInHand=false;this.over=false;this.winner=null;this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;
   this.history=[];this.previewShot=null;this.activeStroke=null;
   this.shotRemaining=SHOT_CLOCK_SECONDS;this.shotClockKey='';
@@ -68,6 +69,7 @@ export class Game {
    this.turn=1-offender;this.foul=true;this.ballInHand=true;this.previewShot=null;
    this.timer=0;this.shotRemaining=SHOT_CLOCK_SECONDS;this.shotClockKey='';
    this.notify(`Shot clock expired. Player ${this.turn+1} has ball in hand.`);
+   this.onTurn({type:'foul',reason:'shot-clock',turn:this.turn,offender});
    return true;
  }
  /** The CPU previews the real shot it will take, including cue motion. */
@@ -95,8 +97,15 @@ export class Game {
      }
      if(this.isAI()&&!this.over){
        if(this.kind==='match'&&this.ballInHand){
-         for(const [x,y] of [[240,250],[320,220],[360,300],[210,150]])
-           if(this.sim.placeCue(x,y)){this.ballInHand=false;break;}
+         const preferred=[[240,250],[320,220],[360,300],[210,150]];
+         // Fall back when the normal ball-in-hand positions are obstructed.
+         for(let x=100;x<=900;x+=100)for(const y of [250,150,350])preferred.push([x,y]);
+         for(const [x,y] of preferred){
+           const spot=nearbyLegalCuePlacement(this.sim,x,y,{maxDistance:52});
+           if(spot&&this.sim.placeCue(spot.x,spot.y)){
+             this.ballInHand=false;this.shotClockKey='';break;
+           }
+         }
          this.previewShot=null;
        }
        if(!this.previewShot){
@@ -123,7 +132,7 @@ export class Game {
        if(this.shotRemaining===0)this.expireShotClock();
      }
    }
-   this.fx=this.fx.filter(effect=>(effect.life-=dt*1.8)>0);
+   this.fx=this.fx.filter(effect=>(effect.life-=dt*(effect.type==='pocket'?5:1.8))>0);
  }
  step({audio=null,haptics=false}={}){
    const events=this.sim.step();if(this.sim.moving)this.timer=0;
@@ -132,7 +141,8 @@ export class Game {
      if(event.type==='rail'&&this.turnShot?.first)this.turnShot.rail=true;
      if(event.type==='pocket'){this.onPocket(event);}
      if(event.type==='pocket'&&this.turnShot){this.turnShot.pots.push(event.id);
-       const [px,py]=POCKETS[event.pocket];this.fx.push({x:px,y:Math.max(0,Math.min(500,py)),life:1});
+       const [px,py]=POCKETS[event.pocket],ball=this.sim.balls.find(b=>b.id===event.id);
+       this.fx.push({type:'pocket',x:px,y:py,sourceX:ball?.x??px,sourceY:ball?.y??py,color:ball?.color,life:1});
        if(haptics&&this.kind!=='attract')navigator.vibrate?.(12);}
      if(event.type==='settled'&&this.turnShot){this.resolve();}
      if(event.type!=='settled'&&this.kind!=='attract')audio?.play(event);
@@ -143,13 +153,15 @@ export class Game {
      if(shot.pots.includes(0)){this.sim.placeCue(240,245);this.notify('Scratch. Tap an open spot to place the cue ball.');this.ballInHand=true;}
      else if(shot.pots.length)this.notify(`${shot.pots.filter(id=>id!==0).length} pocketed. Nice touch.`);
      else this.notify('Keep exploring the angles.');
-     if(this.sim.balls.every(b=>b.id===0||b.pocketed)){this.notify('Table cleared. Rack again to replay.');this.over=true;}
+     if(this.sim.balls.every(b=>b.id===0||b.pocketed)){this.notify('Table cleared. Rack again to replay.');this.over=true;this.onTurn({type:'win',practice:true});}
      return;
    }
    const pocket=shot.pots.filter(id=>id!==0&&id!==8),scratch=shot.pots.includes(0),eight=shot.pots.includes(8);
    if(eight&&!this.break){
      const legalGroup=this.group==='eight';const legal=legalGroup&&!scratch&&shot.first===8;
-     this.over=true;this.winner=legal?this.turn:1-this.turn;this.notify(legal?`Player ${this.turn+1} clears the table!`:`Early or illegal 8-ball. Player ${2-this.turn} wins.`);return;}
+     this.over=true;this.winner=legal?this.turn:1-this.turn;
+     this.notify(legal?`Player ${this.turn+1} clears the table!`:`Early or illegal 8-ball. Player ${2-this.turn} wins.`);
+     this.onTurn({type:'win',winner:this.winner,legal});return;}
    // v0: Casual 8-ball (no manual called pockets); authoritative official rules are a later milestone.
    let foul=scratch||(!this.break&&(shot.first===null||(this.group==='eight'?shot.first!==8:this.groups[this.turn]?!allowed(shot.first,this.group):shot.first===8)));
    if(!this.break&&!foul&&shot.first!==null&&!shot.rail&&!shot.pots.length)foul=true;
@@ -158,7 +170,8 @@ export class Game {
    const mine=!this.groups[this.turn]?pocket.length>0:pocket.some(id=>allowed(id,this.group));
    const wasBreak=this.break;this.break=false;
    if(foul||(!mine&&!wasBreak)||(!pocket.length&&wasBreak)){this.turn=1-this.turn;this.ballInHand=foul;this.foul=foul;
-     this.notify(foul?'Foul. Opponent has ball in hand.':`Player ${this.turn+1} to shoot.`);}
+     this.notify(foul?'Foul. Opponent has ball in hand.':`Player ${this.turn+1} to shoot.`);
+     this.onTurn({type:foul?'foul':'turn',turn:this.turn,ballInHand:foul});}
    else{this.foul=false;this.notify(`Player ${this.turn+1} keeps the table.`);}
    this.timer=0;
  }

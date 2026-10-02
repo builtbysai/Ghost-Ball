@@ -1,6 +1,13 @@
 /** Pointer-first pool controls. DOM-independent gesture maths are exported for tests. */
 export const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 export function pullPower(startY,nowY,travel){return clamp((nowY-startY)/Math.max(1,travel),0,1);}
+// Pointer capture delivers releases even after the finger leaves the rail.
+// Only a release near the actual track is a deliberate shot.
+export function safePowerRelease(point,rect,margin=18){
+ return Number.isFinite(point?.x)&&Number.isFinite(point?.y)&&
+  point.x>=rect.left-margin&&point.x<=rect.right+margin&&
+  point.y>=rect.top-margin&&point.y<=rect.bottom+margin;
+}
 export function wheelAngle(startAngle,deltaY,sensitivity=.004){return Math.atan2(Math.sin(startAngle-deltaY*sensitivity),Math.cos(startAngle-deltaY*sensitivity));}
 /**
  * Every shot must start on the pull handle, travel downward beyond the safety
@@ -36,7 +43,8 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
    pointer=e.pointerId;startY=axis(e);travel=Math.max(42,(rotated()?rect.width-h.width:rect.height-h.height)-9);track.classList.remove('held');draw(0);track.setPointerCapture?.(pointer);e.preventDefault();}
  function move(e){if(e.pointerId!==pointer)return;draw(pullPower(startY,axis(e),travel));e.preventDefault();}
  function finish(e,cancel=false){if(e.pointerId!==pointer)return;const moved=axis(e)-startY;
-   if(!cancel)move(e);const valid=!cancel&&moved>=minimumTravel&&current>=.08&&canShoot();
+   if(!cancel)move(e);const valid=!cancel&&safePowerRelease({x:e.clientX,y:e.clientY},track.getBoundingClientRect())&&
+    moved>=minimumTravel&&current>=.08&&canShoot();
    pointer=null;try{track.releasePointerCapture?.(e.pointerId);}catch{}
    if(valid){
     const retained=onShoot()===false;
@@ -59,19 +67,40 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
    else return;e.preventDefault();});
  return {reset:()=>{track.classList.remove('held','releasing');draw(0);},isDragging:()=>pointer!==null,getProgress:()=>current};
 }
-export function bindAimWheel({element,canAim,getAngle,setAngle}){
- let pointer=null,lastY=0;
+export function bindAimWheel({element,canAim,getAngle,setAngle,onReset=()=>{}}){
+ let pointer=null,lastY=0,travel=0,lastTap=0;
  const axis=e=>typeof window!=='undefined'&&window.matchMedia('(orientation:portrait) and (max-width:820px)').matches?-e.clientX:e.clientY;
- element.addEventListener('pointerdown',e=>{if(pointer!==null||!canAim())return;pointer=e.pointerId;lastY=axis(e);element.setPointerCapture?.(pointer);e.preventDefault();});
- element.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;setAngle(wheelAngle(getAngle(),axis(e)-lastY));lastY=axis(e);e.preventDefault();});
- function stop(e){if(e.pointerId===pointer){pointer=null;try{element.releasePointerCapture?.(e.pointerId);}catch{}}}
- element.addEventListener('pointerup',stop);element.addEventListener('pointercancel',stop);
+ element.addEventListener('pointerdown',e=>{
+  if(pointer!==null||!canAim())return;
+  // Double-tap undoes aim to the previous shot direction without another HUD control.
+  if(lastTap&&Date.now()-lastTap<340){
+   lastTap=0;onReset();e.preventDefault();return;
+  }
+  pointer=e.pointerId;lastY=axis(e);travel=0;
+  element.setPointerCapture?.(pointer);e.preventDefault();
+ });
+ element.addEventListener('pointermove',e=>{
+  if(e.pointerId!==pointer)return;
+  const delta=axis(e)-lastY;travel+=Math.abs(delta);
+  setAngle(wheelAngle(getAngle(),delta));lastY=axis(e);e.preventDefault();
+ });
+ function stop(e,cancel=false){
+  if(e.pointerId!==pointer)return;
+  if(!cancel&&travel<5)lastTap=Date.now();else lastTap=0;
+  pointer=null;try{element.releasePointerCapture?.(e.pointerId);}catch{}
+ }
+ element.addEventListener('pointerup',e=>stop(e));
+ element.addEventListener('pointercancel',e=>stop(e,true));
  element.addEventListener('lostpointercapture',()=>{pointer=null;});
- element.addEventListener('wheel',e=>{if(!canAim())return;setAngle(wheelAngle(getAngle(),e.deltaY*.45));e.preventDefault();},{passive:false});
- element.addEventListener('keydown',e=>{if(!canAim())return;
-   if(e.key==='ArrowUp'||e.key==='ArrowLeft')setAngle(getAngle()+Math.PI/1440);
-   else if(e.key==='ArrowDown'||e.key==='ArrowRight')setAngle(getAngle()-Math.PI/1440);
-   else return;e.preventDefault();});
+ element.addEventListener('wheel',e=>{if(!canAim())return;lastTap=0;setAngle(wheelAngle(getAngle(),e.deltaY*.45));e.preventDefault();},{passive:false});
+ element.addEventListener('keydown',e=>{
+  if(!canAim())return;
+  if(e.key==='ArrowUp'||e.key==='ArrowLeft')setAngle(getAngle()+Math.PI/720);
+  else if(e.key==='ArrowDown'||e.key==='ArrowRight')setAngle(getAngle()-Math.PI/720);
+  else if(e.key==='Backspace'||e.key==='Home')onReset();
+  else return;
+  lastTap=0;e.preventDefault();
+ });
 }
 export function spinFromPoint(x,y,rect){const rx=(x-(rect.left+rect.width/2))/(rect.width*.42),ry=(y-(rect.top+rect.height/2))/(rect.height*.42),d=Math.hypot(rx,ry)||1,s=Math.min(1,1/d);return {x:Math.round(rx*s*100)/100 || 0,y:Math.round(-ry*s*100)/100 || 0};}
 

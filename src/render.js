@@ -49,7 +49,7 @@ export class TableRenderer{
    return {x:clamp(((sx-this.center)/(this.bw*k)+.5)*TABLE.width,0,1000),y:t*TABLE.height};
  }
  clear(){this.g.clearRect(0,0,this.w,this.h);}
- draw(sim,{aim=null,interactive=false,placement=null,fx=[]}={}){
+ draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[]}={}){
   const g=this.g,P=(x,y)=>this.project(x,y);
   this.clear();g.save();
   if(this.cacheStatic&&typeof document!=='undefined'){
@@ -67,6 +67,7 @@ export class TableRenderer{
    }
    g.drawImage(this.surface,0,0,this.w,this.h);
   }else this.paintSurface(g);
+  if(placementZone&&!sim.moving)this.drawPlacementZone(sim,placementZone,placement);
   if(interactive&&aim&&!sim.moving&&!sim.cue()?.pocketed)this.drawAim(sim,aim);
   else if(aim?.strike&&aim.strike.progress<1)this.drawStroke(aim.strike);
   for(const ball of [...sim.balls].filter(b=>!b.pocketed).sort((a,b)=>a.y-b.y))this.drawBall(ball);
@@ -74,9 +75,32 @@ export class TableRenderer{
   if(placement){
     const [sx,sy,k]=P(placement.x,placement.y),r=Math.max(5,TABLE.radius*this.bw/1000*k);
     g.save();g.beginPath();g.arc(sx,sy,r,0,TAU);g.fillStyle=placement.legal?'rgba(248,247,230,.8)':'rgba(201,93,74,.6)';g.fill();
-    g.beginPath();g.arc(sx,sy,r*1.42,0,TAU);g.strokeStyle=placement.legal?'#edc982':'#e97b64';g.lineWidth=2;g.stroke();g.restore();
+    g.beginPath();g.arc(sx,sy,r*1.42,0,TAU);g.strokeStyle=placement.legal?'#edc982':'#e97b64';g.lineWidth=2;g.stroke();
+    if(placement.suggestion&&!placement.legal){
+      const [tx,ty]=P(placement.suggestion.x,placement.suggestion.y);
+      g.beginPath();g.moveTo(sx,sy);g.lineTo(tx,ty);g.setLineDash([3,4]);
+      g.strokeStyle='rgba(235,216,161,.65)';g.lineWidth=1;g.stroke();g.setLineDash([]);
+      g.beginPath();g.arc(tx,ty,r*.95,0,TAU);g.fillStyle='#f4f4e5dc';g.fill();
+      g.beginPath();g.arc(tx,ty,r*1.6,0,TAU);g.strokeStyle='#8ce9b0';g.lineWidth=2;g.stroke();
+    }
+    g.restore();
   }
-  for(const effect of fx){const [sx,sy]=P(effect.x,effect.y);g.beginPath();g.arc(sx,sy,(1-effect.life)*28,0,TAU);g.strokeStyle=`rgba(239,207,139,${effect.life*.65})`;g.lineWidth=2;g.stroke();}
+  for(const effect of fx){
+    const [sx,sy]=P(effect.x,effect.y);
+    if(effect.type==='pocket'){
+      const t=1-effect.life;
+      const [px,py]=P(effect.sourceX,effect.sourceY);
+      const x=px+(sx-px)*t,y=py+(sy-py)*t,r=Math.max(0,TABLE.radius*this.bw/1000*(1-.93*t));
+      g.save();g.shadowColor='#080d0a';g.shadowBlur=9*t;
+      g.beginPath();g.arc(x,y,r,0,TAU);g.fillStyle=effect.color||'#eee5d8';g.fill();
+      g.restore();
+      g.beginPath();g.arc(sx,sy,Math.max(1,t*25),0,TAU);
+      g.strokeStyle=`rgba(239,207,139,${effect.life*.35})`;g.lineWidth=1.6;g.stroke();
+    }else{
+      g.beginPath();g.arc(sx,sy,(1-effect.life)*28,0,TAU);
+      g.strokeStyle=`rgba(239,207,139,${effect.life*.65})`;g.lineWidth=2;g.stroke();
+    }
+  }
   g.restore();this.drawCount++;
  }
  paintSurface(g){
@@ -143,6 +167,27 @@ export class TableRenderer{
   g.restore();
  }
 
+ drawPlacementZone(sim,zone,placement){
+   // All coordinates come from the same geometry used by canPlaceCue.
+   const g=this.g,P=(x,y)=>this.project(x,y);
+   const left=30,right=zone==='break'?265:970,top=30,bottom=470;
+   const boundary=[P(left,top),P(right,top),P(right,bottom),P(left,bottom)];
+   g.save();
+   polygon(g,boundary);g.fillStyle='rgba(183,232,202,.038)';g.fill();
+   g.setLineDash([6,6]);g.lineWidth=1.25;
+   g.strokeStyle='rgba(196,229,207,.6)';g.stroke();g.setLineDash([]);
+   if(placement&&!placement.legal){
+     const blockers=sim.balls.filter(ball=>!ball.pocketed&&ball.id!==0)
+       .map(ball=>({ball,distance:Math.hypot(placement.x-ball.x,placement.y-ball.y)}))
+       .filter(item=>item.distance<50).sort((a,b)=>a.distance-b.distance).slice(0,1);
+     for(const {ball} of blockers){
+       const [x,y,k]=P(ball.x,ball.y),r=Math.max(5,26*this.bw/1000*k);
+       g.beginPath();g.arc(x,y,r,0,TAU);g.lineWidth=1.35;
+       g.strokeStyle='rgba(250,165,124,.62)';g.stroke();
+     }
+   }
+   g.restore();
+ }
  drawAim(sim,aim){
    const {angle}=aim,g=this.g,cue=sim.cue();if(!cue)return;
    if(aim.showGuide===false){this.drawCue(cue,angle,aim.drawback||0);return;}
