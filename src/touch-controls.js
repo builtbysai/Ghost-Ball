@@ -8,10 +8,21 @@ export function safePowerRelease(point,rect,margin=18){
   point.x>=rect.left-margin&&point.x<=rect.right+margin&&
   point.y>=rect.top-margin&&point.y<=rect.bottom+margin;
 }
+/** A committed, near-maximum pull stays valid past the end of the rail,
+ * but never past its lateral lane. On rotated screens the pull moves left. */
+export function alignedMaxPull(point,rect,{rotated=false,margin=18,endInset=8}={}){
+ if(!Number.isFinite(point?.x)||!Number.isFinite(point?.y))return false;
+ return rotated
+  ?point.y>=rect.top-margin&&point.y<=rect.bottom+margin&&point.x<=rect.left+endInset
+  :point.x>=rect.left-margin&&point.x<=rect.right+margin&&point.y>=rect.bottom-endInset;
+}
 export function wheelAngle(startAngle,deltaY,sensitivity=.004){return Math.atan2(Math.sin(startAngle-deltaY*sensitivity),Math.cos(startAngle-deltaY*sensitivity));}
 /**
  * Every shot must start on the pull handle, travel downward beyond the safety
- * threshold and end inside the control. Cancel/leave never commits a shot.
+ * threshold. Near-maximum travel fires at the end of the rail before a
+ * finger can slip off the physical screen; releasing beyond the rail also
+ * works as long as it remains in the same narrow pull lane.
+ * A generic pointercancel does not fire a shot.
  * A pointer gesture is separate from keyboard operation; this eliminates
  * accidental shots caused by changing a native slider.
  */
@@ -29,7 +40,7 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
    track.style.setProperty('--pull-y',Math.max(0,(track.clientHeight-44)*current)+'px');
    track.classList.toggle('charging',current>.025);
    track.setAttribute('aria-valuenow',String(Math.round(Math.max(.08,current)*100)));
-   track.setAttribute('aria-valuetext',current>0?Math.round(Math.max(.08,current)*100)+' percent power':'Ready to pull');
+   track.setAttribute('aria-valuetext',current>=.96?'Maximum power. Release or pull to the end to shoot':current>0?Math.round(Math.max(.08,current)*100)+' percent power':'Ready to pull');
    onPull(current);
   };
  draw(0);
@@ -41,17 +52,46 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
    const available=rotated()?rect.width:rect.height;
    if(start<top-20||start>top+Math.max(48,available*.38))return;
    pointer=e.pointerId;startY=axis(e);travel=Math.max(42,(rotated()?rect.width-h.width:rect.height-h.height)-9);track.classList.remove('held');draw(0);track.setPointerCapture?.(pointer);e.preventDefault();}
- function move(e){if(e.pointerId!==pointer)return;draw(pullPower(startY,axis(e),travel));e.preventDefault();}
- function finish(e,cancel=false){if(e.pointerId!==pointer)return;const moved=axis(e)-startY;
-   if(!cancel)move(e);const valid=!cancel&&safePowerRelease({x:e.clientX,y:e.clientY},track.getBoundingClientRect())&&
-    moved>=minimumTravel&&current>=.08&&canShoot();
-   pointer=null;try{track.releasePointerCapture?.(e.pointerId);}catch{}
-   if(valid){
-    const retained=onShoot()===false;
-    if(retained){track.classList.add('held');}
-    else{track.classList.add('releasing');draw(0);setTimeout(()=>track.classList.remove('releasing'),220);}
-   }else{onCancel();draw(0);}
-   e.preventDefault();}
+ function commit(id){
+   // Disarm first: a captured pointerup/lostpointercapture cannot fire again.
+   if(pointer!==id||!canShoot())return false;
+   pointer=null;try{track.releasePointerCapture?.(id);}catch{}
+   const retained=onShoot()===false;
+   if(retained)track.classList.add('held');
+   else{
+     track.classList.add('releasing');draw(0);
+     setTimeout(()=>track.classList.remove('releasing'),220);
+   }
+   return true;
+ }
+ function move(e){
+   if(e.pointerId!==pointer)return;
+   const moved=axis(e)-startY;
+   draw(pullPower(startY,axis(e),travel));
+   // The handle can be held at 100%. Only an intentional continuation all
+   // the way to the rail's end is auto-fired before physical screen loss.
+   if(moved>=minimumTravel&&current>=.96&&
+       alignedMaxPull({x:e.clientX,y:e.clientY},track.getBoundingClientRect(),{rotated:rotated()})&&
+       canShoot())commit(e.pointerId);
+   e.preventDefault();
+ }
+ function finish(e,cancel=false){
+   if(e.pointerId!==pointer)return;
+   const moved=axis(e)-startY;
+   // Always update power on release; do not use move() here because it may
+   // auto-fire. A canceled system gesture never commits a new shot.
+   if(!cancel)draw(pullPower(startY,axis(e),travel));
+   const rect=track.getBoundingClientRect(),point={x:e.clientX,y:e.clientY};
+   const aligned=alignedMaxPull(point,rect,{rotated:rotated()});
+   const valid=!cancel&&moved>=minimumTravel&&current>=.08&&canShoot()&&
+     (safePowerRelease(point,rect)||current>=.96&&aligned);
+   if(valid)commit(e.pointerId);
+   else{
+     pointer=null;try{track.releasePointerCapture?.(e.pointerId);}catch{}
+     onCancel();draw(0);
+   }
+   e.preventDefault();
+ }
  track.addEventListener('pointerdown',down);
  track.addEventListener('pointermove',move);
  track.addEventListener('pointerup',e=>finish(e));
