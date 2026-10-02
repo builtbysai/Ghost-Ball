@@ -48,6 +48,15 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done}){
  canvas.className='table-flight';canvas.setAttribute('aria-hidden','true');
  canvas.style.width=startBox.width+'px';canvas.style.height=startBox.height+'px';app.append(canvas);
  const flight=new TableRenderer(canvas,{view:'perspective',hall});flight.resize();
+ // Render the floating board at a higher pixel density when it is growing
+ // toward the match layout; CSS-only scaling blurred the previous entrance.
+ const targetPixels=gameRenderer.canvas.width/Math.max(1,startBox.width);
+ const resolution=Math.min(3.2,Math.max(flight.dpr,targetPixels*.95));
+ if(resolution>flight.dpr){
+  flight.dpr=resolution;canvas.width=Math.round(flight.w*resolution);
+  canvas.height=Math.round(flight.h*resolution);
+  flight.g.setTransform(resolution,0,0,resolution,0,0);
+ }
  const start={x:startBox.left-appBox.left+startBox.width/2,y:startBox.top-appBox.top+startBox.height/2};
  const originals=from.balls.map(ball=>({...ball})),rack=to.balls.map(ball=>({...ball}));
  let started=null;
