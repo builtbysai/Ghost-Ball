@@ -15,13 +15,35 @@ let current=null,active='lobby',motion=true,placement=null,pointerMode=null;
 let settingsOrigin='lobby',updateWaiting=false,powerSide='left';
 let matchElapsed=0,lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
-let previousShotAngles=[0,0];
+let previousShotAngles=[0,0],toastTimeout=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
 const setText=(id,value)=>{$(id).textContent=value;};
 function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
 
 function notify(message){if(message)setText('matchAnnouncements',message);}
+function clearTableToast(){
+ if(toastTimeout!==null)clearTimeout(toastTimeout);
+ toastTimeout=null;hide('tableToast');
+}
+function tableToast(message,kind='turn'){
+ clearTableToast();setText('tableToast',message);
+ $('tableToast').dataset.kind=kind;show('tableToast');
+ toastTimeout=setTimeout(()=>{hide('tableToast');toastTimeout=null;},kind==='foul'?1700:1150);
+}
+function matchTurn(event){
+ if(active!=='game')return;
+ if(event.type==='win'){clearTableToast();return;}
+ const local=current.players==='local',human=event.turn===0;
+ const who=local?`PLAYER ${event.turn+1}`:human?'YOU':'RIVAL';
+ if(event.type==='foul'){
+  tableToast(`FOUL · ${who} HAS BALL IN HAND`,'foul');
+  audio.play({type:'foul'});
+ }else if(event.type==='turn'){
+  tableToast(local?`${who} TO SHOOT`:human?'YOUR TURN':'RIVAL TURN');
+  if(local||human)audio.play({type:'turn'});
+ }
+}
 function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);
   document.documentElement.style.setProperty('--hall',h.felt);document.documentElement.style.setProperty('--room-aura',h.aura);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
   setText('roomPlaque',String(h.year));setText('roomArt',h.name.toUpperCase());$('roomEyebrow').dataset.short=`ROOM 0${room+1} · ${h.year}`;setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
@@ -92,9 +114,9 @@ function turnUI(){if(!current)return;
 }
 function begin(kind){
  if(active!=='lobby')return;
- lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];$('collectedBalls').replaceChildren();hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
+ lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();$('collectedBalls').replaceChildren();hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
- current=new Game({kind,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',notify,onPocket:animatePocket});
+ current=new Game({kind,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',notify,onPocket:animatePocket,onTurn:matchTurn});
  if(kind==='attract'){current.turn=0;notify('An exhibition between our house rivals.');}
  let needsHint=false;try{needsHint=localStorage.getItem('ghostball-controls-taught')!=='yes';}catch{}
  if(kind==='match'&&needsHint)show('controlsHint');else hide('controlsHint');
@@ -115,7 +137,7 @@ function begin(kind){
  catch(err){console.warn('Table entrance skipped',err);finish();}
 }
 function finishLobby(){
- active='lobby';current=null;placement=null;pointerMode=null;shotMotion=null;pullProgress=0;tensionLevel=0;
+ active='lobby';current=null;placement=null;pointerMode=null;shotMotion=null;pullProgress=0;tensionLevel=0;clearTableToast();
  hide('spinShade');hide('spinSheet');hide('pauseMenu');hide('gameScreen');hide('controlsHint');
  $('gameScreen').classList.remove('entering','leaving');$('app').classList.remove('entering-match','leaving-match');
  $('ambient').style.visibility='';$('lobby').removeAttribute('aria-hidden');resize();$('menuBtn').focus();
@@ -131,13 +153,13 @@ function quitToLobby(){
  catch(err){console.warn('Return transition skipped',err);finishLobby();}
 }
 function pauseMatch(){
- if(active!=='game')return;active='paused';hide('spinSheet');hide('spinShade');hide('settingsSheet');hide('backdrop');
+ if(active!=='game')return;active='paused';clearTableToast();hide('spinSheet');hide('spinShade');hide('settingsSheet');hide('backdrop');
  setText('pauseSummary',current?.kind==='practice'?'Practice table':current?.kind==='attract'?'Exhibition table':'Your match is on hold');
  show('pauseMenu');$('resumeMatch').focus();
 }
 function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('pauseButton').focus();turnUI();}
 function resetMatch(){
- if(!current)return;current.reset();lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];
+ if(!current)return;current.reset();lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();
  $('collectedBalls').replaceChildren();placement=null;angle=0;spin={x:0,y:0};syncAim();syncSpin();
  setPower(50);powerControl.reset();$('powerTrack').classList.remove('impact');turnUI();
 }
