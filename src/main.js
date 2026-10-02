@@ -1,6 +1,6 @@
 import {Game} from './game.js';
 import {TableRenderer,halls} from './render.js';
-import {TABLE} from './physics.js';
+import {TABLE,POCKETS} from './physics.js';
 import {Audio} from './audio.js';
 import {bindPower,bindAimWheel,spinFromPoint,cueShaftHit,rearAimAngle,wrapAngle} from './touch-controls.js';
 import {flyTable} from './table-transition.js';
@@ -9,25 +9,26 @@ const $=id=>document.getElementById(id);
 const all=(query)=>[...document.querySelectorAll(query)];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 let room=1,mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
-let current=null,active='lobby',motion=true,releaseToShoot=true,placement=null,pointerMode=null;
+let current=null,active='lobby',motion=true,placement=null,pointerMode=null;
+let matchElapsed=0,shotRemaining=45,clockKey='',lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
 const setText=(id,value)=>{$(id).textContent=value;};
 function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
 
-function notify(message){if(message)setText('status',message);}
+function notify(message){if(message)setText('matchAnnouncements',message);}
 function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);
   document.documentElement.style.setProperty('--hall',h.felt);document.documentElement.style.setProperty('--room-aura',h.aura);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
-  setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
+  setText('roomPlaque',String(h.year));setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
   setText('playText',mode==='practice'?`Practice at ${h.name}`:`Break at ${h.name}`);
   if(current)setText('roundLabel',h.name.toUpperCase());
 }
 function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
 function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';show('backdrop');show('setupSheet');$('closeSetup').focus();}
-function closeSetup(){hide('setupSheet');if($('settingsSheet').hidden)hide('backdrop');$('openSetup').focus();}
-function openSettings(){hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('motionToggle').checked=motion;$('releaseToggle').checked=releaseToShoot;}
-function closeSettings(){hide('settingsSheet');hide('backdrop');if(active==='game')$('inGameSettings').focus();}
+function closeSetup(){const wasOpen=!$('setupSheet').hidden;hide('setupSheet');if($('settingsSheet').hidden)hide('backdrop');if(wasOpen)$('openSetup').focus();}
+function openSettings(){hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('motionToggle').checked=motion;$('closeSettings').focus();}
+function closeSettings(){if($('settingsSheet').hidden)return;hide('settingsSheet');hide('backdrop');if(active==='paused')$('pauseSettings').focus();else if(active==='lobby')$('menuBtn').focus();}
 function openMenu(){show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){setText('matchSummary',mode==='practice'?'Open practice table':rival==='local'?'8-Ball · Two players':`8-Ball vs ${rival==='rookie'?'Rookie':'Club Pro'}`);
   setText('playSubtitle',mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':'CASUAL 8-BALL · NO ENTRY FEE');
@@ -49,18 +50,23 @@ function turnUI(){if(!current)return;
  const signature=current.groups.join(':')+':'+current.sim.balls.filter(b=>b.pocketed).map(b=>b.id).sort((a,b)=>a-b).join(',');
  if(signature!==lastScoreSignature){ballSlots($('ballsOne'),0);ballSlots($('ballsTwo'),1);lastScoreSignature=signature;}
  $('gameScreen').dataset.shots=String(current.shots);
+ const seconds=Math.ceil(shotRemaining);const pct=current.kind==='match'?`${Math.max(0,shotRemaining/45)*100}%`:'100%';
+ for(const [i,id,clock] of [[0,'oneCard','clockOne'],[1,'twoCard','clockTwo']]){
+  $(id).style.setProperty('--turn-progress',current.turn===i?pct:'100%');
+  $(clock).textContent=String(seconds);$(clock).hidden=current.kind!=='match'||current.turn!==i;
+ }
  $('oneCard').classList.toggle('playing',current.turn===0);$('twoCard').classList.toggle('playing',current.turn===1);
- $('shootBtn').disabled=!canAct();$('powerTrack').classList.toggle('is-disabled',!canAct());
+ $('powerTrack').classList.toggle('is-disabled',!canAct());
  $('powerTrack').setAttribute('aria-disabled',String(!canAct()));$('aimWheel').setAttribute('aria-disabled',String(!canAct()));
  setText('guideBadge',current.ballInHand?'DRAG CUE BALL TO PLACE':ai?'WATCH THE SHOT':canAct()?'DRAG THE CUE STICK TO AIM':'BALLS IN MOTION');
  $('guideBadge').style.opacity=busy?'0':'.9';
 }
 function begin(kind){
  if(active!=='lobby')return;
- lastScoreSignature='';hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
+ lastScoreSignature='';matchElapsed=0;shotRemaining=45;clockKey='';lastClockSecond=-1;$('collectedBalls').replaceChildren();hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
- current=new Game({kind,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',notify});
- if(kind==='attract'){current.turn=0;setText('status','An exhibition between our house rivals.');}
+ current=new Game({kind,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',notify,onPocket:animatePocket});
+ if(kind==='attract'){current.turn=0;notify('An exhibition between our house rivals.');}
  active='transition';show('gameScreen');$('lobby').setAttribute('aria-hidden','true');
  $('gameScreen').classList.add('entering');$('app').classList.add('entering-match');
  applyRoom();turnUI();resize();
@@ -77,25 +83,73 @@ function begin(kind){
    from:attract.sim,to:current.sim,hall:room,gameRenderer:table,done:finish,isActive:()=>active==='transition'});}
  catch(err){console.warn('Table entrance skipped',err);finish();}
 }
-function exit(){
+function finishLobby(){
  active='lobby';current=null;placement=null;pointerMode=null;shotMotion=null;pullProgress=0;tensionLevel=0;
- hide('spinShade');hide('spinSheet');hide('gameScreen');
- $('gameScreen').classList.remove('entering');$('app').classList.remove('entering-match');
- $('ambient').style.visibility='';$('lobby').removeAttribute('aria-hidden');resize();
+ hide('spinShade');hide('spinSheet');hide('pauseMenu');hide('gameScreen');
+ $('gameScreen').classList.remove('entering','leaving');$('app').classList.remove('entering-match','leaving-match');
+ $('ambient').style.visibility='';$('lobby').removeAttribute('aria-hidden');resize();$('menuBtn').focus();
+}
+function quitToLobby(){
+ if(active!=='paused'&&active!=='game')return;
+ closeSettings();hide('pauseMenu');hide('spinShade');hide('spinSheet');
+ const leaving=current;active='transition';$('gameScreen').classList.add('leaving');$('app').classList.add('leaving-match');
+ resize();ambient.draw(attract.sim,{fx:[]});
+ try{flyTable({app:$('app'),source:$('gameCanvas'),target:$('attractCanvas'),from:leaving.sim,to:attract.sim,
+   hall:room,gameRenderer:ambient,reverse:true,done:finishLobby,isActive:()=>active==='transition'});}
+ catch(err){console.warn('Return transition skipped',err);finishLobby();}
+}
+function pauseMatch(){
+ if(active!=='game')return;active='paused';hide('spinSheet');hide('spinShade');hide('settingsSheet');hide('backdrop');
+ setText('pauseSummary',current?.kind==='practice'?'Practice table':current?.kind==='attract'?'Exhibition table':'Your match is on hold');
+ show('pauseMenu');$('resumeMatch').focus();
+}
+function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('pauseButton').focus();turnUI();}
+function resetMatch(){
+ if(!current)return;current.reset();lastScoreSignature='';shotRemaining=45;clockKey='';matchElapsed=0;lastClockSecond=-1;
+ $('collectedBalls').replaceChildren();placement=null;angle=0;spin={x:0,y:0};syncAim();syncSpin();
+ setPower(50);powerControl.reset();$('powerTrack').classList.remove('impact');turnUI();
+}
+const pocketColors=['#f4f3e9','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d','#191918','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d'];
+function animatePocket(event){
+ if(active!=='game'||!current)return;
+ const dock=$('collectedBalls'),ball=document.createElement('span');ball.className='return-ball'+(event.id>=9?' striped':'');
+ ball.style.setProperty('--ball-color',pocketColors[event.id]);ball.textContent=event.id||'';
+ ball.setAttribute('aria-label',event.id?'Ball '+event.id+' pocketed':'Cue ball scratched');dock.append(ball);
+ const [px,py]=POCKETS[event.pocket],[x,y]=table.project(px,py),canvasBox=$('gameCanvas').getBoundingClientRect(),end=ball.getBoundingClientRect();
+ const source=mobileLandscape()?{x:canvasBox.right-y,y:canvasBox.top+x}:{x:canvasBox.left+x,y:canvasBox.top+y};
+ const dx=source.x-(end.left+end.width/2),dy=source.y-(end.top+end.height/2);
+ if(motion&&ball.animate&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+  const flight=ball.animate([
+   {transform:`translate(${dx}px,${dy}px) scale(1.1)`,opacity:1,offset:0},
+   {transform:`translate(${dx*.4}px,${dy*.23}px) scale(.9)`,opacity:1,offset:.65},
+   {transform:'translate(0,0) scale(1)',opacity:1,offset:1}
+  ],{duration:600,easing:'cubic-bezier(.15,.78,.2,1)'});
+  if(event.id===0)flight.onfinish=()=>ball.remove();
+ }else if(event.id===0)ball.remove();
+}
+function updateClocks(elapsed){
+ if(!current||current.over)return;matchElapsed+=elapsed;
+ if(!current.sim.moving&&!current.ballInHand){
+  const key=`${current.turn}:${current.shots}:${current.break}`;
+  if(key!==clockKey){clockKey=key;shotRemaining=45;}
+  else if(current.kind==='match')shotRemaining=Math.max(0,shotRemaining-elapsed);
+ }
+ const whole=Math.floor(matchElapsed);
+ if(whole!==lastClockSecond){lastClockSecond=whole;setText('matchTime',`${String(Math.floor(whole/60)).padStart(2,'0')}:${String(whole%60).padStart(2,'0')}`);}
 }
 // Cue aiming is acquired on the stick behind the cue ball, not the guide in
 // front. Offset-preserving relative rotation avoids a jump when grabbed.
-function cuePoint(clientX,clientY){
- const rect=$('gameCanvas').getBoundingClientRect();
- return table.unproject(clientX-rect.left,clientY-rect.top);
-}
+function mobileLandscape(){return window.matchMedia('(orientation:portrait) and (max-width:820px)').matches;}
+function localCanvasPoint(clientX,clientY){const rect=$('gameCanvas').getBoundingClientRect();
+ return mobileLandscape()?{x:clientY-rect.top,y:rect.right-clientX}:{x:clientX-rect.left,y:clientY-rect.top};}
+function cuePoint(clientX,clientY){const p=localCanvasPoint(clientX,clientY);return table.unproject(p.x,p.y);}
 let rearGesture=null;
 function startCueDrag(e,pt,cue){
  const rect=$('gameCanvas').getBoundingClientRect(),geo=cueGeometry(cue,angle,pullProgress);
  const [cx,cy]=table.project(cue.x,cue.y);
  const [tx,ty]=table.project(geo.tip.x,geo.tip.y);
  const [bx,by]=table.project(geo.butt.x,geo.butt.y);
- const p={x:e.clientX-rect.left,y:e.clientY-rect.top};
+ const p=localCanvasPoint(e.clientX,e.clientY);
  if(!cueShaftHit(p,{x:cx,y:cy},{x:tx,y:ty},{x:bx,y:by},e.pointerType==='touch'?32:20))return false;
  const bearing=rearAimAngle(cue,pt);
  if(bearing===null)return false;
@@ -144,29 +198,25 @@ function onPull(amount){
 function setPower(n){power=clamp(Number(n)/100,.08,1);setText('powerValue',`${Math.round(power*100)}%`);}
 $('menuBtn').onclick=openMenu;$('closeMenu').onclick=()=>hide('clubMenu');
 $('menuPractice').onclick=()=>begin('practice');$('menuSettings').onclick=openSettings;
-$('inGameSettings').onclick=openSettings;
+$('pauseButton').onclick=pauseMatch;$('resumeMatch').onclick=resumeMatch;
+$('pauseSettings').onclick=openSettings;$('rerack').onclick=()=>{resetMatch();resumeMatch();};$('quitMatch').onclick=quitToLobby;
 $('closeSettings').onclick=closeSettings;
 $('soundToggle').onchange=event=>{audio.enabled=event.target.checked;savePreference('ghostball-sound',audio.enabled?'on':'off');};
 $('motionToggle').onchange=event=>{motion=event.target.checked;savePreference('ghostball-motion',motion?'on':'off');};
-$('releaseToggle').onchange=event=>{releaseToShoot=event.target.checked;savePreference('ghostball-release',releaseToShoot?'on':'off');$('powerTrack').setAttribute('aria-label',releaseToShoot?'Drag downward and release to shoot':'Drag downward to set power; use Shoot to fire');};
 $('openSetup').onclick=openSetup;$('closeSetup').onclick=closeSetup;$('backdrop').onclick=()=>{closeSetup();closeSettings();};
 $('prevRoom').onclick=()=>{room=(room-1+halls.length)%halls.length;applyRoom();};
 $('nextRoom').onclick=()=>{room=(room+1)%halls.length;applyRoom();};
 all('.mode[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;refreshMenu();applyRoom();});
 all('#rivals [data-rival]').forEach(b=>b.onclick=()=>{rival=b.dataset.rival;all('#rivals button').forEach(n=>n.classList.toggle('selected',n===b));refreshMenu();});
 $('playBtn').onclick=()=>begin(mode);$('watchBtn').onclick=()=>begin('attract');
-$('leaveGame').onclick=exit;$('rerack').onclick=()=>{current?.reset();lastScoreSignature='';placement=null;angle=0;spin={x:0,y:0};syncAim();syncSpin();setPower(50);powerControl.reset();$('powerTrack').classList.remove('impact');turnUI();};
 $('aimLeft').onclick=()=>{angle-=Math.PI/720;syncAim();};
 $('aimRight').onclick=()=>{angle+=Math.PI/720;syncAim();};
 $('aimRange').oninput=e=>{angle=Number(e.target.value)*Math.PI/180;};
-// Optional Shoot button is preserved for keyboard/assistive input and users
-// who switch off release-to-shoot. On touch, a committed pull is the default.
-$('shootBtn').onclick=fire;
 const powerControl=bindPower({
  track:$('powerTrack'),handle:$('pullHandle'),canShoot:()=>Boolean(canAct()),
  onPower:n=>{setPower(n*100);audio.unlock();},
  onPull,
- onShoot:()=>{if(releaseToShoot){fire();return true;}notify('Power ready. Press SHOOT.');setText('powerValue',Math.round(power*100)+'% READY');return false;},
+ onShoot:()=>{fire();return true;},
  onCancel:()=>{setPower(50);}
 });
 bindAimWheel({element:$('aimWheel'),canAim:()=>Boolean(canAct()),getAngle:()=>angle,setAngle:n=>{angle=n;syncAim();}});
@@ -181,7 +231,9 @@ function closeSpin(){hide('spinShade');hide('spinSheet');$('spinButton').focus()
 $('spinDone').onclick=closeSpin;$('spinShade').onclick=closeSpin;
 $('spinReset').onclick=()=>{spin={x:0,y:0};syncSpin();};
 let spinPointer=null;
-function spinPosition(e){spin=spinFromPoint(e.clientX,e.clientY,$('spinBall').getBoundingClientRect());syncSpin();}
+function spinPosition(e){const rect=$('spinBall').getBoundingClientRect();
+ if(mobileLandscape()){spin=spinFromPoint(e.clientY-rect.top,rect.right-e.clientX,{left:0,top:0,width:rect.height,height:rect.width});}
+ else spin=spinFromPoint(e.clientX,e.clientY,rect);syncSpin();}
 $('spinBall').addEventListener('pointerdown',e=>{if(spinPointer!==null)return;spinPointer=e.pointerId;$('spinBall').setPointerCapture?.(spinPointer);spinPosition(e);});
 $('spinBall').addEventListener('pointermove',e=>{if(e.pointerId===spinPointer)spinPosition(e);});
 $('spinBall').addEventListener('pointerup',e=>{if(e.pointerId!==spinPointer)return;spinPosition(e);spinPointer=null;});
@@ -220,21 +272,21 @@ $('gameCanvas').addEventListener('pointercancel',e=>{
  if(e.pointerId===pointerId){pointerId=null;rearGesture=null;pointerMode=null;placement=null;}
 });
 window.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){if(!$('spinSheet').hidden){closeSpin();return;}if(!$('settingsSheet').hidden)closeSettings();else if(!$('setupSheet').hidden)closeSetup();else if(!$('clubMenu').hidden)hide('clubMenu');else if(active==='game')exit();return;}
+  if(e.key==='Escape'){if(!$('spinSheet').hidden){closeSpin();return;}if(!$('settingsSheet').hidden)closeSettings();else if(!$('setupSheet').hidden)closeSetup();else if(!$('clubMenu').hidden)hide('clubMenu');else if(active==='paused')resumeMatch();else if(active==='game')pauseMatch();return;}
   if(!$('settingsSheet').hidden||!$('setupSheet').hidden||!$('clubMenu').hidden||!$('spinSheet').hidden)return;
   if(active!=='game'||['INPUT','BUTTON','TEXTAREA'].includes(document.activeElement?.tagName)&&document.activeElement?.type==='range')return;
   if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a'){angle-=Math.PI/720;syncAim();e.preventDefault();}
   if(e.key==='ArrowRight'||e.key.toLowerCase()==='d'){angle+=Math.PI/720;syncAim();e.preventDefault();}
   if(e.code==='Space'){e.preventDefault();fire();}
-  if(e.key.toLowerCase()==='r'){current?.reset();turnUI();}
+  if(e.key.toLowerCase()==='r'){pauseMatch();}
 });
-try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';releaseToShoot=localStorage.getItem('ghostball-release')!=='off';}catch{}
-$('releaseToggle').checked=releaseToShoot;syncSpin();
+try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';}catch{}
+syncSpin();
 applyRoom();refreshMenu();hide('gameScreen');
 let previous=performance.now(),acc=0,uiTimer=0;
 function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previous)/1000,.05);previous=now;
   if(document.hidden)return;
-  if(active==='transition'){previous=now;acc=0;return;}
+  if(active==='transition'||active==='paused'){previous=now;acc=0;return;}
   const g=active==='lobby'?attract:current;if(!g)return;
   acc+=elapsed;let iterations=0;
   // Avoid spiral of death after tab suspension or background throttling.
@@ -242,7 +294,7 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
   if(iterations>=14)acc=0;
   g.update(elapsed,{audio,haptics:motion});
   if(active==='lobby'){ambient.draw(g.sim,{fx:motion?g.fx:[]});}
-  else{const strokeTime=shotMotion?(now-shotMotion.start)/115:1;
+  else{updateClocks(elapsed);const strokeTime=shotMotion?(now-shotMotion.start)/115:1;
    const strike=shotMotion&&strokeTime<1?{...shotMotion,progress:Math.max(0,strokeTime)}:null;
    if(shotMotion&&strokeTime>=1){shotMotion=null;$('powerTrack').classList.remove('impact');}
    const frame={interactive:!g.isAI()&&!g.over,aim:{angle,power,drawback:pullProgress,strike},placement,fx:motion?g.fx:[]};
