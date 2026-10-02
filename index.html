@@ -2,7 +2,7 @@
 <html lang="en"><head>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
  <meta name="theme-color" content="#0b1510"><meta name="description" content="Ghost Ball. A beautifully tactile billiards clubhouse.">
- <title>Ghost Ball | The Clubhouse</title><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon-192.png"> <script type="importmap">{"imports":{"./src/audio.js":"./src/audio.js?v=ghostball-20261002-p1-2","./src/cue-feel.js":"./src/cue-feel.js?v=ghostball-20261002-p0-8","./src/game.js":"./src/game.js?v=ghostball-20261002-p0-8","./src/physics.js":"./src/physics.js?v=ghostball-20261002-p0-8","./src/random.js":"./src/random.js?v=ghostball-20261002-p0-8","./src/render.js":"./src/render.js?v=ghostball-20261002-p0-8","./src/table-finishes.js":"./src/table-finishes.js?v=ghostball-20261002-p0-8","./src/table-transition.js":"./src/table-transition.js?v=ghostball-20261002-p0-8","./src/touch-controls.js":"./src/touch-controls.js?v=ghostball-20261002-p0-8"}}</script><link rel="stylesheet" href="src/style.css?v=ghostball-20261002-p0-8"><link rel="stylesheet" href="src/landscape.css?v=ghostball-20261002-p0-8"><link rel="stylesheet" href="src/transition.css?v=ghostball-20261002-p0-8"><link rel="stylesheet" href="src/feel.css?v=ghostball-20261002-p0-8"><link rel="stylesheet" href="src/polish.css?v=ghostball-20261002-p0-8"><link rel="stylesheet" href="src/responsive-ui.css?v=ghostball-20261002-p0-8"><link rel="manifest" href="manifest.webmanifest">
+ <title>Ghost Ball | The Clubhouse</title><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon-192.png"> <script type="importmap">{"imports":{"./src/audio.js":"./src/audio.js?v=ghostball-20261002-p2-1","./src/cue-feel.js":"./src/cue-feel.js?v=ghostball-20261002-p2-1","./src/game.js":"./src/game.js?v=ghostball-20261002-p2-1","./src/physics.js":"./src/physics.js?v=ghostball-20261002-p2-1","./src/random.js":"./src/random.js?v=ghostball-20261002-p2-1","./src/render.js":"./src/render.js?v=ghostball-20261002-p2-1","./src/table-finishes.js":"./src/table-finishes.js?v=ghostball-20261002-p2-1","./src/table-transition.js":"./src/table-transition.js?v=ghostball-20261002-p2-1","./src/touch-controls.js":"./src/touch-controls.js?v=ghostball-20261002-p2-1"}}</script><link rel="stylesheet" href="src/style.css?v=ghostball-20261002-p2-1"><link rel="stylesheet" href="src/landscape.css?v=ghostball-20261002-p2-1"><link rel="stylesheet" href="src/transition.css?v=ghostball-20261002-p2-1"><link rel="stylesheet" href="src/feel.css?v=ghostball-20261002-p2-1"><link rel="stylesheet" href="src/polish.css?v=ghostball-20261002-p2-1"><link rel="stylesheet" href="src/responsive-ui.css?v=ghostball-20261002-p2-1"><link rel="manifest" href="manifest.webmanifest">
 </head><body>
 <main id="app">
  <div class="room" aria-hidden="true"><div class="room-wall"></div><div class="frames"><div class="art" id="roomArt">THE PARLOR</div><div class="art badge-art" id="roomPlaque">1893</div></div><div class="wainscot"></div><div class="room-floor"></div><div class="room-lamp"><span></span></div><div class="light-beam"></div></div>
@@ -55,12 +55,12 @@
    <div class="match-arena">
       <aside class="shot-rail" aria-label="Pull down to shoot">
         <span class="rail-label">POWER</span>
-        <div class="power-track" id="powerTrack" role="slider" tabindex="0" aria-label="Pull downward and release to shoot; arrows adjust power, Enter shoots" aria-valuemin="8" aria-valuemax="100" aria-valuenow="8" aria-orientation="vertical">
+        <div class="power-track" id="powerTrack" role="slider" tabindex="0" aria-label="Pull to shoot. Full power fires at the end of the rail; arrows adjust power, Enter shoots" aria-valuemin="8" aria-valuemax="100" aria-valuenow="8" aria-orientation="vertical">
           <div class="track-groove"><div id="powerFill" class="power-fill"></div></div><div class="pull-handle" id="pullHandle"><div class="cue-tip"></div></div>
         </div>
         <output id="powerValue" class="power-readout">PULL ↓</output>
       </aside>
-      <div class="table-play-area" id="tableArea"><canvas id="gameCanvas" aria-label="Pool table. Grab and drag the cue stick behind the cue ball to aim. Drag the cue ball after a foul."></canvas><div class="guide-badge" id="guideBadge">DRAG THE CUE TO AIM</div>
+      <div class="table-play-area" id="tableArea"><canvas id="gameCanvas" aria-label="Pool table. Grab the cue stick behind the white ball to aim. After a foul, tap to preview a placement or drag to position the white ball."></canvas><div class="guide-badge" id="guideBadge">DRAG THE CUE TO AIM</div>
        <div id="controlsHint" class="controls-hint" role="status" hidden>GRAB THE CUE TO AIM · PULL DOWN AND RELEASE TO SHOOT</div>
        <div id="tableToast" class="table-toast" aria-hidden="true" hidden></div>
        <section id="matchResult" class="match-result" role="status" aria-live="polite" hidden>
@@ -68,6 +68,12 @@
          <div class="match-result-actions"><button id="playAgain" class="primary">RACK 'EM AGAIN ↻</button><button id="resultMenu">MENU ↗</button></div>
        </section><div class="ball-return" id="ballReturn" aria-label="Pocketed balls"><span aria-hidden="true" class="return-gate">◉</span><div class="collected-balls" id="collectedBalls"></div></div></div>
       <aside class="tools-rail" aria-label="Shot tools">
+         <div class="placement-tools" id="placementTools" aria-label="Cue ball placement tools" hidden>
+          <span class="placement-tools-title">BALL IN HAND</span>
+          <button id="placeCueConfirm" class="placement-confirm" type="button" disabled aria-label="Confirm cue ball placement">PLACE <span aria-hidden="true">✓</span></button>
+          <button id="placeCueReset" class="placement-reset" type="button" aria-label="Reset cue ball position">RESET <span aria-hidden="true">↺</span></button>
+          <small id="placementStatus" class="placement-status" role="status">TAP OR DRAG</small>
+         </div>
          <button class="cueball-button" id="spinButton" aria-label="Adjust cue ball spin"><span class="cueball-face"><i id="spinPreview"></i></span><small>SPIN</small></button>
 
          <div class="aim-wheel-control"><span>FINE AIM</span><button id="aimLeft" aria-label="Fine aim counterclockwise">−</button><div id="aimWheel" class="aim-wheel" role="slider" tabindex="0" aria-label="Fine aiming wheel: drag or use arrow keys. Double tap, Home or Backspace to recall your previous shot direction" title="Double-tap to recall previous shot aim" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" aria-orientation="vertical"><div class="wheel-grip"></div></div><button id="aimRight" aria-label="Fine aim clockwise">+</button><input id="aimRange" type="range" min="-180" max="180" step=".25" value="0" tabindex="-1" aria-hidden="true"></div>
@@ -79,4 +85,4 @@
    <section class="spin-sheet" id="spinSheet" role="dialog" aria-modal="true" aria-label="Cue ball spin" hidden><div class="spin-head"><h2>Cue-ball spin</h2><button id="spinDone" aria-label="Done adjusting spin">DONE</button></div><p>Drag the red contact point to adjust spin.</p><div class="spin-ball" id="spinBall" role="img" aria-label="Drag to choose side spin, follow or draw"><i id="spinDot"></i></div><div id="spinLabel" class="spin-description">CENTER</div><button id="spinReset">RESET TO CENTER</button></section>
  </section>
  <div id="updateNotice" class="update-notice" role="status" aria-live="polite" hidden><span>New version ready</span><button id="applyUpdate">RELOAD</button></div>
-</main><script type="module" src="src/main.js?v=ghostball-20261002-p0-8"></script></body></html>
+</main><script type="module" src="src/main.js?v=ghostball-20261002-p2-1"></script></body></html>
