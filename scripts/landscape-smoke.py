@@ -32,7 +32,8 @@ with sync_playwright() as p:
         page.locator('#playBtn').click(force=True)
         page.wait_for_timeout(1650)
         before=page.evaluate('({canvas:document.querySelector("#gameCanvas").getBoundingClientRect().toJSON(), track:document.querySelector("#powerTrack").getBoundingClientRect().toJSON(), aim:document.querySelector("#aimWheel").getBoundingClientRect().toJSON(), hud:document.querySelector(".match-hud").getBoundingClientRect().toJSON(), over: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight, gate:document.querySelector("#rotateGate")!==null, view:document.querySelector("#gameView")!==null})')
-        assert not before['over'],f'overflow {w}x{h}'\n        assert not before['gate'] and not before['view']
+        assert not before['over'],f'overflow {w}x{h}'
+        assert not before['gate'] and not before['view']
         if w>h:
             assert before['canvas']['y']+before['canvas']['height'] < h+1,f'clipped table {w}x{h}'
             screenshot=root/'screenshots'/f'preview-{w}x{h}.png';screenshot.parent.mkdir(exist_ok=True);page.screenshot(path=str(screenshot))
