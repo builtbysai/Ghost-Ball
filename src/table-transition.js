@@ -12,34 +12,52 @@ export function cameraFlight(progress){
   lift:Math.sin(Math.PI*t),
  };
 }
+/**
+ * Staggered converging paths followed by a deterministic exclusion solver.
+ * Every frame is a pure function of progress, so reflows/low frame rates never
+ * accumulate drift. The last frame uses exact physics rack coordinates.
+ */
 export function movingRack(before,after,progress){
- const origins=new Map(before.map(ball=>[ball.id,ball]));
- return after.map(ball=>{
-  const origin=origins.get(ball.id),from=origin||ball;
-  const stagger=(ball.id*7%17)/17*.14;
-  const begin=.17+stagger,duration=.66-stagger;
-  const move=smooth((progress-begin)/duration);
-  const old=smooth((progress-.047-begin)/duration);
+ const t=Math.max(0,Math.min(1,progress));
+ if(t>=1)return after.map(b=>({...b,pocketed:false,opacity:1,trail:null}));
+ const origins=new Map(before.map(b=>[b.id,b]));
+ const positions=after.map(ball=>{
+  const from=origins.get(ball.id)||ball;
+  const emerging=!origins.has(ball.id)||from.pocketed;
   const distance=Math.hypot(ball.x-from.x,ball.y-from.y);
+  // Let the cue ball lead; the object balls form a visually legible wave.
+  const stagger=ball.id===0?0:((ball.id*7)%17)/17*.19;
+  const start=.12+stagger,span=.69-stagger;
+  const move=smooth((t-start)/span),prior=smooth((t-.014-start)/span);
   const side=ball.id%2?1:-1;
-  const position=p=>{
-   const curve=Math.sin(Math.PI*p)*Math.min(27,distance*.043)*side;
-   // A curved gather, rather than linear teleportation or ball collisions.
-   return {x:mix(from.x,ball.x,p)+curve*(ball.y-from.y)/(distance||1),
-    y:mix(from.y,ball.y,p)-curve*(ball.x-from.x)/(distance||1)};
-  };
-  const here=position(move),earlier=position(old);
-  const emerging=!origin||origin.pocketed;
-  const rolling=distance/(24*Math.PI)*(move-old);
-  return {...ball,pocketed:false,
-   opacity:emerging?smooth((move-.005)/.22):1,
-   x:here.x,y:here.y,
-   rotation:mix(from.rotation||0,ball.rotation||0,move)+rolling,
-   trail:move>.025&&move<.96&&distance>65?
-    {...earlier,opacity:Math.min(.32,(move-old)*2.6)*(1-move*.55)}:null};
+  const curve=Math.sin(move*Math.PI)*Math.min(47,distance*.092)*side;
+  const dx=(ball.x-from.x)/(distance||1),dy=(ball.y-from.y)/(distance||1);
+  const px=mix(from.x,ball.x,move)-dy*curve;
+  const py=mix(from.y,ball.y,move)+dx*curve;
+  return {...ball,pocketed:false,x:px,y:py,opacity:emerging?smooth((move-.015)/.26):1,
+   rotation:mix(from.rotation||0,ball.rotation||0,move)+distance/(24*Math.PI)*(move-prior),
+   trail:move>.025&&move<.96&&distance>65?{x:mix(from.x,ball.x,prior),y:mix(from.y,ball.y,prior),opacity:.15*(1-move)}:null};
  });
+ // Position-only separation prevents balls passing through each other while
+ // retaining their soft, curved migration toward their assigned rack slots.
+ const spacing=24.04;
+ for(let pass=0;pass<16;pass++){
+  let moved=false;
+  for(let i=0;i<positions.length;i++)for(let j=i+1;j<positions.length;j++){
+   const a=positions[i],b=positions[j];
+   if(a.opacity<.12||b.opacity<.12)continue;
+   let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+   if(d>=spacing)continue;
+   if(d<.0001){const seed=(a.id*19+b.id*11)*2.39996;dx=Math.cos(seed);dy=Math.sin(seed);d=1;}
+   const correction=(spacing-d)/2+.0005,ux=dx/d,uy=dy/d;
+   a.x-=ux*correction;a.y-=uy*correction;
+   b.x+=ux*correction;b.y+=uy*correction;moved=true;
+  }
+  if(!moved)break;
+ }
+ return positions;
 }
-export function flyTable({app,source,target,from,to,hall,gameRenderer,done,isActive=()=>true}){
+export function flyTable({app,source,target,from,to,hall,gameRenderer,done,reverse=false,isActive=()=>true}){
  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){done();return;}
  const startBox=source.getBoundingClientRect(),appBox=app.getBoundingClientRect();
  if(startBox.width<2||startBox.height<2){done();return;}
@@ -48,6 +66,7 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done,isAct
  canvas.className='table-flight';canvas.setAttribute('aria-hidden','true');
  canvas.style.width=startBox.width+'px';canvas.style.height=startBox.height+'px';app.append(canvas);
  const flight=new TableRenderer(canvas,{view:'perspective',hall,cacheStatic:false});flight.resize();
+ flight.setBlend(reverse?1:0);
  // Render the floating board at a higher pixel density when it is growing
  // toward the match layout; CSS-only scaling blurred the previous entrance.
  const targetPixels=gameRenderer.canvas.width/Math.max(1,startBox.width);
@@ -69,7 +88,7 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done,isAct
   if(!canvas.isConnected||!isActive()){canvas.remove();halo.remove();done();return;}
   started??=now;
   const t=Math.min(1,(now-started)/duration),camera=cameraFlight(t);
-  flight.setBlend(camera.flatten);
+  flight.setBlend(reverse?1-camera.flatten:camera.flatten);
   // Re-target during orientation changes without deforming the world state.
   const targetBox=target.getBoundingClientRect(),root=app.getBoundingClientRect();
   const finish={x:targetBox.left-root.left+targetBox.width/2,y:targetBox.top-root.top+targetBox.height/2};
@@ -77,7 +96,10 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done,isAct
   const scaleY=gameRenderer.bh/Math.max(1,flight.bh);
   const pulse=1+.023*camera.lift;
   let sx=mix(1,scaleX,camera.travel)*pulse,sy=mix(1,scaleY,camera.travel)*pulse;
-  const rotation=(gameRenderer.portrait?-90:0)*camera.flatten,rad=rotation*Math.PI/180;
+  const rotation=reverse
+   ? (flight.portrait&&!gameRenderer.portrait?90:!flight.portrait&&gameRenderer.portrait?-90:0)*camera.travel
+   : (gameRenderer.portrait?-90:0)*camera.flatten;
+  const rad=rotation*Math.PI/180;
   // Bounding the *drawn board*, not the transparent canvas, avoids cropped
   // pockets as the table lifts or turns across a narrow phone screen.
   const halfX=()=>Math.abs(Math.cos(rad))*flight.bw*sx/2+Math.abs(Math.sin(rad))*flight.bh*sy/2;
