@@ -21,7 +21,7 @@ function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
 function notify(message){if(message)setText('matchAnnouncements',message);}
 function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);
   document.documentElement.style.setProperty('--hall',h.felt);document.documentElement.style.setProperty('--room-aura',h.aura);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
-  setText('roomPlaque',String(h.year));$('roomEyebrow').dataset.short=`ROOM 0${room+1} · ${h.year}`;setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
+  setText('roomPlaque',String(h.year));setText('roomArt',h.name.toUpperCase());$('roomEyebrow').dataset.short=`ROOM 0${room+1} · ${h.year}`;setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
   setText('playText',mode==='practice'?`Practice at ${h.name}`:`Break at ${h.name}`);
   if(current)setText('roundLabel',h.name.toUpperCase());
 }
