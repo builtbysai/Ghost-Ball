@@ -166,7 +166,7 @@
 /* A brief, nonblocking event cue; no permanent gameplay notifications. */
 #gameScreen .table-toast[hidden]{display:none!important}
 #gameScreen .table-toast{
- position:absolute;left:50%;top:clamp(24px,9%,50px);z-index:6;
+ position:absolute;left:50%;top:clamp(38px,12%,62px);z-index:6;
  transform:translateX(-50%);max-width:min(92%,330px);
  border:1px solid #e2d19b91;border-radius:100px;
  background:#162e39ee;color:#fff6df;
@@ -186,3 +186,6 @@
 @media(prefers-reduced-motion:reduce){
  #gameScreen .table-toast{animation:none}
 }
+
+/* Prioritize an event briefly, then reveal the persistent placement guidance. */
+#gameScreen .table-play-area:has(.table-toast:not([hidden])) .guide-badge{display:none!important}
