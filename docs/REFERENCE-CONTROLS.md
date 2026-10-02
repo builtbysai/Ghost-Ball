@@ -14,12 +14,16 @@ The user's screenshot establishes spatial priorities: horizontal table dominates
 
 | Interaction | Ghost Ball v0.4 | Remaining |
 |---|---|---|
-| Table gesture | Absolute aim by drag over felt; same pointer events on mouse/touch | Occlusion tests and configurable drag sensitivity |
+| Table gesture | Grab and drag the visible cue **behind** the cue ball. Touches in front cannot grab the cue; relative rotation prevents an initial jump. | Physical touch occlusion and configurable sensitivity |
 | Fine aim wheel | Incremental vertical drag and keyboard arrows | Acceleration and haptic ticks |
 | Power | Pull down from handle; travel threshold and pointer capture; release by default | Power-side toggle; portrait usability |
 | Spin | Circular 2-axis selection, center reset | Realistic rolling and spin transfer calibration |
 | Cue ball placement | Drag after foul; pre-break head-only move | Tournament-specific break area rules |
-| Views | Default flat 2D, optional elevated and WebGL2 | Hardware WebGL certification |
+| Views | Top-down 2D only in matches; animated live perspective lobby morphs into the playing table | Future elevated/surface camera from new reference |
 | HUD | Compact two-player labels and pocketed-ball marker slots | Complete rules-driven group display |
 
 Visual QA is required beyond functional tests. Do not reproduce Miniclip's avatars, currency systems, branded menus, icon art, textures or screenshots as shipping assets.
+
+## October 2 decisions
+
+The rotate-device overlay and three-way live view toggle are gone. Landscape is the preferred design but narrow portrait screens can play immediately with an upright top-down board. Only the top-down 2D camera is currently implemented for matches; Camera and Device orientation in preferences show disabled future choices. The menu-to-match transition carries the current simulated exhibition balls into the opening rack and rotates the table itself. No proprietary Miniclip artwork is shipped.
