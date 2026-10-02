@@ -162,3 +162,27 @@
  #gameScreen .match-result-actions button{min-height:27px}
  #gameScreen .controls-hint{top:0;padding:3px 7px}
 }
+
+/* A brief, nonblocking event cue; no permanent gameplay notifications. */
+#gameScreen .table-toast[hidden]{display:none!important}
+#gameScreen .table-toast{
+ position:absolute;left:50%;top:clamp(24px,9%,50px);z-index:6;
+ transform:translateX(-50%);max-width:min(92%,330px);
+ border:1px solid #e2d19b91;border-radius:100px;
+ background:#162e39ee;color:#fff6df;
+ padding:clamp(4px,.8dvh,8px) clamp(12px,2vw,22px);
+ font:850 clamp(9px,1.1vw,13px)/1.15 system-ui;
+ letter-spacing:.07em;text-align:center;white-space:normal;
+ box-shadow:0 7px 25px #0009;pointer-events:none;
+ animation:table-toast-in .18s cubic-bezier(.2,.8,.2,1) both;
+}
+#gameScreen .table-toast[data-kind="foul"]{
+ background:#473027ef;border-color:#e6a978;color:#ffe6c5;
+}
+@keyframes table-toast-in{
+ from{opacity:0;transform:translate(-50%,-7px)}
+ to{opacity:1;transform:translate(-50%,0)}
+}
+@media(prefers-reduced-motion:reduce){
+ #gameScreen .table-toast{animation:none}
+}
