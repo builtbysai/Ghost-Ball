@@ -30,6 +30,9 @@ jobs:
         env:
           CHROMIUM_BIN: /usr/bin/google-chrome
         run: python3 scripts/landscape-smoke.py
+      - name: Deployed site diagnostic
+        if: github.event_name == 'pull_request'
+        run: python3 scripts/live-probe.py
       - name: Save viewport screenshots
         if: always() && github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
