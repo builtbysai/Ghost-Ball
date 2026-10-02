@@ -29,3 +29,32 @@ export function nearbyLegalCuePlacement(sim,x,y,{breakOnly=false,maxDistance=48}
  }
  return null;
 }
+
+
+/** One source of truth for the preview, confirm button and the renderer. */
+export function cuePlacementDraft(sim,x,y,{breakOnly=false,maxDistance=48}={}){
+ if(!sim||!Number.isFinite(x)||!Number.isFinite(y))return null;
+ const legal=sim.canPlaceCue(x,y)&&(!breakOnly||x<=265);
+ const suggestion=legal?null:nearbyLegalCuePlacement(sim,x,y,{breakOnly,maxDistance});
+ const candidate=legal?{x,y}:suggestion?{x:suggestion.x,y:suggestion.y}:null;
+ return {x,y,legal,suggestion,candidate};
+}
+/** An accessible initial placement when a scratched ball isn't visible. */
+export function initialCuePlacement(sim,{breakOnly=false}={}){
+ if(!sim)return null;
+ const cue=sim.cue();
+ const xs=breakOnly?[240,190,130]:[cue?.pocketed?240:cue?.x,240,300,400,500,600,700,800,130,900];
+ const ys=[cue?.pocketed?250:cue?.y,250,180,320,110,390];
+ for(const x of xs)for(const y of ys){
+   if(!Number.isFinite(x)||!Number.isFinite(y))continue;
+   const draft=cuePlacementDraft(sim,x,y,{breakOnly});
+   if(draft?.candidate)return draft;
+ }
+ // Rare pathological racks: deterministic full-cloth scan, never force legality.
+ for(let x=30;x<=(breakOnly?265:970);x+=16)
+  for(let y=30;y<=470;y+=16){
+   const draft=cuePlacementDraft(sim,x,y,{breakOnly,maxDistance:0});
+   if(draft?.candidate)return draft;
+  }
+ return null;
+}
