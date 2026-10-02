@@ -14,6 +14,8 @@ let lastScoreSignature='',pullTension=0,shotFx=null,lastDetent=0;
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
 const setText=(id,value)=>{$(id).textContent=value;};
+// Storage is optional: private/restricted browser contexts must still play.
+function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
 function notify(message){if(message)setText('status',message);}
 function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);
   document.documentElement.style.setProperty('--hall',h.felt);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
@@ -73,7 +75,7 @@ function begin(kind){
   turnUI();
  };
  try{flyTable({app:$('app'),source:$('attractCanvas'),target:$('tableArea'),
-   from:attract.sim,to:current.sim,hall:room,gameRenderer:table,done:finish});}
+   from:attract.sim,to:current.sim,hall:room,gameRenderer:table,done:finish,isActive:()=>active==='transition'});}
  catch(err){console.warn('Table entrance skipped',err);finish();}
 }
 function exit(){
@@ -132,9 +134,9 @@ $('menuBtn').onclick=openMenu;$('closeMenu').onclick=()=>hide('clubMenu');
 $('menuPractice').onclick=()=>begin('practice');$('menuSettings').onclick=openSettings;
 $('inGameSettings').onclick=openSettings;
 $('closeSettings').onclick=closeSettings;
-$('soundToggle').onchange=event=>{audio.enabled=event.target.checked;localStorage.setItem('ghostball-sound',audio.enabled?'on':'off');};
-$('motionToggle').onchange=event=>{motion=event.target.checked;localStorage.setItem('ghostball-motion',motion?'on':'off');};
-$('releaseToggle').onchange=event=>{releaseToShoot=event.target.checked;localStorage.setItem('ghostball-release',releaseToShoot?'on':'off');$('powerTrack').setAttribute('aria-label',releaseToShoot?'Drag downward and release to shoot':'Drag downward to set power; use Shoot to fire');};
+$('soundToggle').onchange=event=>{audio.enabled=event.target.checked;savePreference('ghostball-sound',audio.enabled?'on':'off');};
+$('motionToggle').onchange=event=>{motion=event.target.checked;savePreference('ghostball-motion',motion?'on':'off');};
+$('releaseToggle').onchange=event=>{releaseToShoot=event.target.checked;savePreference('ghostball-release',releaseToShoot?'on':'off');$('powerTrack').setAttribute('aria-label',releaseToShoot?'Drag downward and release to shoot':'Drag downward to set power; use Shoot to fire');};
 $('openSetup').onclick=openSetup;$('closeSetup').onclick=closeSetup;$('backdrop').onclick=()=>{closeSetup();closeSettings();};
 $('prevRoom').onclick=()=>{room=(room-1+halls.length)%halls.length;applyRoom();};
 $('nextRoom').onclick=()=>{room=(room+1)%halls.length;applyRoom();};
