@@ -96,7 +96,7 @@ export class TableRenderer{
   if(ball.id>=9){g.save();g.rotate(ball.rotation*.17);g.fillStyle='#f7f4e9';g.fillRect(-r,-r*.4,2*r,r*.8);g.restore();}
   if(ball.id){g.beginPath();g.arc(-r*.12,-r*.12,r*.39,0,TAU);g.fillStyle='#f6f3e8';g.fill();g.fillStyle='#181512';g.font=`bold ${Math.max(5,r*.65)}px system-ui`;g.textAlign='center';g.textBaseline='middle';g.fillText(String(ball.id),-r*.12,-r*.09);}
   g.restore();}
- drawAim(sim,{angle,power}){const g=this.g,cue=sim.cue();if(!cue)return;
+ drawAim(sim,aim){const {angle,power}=aim,g=this.g,cue=sim.cue();if(!cue)return;
   const dx=Math.cos(angle),dy=Math.sin(angle),r=TABLE.radius;let limit=1300,target=null;
   for(const ball of sim.balls){if(ball.id===0||ball.pocketed)continue;
     const rx=ball.x-cue.x,ry=ball.y-cue.y,t=rx*dx+ry*dy,perp2=rx*rx+ry*ry-t*t;
