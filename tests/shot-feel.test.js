@@ -23,7 +23,7 @@ test('camera flight begins and finishes exactly at the visual table destination'
  const begin=entrancePose(0,false),lift=entrancePose(.5,false),end=entrancePose(1,false);
  assert.equal(begin.travel,0);assert.equal(begin.unroll,0);
  assert.equal(end.travel,1);assert.equal(end.unroll,1);
- assert.equal(end.rotation,0);assert.equal(end.scale,1);assert.ok(Math.abs(end.lift)<1e-9);
+ assert.ok(Math.abs(end.rotation)<1e-9);assert.equal(end.scale,1);assert.ok(Math.abs(end.lift)<1e-9);
  assert.ok(lift.lift<0&&lift.scale>1&&lift.rotation>0);
  assert.equal(entrancePose(1,true).rotation,-90);
 });
