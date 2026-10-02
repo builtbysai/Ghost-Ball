@@ -157,3 +157,7 @@
  display:flex;align-items:center;gap:12px;padding:9px 12px;background:#111e2fe8;border:1px solid #d7c09075;
  border-radius:10px;box-shadow:0 6px 20px #0008;color:#f2e7d5;font-size:11px}
 .update-notice button{border:1px solid #d6bd88;background:#ddc18d;color:#13283b;border-radius:5px;padding:6px 9px;font-size:10px;font-weight:800}
+
+/* Keep room-specific framed art away from the foreground heading. */
+@media(min-width:900px) and (min-height:650px){#app .frames{top:15%}}
+@media(max-height:480px) and (orientation:landscape){#app .frames{display:none}}
