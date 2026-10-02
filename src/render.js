@@ -70,18 +70,41 @@ export class TableRenderer{
   if(placementZone&&!sim.moving)this.drawPlacementZone(sim,placementZone,placement);
   if(interactive&&aim&&!sim.moving&&!sim.cue()?.pocketed)this.drawAim(sim,aim);
   else if(aim?.strike&&aim.strike.progress<1)this.drawStroke(aim.strike);
-  for(const ball of [...sim.balls].filter(b=>!b.pocketed).sort((a,b)=>a.y-b.y))this.drawBall(ball);
+  // A placed-in-hand ball is a preview until confirmed; never draw two white
+  // balls or mutate the authoritative simulation during positioning.
+  for(const ball of [...sim.balls].filter(b=>!b.pocketed).sort((a,b)=>a.y-b.y)){
+    if(placementZone&&placement?.candidate&&ball.id===0)continue;
+    this.drawBall(ball);
+  }
   if(interactive&&aim?.showGuide!==false&&!sim.moving&&!sim.cue()?.pocketed)this.drawCueStrike(sim.cue(),aim.spin);
   if(placement){
-    const [sx,sy,k]=P(placement.x,placement.y),r=Math.max(5,TABLE.radius*this.bw/1000*k);
-    g.save();g.beginPath();g.arc(sx,sy,r,0,TAU);g.fillStyle=placement.legal?'rgba(248,247,230,.8)':'rgba(201,93,74,.6)';g.fill();
-    g.beginPath();g.arc(sx,sy,r*1.42,0,TAU);g.strokeStyle=placement.legal?'#edc982':'#e97b64';g.lineWidth=2;g.stroke();
-    if(placement.suggestion&&!placement.legal){
-      const [tx,ty]=P(placement.suggestion.x,placement.suggestion.y);
-      g.beginPath();g.moveTo(sx,sy);g.lineTo(tx,ty);g.setLineDash([3,4]);
-      g.strokeStyle='rgba(235,216,161,.65)';g.lineWidth=1;g.stroke();g.setLineDash([]);
-      g.beginPath();g.arc(tx,ty,r*.95,0,TAU);g.fillStyle='#f4f4e5dc';g.fill();
-      g.beginPath();g.arc(tx,ty,r*1.6,0,TAU);g.strokeStyle='#8ce9b0';g.lineWidth=2;g.stroke();
+    const [sx,sy,k]=P(placement.x,placement.y);
+    const r=Math.max(5,TABLE.radius*this.bw/1000*k);
+    g.save();
+    if(!placement.candidate){
+      g.beginPath();g.arc(sx,sy,r*1.45,0,TAU);
+      g.strokeStyle='#f09b85';g.lineWidth=1.8;g.setLineDash([3,4]);g.stroke();
+      g.setLineDash([]);
+    }else{
+      const {x,y}=placement.candidate,[gx,gy,gk]=P(x,y);
+      const gr=Math.max(5,TABLE.radius*this.bw/1000*gk);
+      if(!placement.legal){
+        g.beginPath();g.arc(sx,sy,r*.98,0,TAU);
+        g.strokeStyle='rgba(239,123,106,.73)';g.lineWidth=1.3;g.stroke();
+        g.beginPath();g.moveTo(sx,sy);g.lineTo(gx,gy);
+        g.strokeStyle='rgba(255,231,173,.52)';g.lineWidth=1;
+        g.setLineDash([3,4]);g.stroke();g.setLineDash([]);
+      }
+      // The white ball has a real-looking surface with a distinct mint ring
+      // that indicates a valid landing location, not an actual physics ball.
+      g.save();g.shadowColor='rgba(13,28,23,.7)';g.shadowBlur=6*gk;g.shadowOffsetY=2*gk;
+      const skin=g.createRadialGradient(gx-gr*.35,gy-gr*.39,gr*.15,gx,gy,gr*1.05);
+      skin.addColorStop(0,'#fffef7');skin.addColorStop(.6,'#e6e8de');skin.addColorStop(1,'#85958d');
+      g.fillStyle=skin;g.beginPath();g.arc(gx,gy,gr,0,TAU);g.fill();g.restore();
+      g.beginPath();g.arc(gx,gy,gr*1.6,0,TAU);
+      g.strokeStyle='rgba(145,230,183,.95)';g.lineWidth=2;g.stroke();
+      g.beginPath();g.arc(gx,gy,gr*2.3,0,TAU);
+      g.strokeStyle='rgba(145,230,183,.27)';g.lineWidth=1;g.stroke();
     }
     g.restore();
   }

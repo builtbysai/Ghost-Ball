@@ -40,7 +40,7 @@ The supplied audit contains a claimed 101-shot browser match. That observation a
 
 ### P1: Input/feel benchmark + shot readability
 _Initial control-feel pass shipped to `main` in [PR #13](https://github.com/builtbysai/Ghost-Ball/pull/13). Syntax, unit, responsive browser, foul-to-placement and real HTTP checks passed; landscape and rotated viewport screenshots were reviewed. Real Android validation remains outstanding._
-- [x] Cancel pointer-captured power gestures released outside the rail; retain inward recovery and keyboard shooting.
+- [x] Keep sideways releases and generic system cancellations safe; intentionally allow on-axis full pulls to cross the rail's end.
 - [x] Add a forgiving, bounded **visible** nearby legal snap while retaining exact legal tap placement and the break head-zone restriction. Do not teleport illegal drops.
 - [x] Suppress cue aiming while ball-in-hand, block human placement during AI's turn, and give the AI deterministic fallback spots.
 - [x] Double-tap the fine aim wheel (or press Home/Backspace with the wheel focused) to recall the current player's previous shot direction.
@@ -55,6 +55,17 @@ _Initial control-feel pass shipped to `main` in [PR #13](https://github.com/buil
 - Prioritize visual test artifacts and real-device play over decorative effects.
 
 **Exit:** A player can aim and power shots consistently without accidental firing and can understand why a shot travelled as it did.
+
+### P1.1: Off-screen full pull and ball-in-hand refinement (October 2)
+
+- [x] Fix the user-reproduced 100%-power issue: deliberately pulling to the rail's far end commits before a finger can leave the physical screen. Also accept aligned maximum-power releases past the track, without opening the sideways firing lane. Generic OS `pointercancel` does not fire.
+- [x] Convert foul placement into a contextual, table-first workflow: visible valid-area outline and ghost cue ball, nearby legal snap, tap to preview plus explicit PLACE/RESET tools, or drag to release directly.
+- [x] Offset the ghost gently during touch drags, suppress duplicate cue balls, hide irrelevant spin/aim tools, and expose keyboard arrow nudging plus Enter confirmation.
+- [x] Add isolated input/placement unit tests and extend landscape and foul-placement browser tests across normal and rotated phones.
+- [ ] Complete PR acceptance checks and visually review the smallest generated screenshots before merging.
+- [ ] Test actual Android gesture cancellation at the physical edge, under display cutouts and app navigation; browser automation cannot conclusively establish touch-controller behavior.
+
+**Exit:** A maximum charged shot cannot be stranded by leaving the rail; interrupted lateral drags remain safe. On fouls, both a deliberate tap-and-confirm and touch drag finish only at a visibly legal spot, without obstructing the table.
 
 ### P2: Rules and opponent confidence
 - Keep casual rules as default. Implement an *explicit* tournament ruleset instead of silently changing casual matches: open-table assignment, break legality, called 8 pocket, scratches, illegal contacts and ending conditions.
