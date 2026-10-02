@@ -29,8 +29,19 @@ with sync_playwright() as p:
         page=context.new_page();err=[]
         page.on('pageerror',lambda e:err.append(str(e)))
         page.set_content(html_source(),wait_until='load')
+        if (w,h) in ((844,390),(390,844)):
+            page.wait_for_timeout(160)
+            screenshot=root/'screenshots'/f'menu-{w}x{h}.png'
+            screenshot.parent.mkdir(exist_ok=True)
+            page.screenshot(path=str(screenshot))
         page.locator('#playBtn').click(force=True)
-        page.wait_for_timeout(1850)
+        if (w,h) in ((844,390),(390,844)):
+            page.wait_for_timeout(880)
+            screenshot=root/'screenshots'/f'entrance-mid-{w}x{h}.png'
+            page.screenshot(path=str(screenshot))
+            page.wait_for_timeout(1030)
+        else:
+            page.wait_for_timeout(1850)
         before=page.evaluate('({canvas:document.querySelector("#gameCanvas").getBoundingClientRect().toJSON(), track:document.querySelector("#powerTrack").getBoundingClientRect().toJSON(), aim:document.querySelector("#aimWheel").getBoundingClientRect().toJSON(), hud:document.querySelector(".match-hud").getBoundingClientRect().toJSON(), over: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight, gate:document.querySelector("#rotateGate")!==null, view:document.querySelector("#gameView")!==null})')
         assert not before['over'],f'overflow {w}x{h}'
         assert not before['gate'] and not before['view']
