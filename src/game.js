@@ -64,7 +64,7 @@ export class Game {
        const shot=this.break?{angle:0,power:.83}:chooseShot(this.sim,'open',this.turn===0?'club':'rookie',this.random);this.beginShot(shot.angle,shot.power);}
      else if(this.isAI()&&!this.over&&this.kind==='match'&&this.timer>1.05){this.timer=0;
        if(this.ballInHand){const cue=this.sim.cue();for(const [x,y] of [[240,250],[320,220],[360,300],[210,150]])if(this.sim.placeCue(x,y)){this.ballInHand=false;break;}if(cue?.pocketed)this.sim.placeCue(230,240);}
-       const shot=this.break?{angle:0,power:.82}:chooseShot(this.sim,this.group,this.difficulty,this.random);this.beginShot(shot.angle,shot.power);}
+       const shot=this.break?{angle:0,power:.82}:chooseShot(this.sim,this.group,this.difficulty,this.random);if(this.beginShot(shot.angle,shot.power))audio?.play({type:'strike',power:shot.power});}
    }
    this.fx=this.fx.filter(effect=>(effect.life-=dt*1.8)>0);
  }
