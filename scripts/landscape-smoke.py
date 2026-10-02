@@ -17,7 +17,7 @@ def module_data(name, cache=None):
     return url
 def html_source():
     doc=(root/'index.html').read_text()
-    for style in ['style.css','landscape.css']:
+    for style in ['style.css','landscape.css','transition.css']:
         doc=doc.replace(f'<link rel="stylesheet" href="src/{style}">',f'<style>{(root/"src"/style).read_text()}</style>')
     doc=doc.replace('<link rel="manifest" href="manifest.webmanifest">','')
     doc=doc.replace('<script type="module" src="src/main.js"></script>',f'<script type="module">import "{module_data("main.js")}";</script>')
@@ -30,7 +30,7 @@ with sync_playwright() as p:
         page.on('pageerror',lambda e:err.append(str(e)))
         page.set_content(html_source(),wait_until='load')
         page.locator('#playBtn').click(force=True)
-        page.wait_for_timeout(1650)
+        page.wait_for_timeout(1850)
         before=page.evaluate('({canvas:document.querySelector("#gameCanvas").getBoundingClientRect().toJSON(), track:document.querySelector("#powerTrack").getBoundingClientRect().toJSON(), aim:document.querySelector("#aimWheel").getBoundingClientRect().toJSON(), hud:document.querySelector(".match-hud").getBoundingClientRect().toJSON(), over: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight, gate:document.querySelector("#rotateGate")!==null, view:document.querySelector("#gameView")!==null})')
         assert not before['over'],f'overflow {w}x{h}'
         assert not before['gate'] and not before['view']
@@ -52,7 +52,27 @@ with sync_playwright() as p:
             bar=before['track'];x=bar['x']+bar['width']/2;y=bar['y']+20
             page.mouse.move(x,y);page.mouse.down();page.mouse.up();page.wait_for_timeout(100)
             assert page.locator('#gameScreen').get_attribute('data-shots')=='0','short tap fired a shot'
-            page.mouse.move(x,y);page.mouse.down();page.mouse.move(x,y+bar['height']*.62,steps=9);page.mouse.up();page.wait_for_timeout(120)
+            page.evaluate('''() => {
+                const c=document.querySelector("#gameCanvas");
+                window.__cueBefore=c.getContext("2d").getImageData(0,0,c.width,c.height).data.slice();
+            }''')
+            page.mouse.move(x,y);page.mouse.down();page.mouse.move(x,y+bar['height']*.62,steps=9)
+            page.wait_for_timeout(80)
+            charged=page.evaluate('''() => {
+                const bar=document.querySelector("#powerTrack"),handle=document.querySelector("#pullHandle");
+                const c=document.querySelector("#gameCanvas");
+                const after=c.getContext("2d").getImageData(0,0,c.width,c.height).data;
+                let delta=0;for(let i=0;i<after.length;i+=9)delta+=Math.abs(after[i]-window.__cueBefore[i]);
+                return {charge:parseFloat(bar.style.getPropertyValue("--charge")),
+                        pulling:bar.classList.contains("is-pulling"),
+                        travel:handle.getBoundingClientRect().top-bar.getBoundingClientRect().top,delta};
+            }''')
+            assert charged['charge']>.48 and charged['pulling'] and charged['travel']>bar['height']*.40,charged
+            assert charged['delta']>500,'cue did not visibly retract while pulling'
+            if (w,h)==(844,390):
+                screenshot=root/'screenshots'/'charged-844x390.png'
+                page.screenshot(path=str(screenshot))
+            page.mouse.up();page.wait_for_timeout(120)
             assert page.locator('#gameScreen').get_attribute('data-shots')=='1','pull did not fire shot'
             if (w,h)==(844,390):
                 page.locator('#rerack').click()
@@ -65,6 +85,15 @@ with sync_playwright() as p:
                 touch('touchEnd',y+bar['height']*.62)
                 page.wait_for_timeout(100)
                 assert page.locator('#gameScreen').get_attribute('data-shots')=='1','touch pull did not fire'
+                page.locator('#rerack').click()
+                page.locator('#inGameSettings').click()
+                page.locator('#releaseToggle').uncheck()
+                page.locator('#closeSettings').click()
+                page.mouse.move(x,y);page.mouse.down();page.mouse.move(x,y+bar['height']*.62,steps=8);page.mouse.up()
+                assert page.locator('#gameScreen').get_attribute('data-shots')=='0','manual mode auto-fired'
+                assert page.locator('#powerTrack').evaluate('(e)=>e.classList.contains("is-ready")'),'manual mode lost tension'
+                page.locator('#shootBtn').click()
+                assert page.locator('#gameScreen').get_attribute('data-shots')=='1','manual shoot button did not fire'
         else:
             assert not before['gate'] and not before['view'],'obsolete view/orientation controls remain'
         screenshot=root/'screenshots'/f'landscape-{w}x{h}.png';screenshot.parent.mkdir(exist_ok=True);page.screenshot(path=str(screenshot))
