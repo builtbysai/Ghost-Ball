@@ -197,6 +197,8 @@ function mobileLandscape(){return window.matchMedia('(orientation:portrait) and 
 function localCanvasPoint(clientX,clientY){const rect=$('gameCanvas').getBoundingClientRect();
  return mobileLandscape()?{x:clientY-rect.top,y:rect.right-clientX}:{x:clientX-rect.left,y:clientY-rect.top};}
 function cuePoint(clientX,clientY){const p=localCanvasPoint(clientX,clientY);return table.unproject(p.x,p.y);}
+function insideGameCanvas(clientX,clientY){const r=$('gameCanvas').getBoundingClientRect();
+ return clientX>=r.left&&clientX<=r.right&&clientY>=r.top&&clientY<=r.bottom;}
 let rearGesture=null;
 function startCueDrag(e,pt,cue){
  const rect=$('gameCanvas').getBoundingClientRect(),geo=cueGeometry(cue,angle,pullProgress);
@@ -218,6 +220,7 @@ function moveCueDrag(clientX,clientY){
 }
 function previewPlacement(clientX,clientY){
   if(!current||(!current.ballInHand&&pointerMode!=='break-place')||current.sim.moving)return;
+  if(!insideGameCanvas(clientX,clientY)){placement=null;return;}
   const pt=cuePoint(clientX,clientY);
   const isBreak=pointerMode==='break-place';
    const direct=current.sim.canPlaceCue(pt.x,pt.y)&&(!isBreak||pt.x<=265);
@@ -327,7 +330,7 @@ $('gameCanvas').addEventListener('pointerup',e=>{
  if(pointerMode==='cue-aim')moveCueDrag(e.clientX,e.clientY);
  if(pointerMode==='place'||pointerMode==='break-place'){
   previewPlacement(e.clientX,e.clientY);
-  const drop=placement?.legal?placement:placement?.suggestion;
+  const drop=insideGameCanvas(e.clientX,e.clientY)?(placement?.legal?placement:placement?.suggestion):null;
   if(drop&&(pointerMode==='break-place'?current.placeBreakCue(drop.x,drop.y):current.placeCue(drop.x,drop.y))){
    placement=null;turnUI();
   }
