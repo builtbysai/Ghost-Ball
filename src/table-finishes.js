@@ -24,6 +24,20 @@ export const FINISHES=[
 export function paintFrame(g,{P,h,finish,bw,blend,portrait,margin}){
  const edge=[P(-margin,-margin),P(TABLE.width+margin,-margin),P(TABLE.width+margin,TABLE.height+margin),P(-margin,TABLE.height+margin)];
  const front=P(-margin,-margin),back=P(TABLE.width+margin,TABLE.height+margin);
+ // Solid support beneath the exhibition table; it recedes as the view
+ // comes overhead rather than popping in and out during the camera move.
+ if(blend<.95&&!portrait){
+  g.save();g.globalAlpha=1-blend;
+  const foot=C(bw*.17,18,70);
+  for(const x of [55,945]){
+    const [sx,sy]=P(x,500+margin);
+    const footGrad=g.createLinearGradient(sx-11,sy,sx+12,sy+foot);
+    footGrad.addColorStop(0,h.wood);footGrad.addColorStop(.42,h.rail);footGrad.addColorStop(1,'#16100e');
+    path(g,[[sx-16,sy-3],[sx+16,sy-3],[sx+10,sy+foot],[sx-10,sy+foot]]);
+    g.fillStyle=footGrad;g.fill();g.strokeStyle='#100e0b';g.lineWidth=2;g.stroke();
+  }
+  g.restore();
+ }
  g.save();g.shadowColor='rgba(0,0,0,.78)';g.shadowBlur=C(bw*.043,12,42);g.shadowOffsetY=10+14*(1-blend);
  path(g,edge);
  const wood=g.createLinearGradient(front[0],front[1],back[0],back[1]);
