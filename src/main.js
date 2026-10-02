@@ -74,7 +74,7 @@ function begin(kind){
   turnUI();
  };
  try{flyTable({app:$('app'),source:$('attractCanvas'),target:$('tableArea'),
-   from:attract.sim,to:current.sim,hall:room,gameRenderer:table,done:finish});}
+   from:attract.sim,to:current.sim,hall:room,gameRenderer:table,done:finish,isActive:()=>active==='transition'});}
  catch(err){console.warn('Table entrance skipped',err);finish();}
 }
 function exit(){
