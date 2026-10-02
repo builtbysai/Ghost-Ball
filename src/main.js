@@ -16,7 +16,7 @@ let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new
 const setText=(id,value)=>{$(id).textContent=value;};
 function notify(message){if(message)setText('status',message);}
 function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);
-  document.documentElement.style.setProperty('--hall',h.felt);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
+  document.documentElement.style.setProperty('--hall',h.felt);document.documentElement.style.setProperty('--room-aura',h.aura);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
   setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
   setText('playText',mode==='practice'?`Practice at ${h.name}`:`Break at ${h.name}`);
   if(current)setText('roundLabel',`${h.name.toUpperCase()} · ${current.kind==='practice'?'PRACTICE':'CASUAL 8-BALL'}`);
@@ -122,7 +122,7 @@ function fire(){
   placement=null;
   if(motion)navigator.vibrate?.(strength>.7?[15,18,7]:[Math.round(4+strength*12)]);
   audio.play({type:'strike',power:strength});
-  $('powerTrack').classList.add('impact');
+  if(shotMotion)$('powerTrack').classList.add('impact');
   notify('Balls in motion…');setPower(50);turnUI();
  }
 }
