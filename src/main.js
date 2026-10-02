@@ -1,3 +1,4 @@
+import {slotModels} from './score-slots.js';
 import {Game} from './game.js';
 import {TableRenderer,halls} from './render.js';
 import {TABLE,POCKETS} from './physics.js';
@@ -10,7 +11,7 @@ const all=(query)=>[...document.querySelectorAll(query)];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 let room=1,mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
 let current=null,active='lobby',motion=true,placement=null,pointerMode=null;
-let settingsOrigin='lobby',updateWaiting=false;
+let settingsOrigin='lobby',updateWaiting=false,powerSide='left';
 let matchElapsed=0,shotRemaining=45,clockKey='',lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
@@ -28,7 +29,11 @@ function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(roo
 function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
 function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';show('backdrop');show('setupSheet');$('closeSetup').focus();}
 function closeSetup(){const wasOpen=!$('setupSheet').hidden;hide('setupSheet');if($('settingsSheet').hidden)hide('backdrop');if(wasOpen)$('openSetup').focus();}
-function openSettings(){settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('motionToggle').checked=motion;$('closeSettings').focus();}
+function syncPowerSide(){
+ $('gameScreen').classList.toggle('power-right',powerSide==='right');
+ all('[data-power-side]').forEach(b=>{const pressed=b.dataset.powerSide===powerSide;b.setAttribute('aria-pressed',String(pressed));b.classList.toggle('selected',pressed);});
+}
+function openSettings(){syncPowerSide();settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('motionToggle').checked=motion;$('closeSettings').focus();}
 function closeSettings(){if($('settingsSheet').hidden)return;hide('settingsSheet');hide('backdrop');if(settingsOrigin==='menu'&&active==='lobby'){show('clubMenu');$('menuSettings').focus();}else if(active==='paused')$('pauseSettings').focus();else if(active==='lobby')$('menuBtn').focus();}
 function openMenu(){show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){setText('matchSummary',mode==='practice'?'Open practice table':rival==='local'?'8-Ball · Two players':`8-Ball vs ${rival==='rookie'?'Rookie':'Club Pro'}`);
@@ -37,10 +42,17 @@ function refreshMenu(){setText('matchSummary',mode==='practice'?'Open practice t
 function resize(){ambient.resize();table.resize();}
 function canAct(){return active==='game'&&current&&!current.over&&!current.sim.moving&&!current.isAI()&&!current.ballInHand;}
 function ballSlots(container,player){
- const group=current.groups[player];const ids=group==='solids'?[1,2,3,4,5,6,7]:group==='stripes'?[9,10,11,12,13,14,15]:[1,2,3,4,5,6,7];
- const colors=['','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d','#191918','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d'];
- container.replaceChildren(...ids.map(id=>{const el=document.createElement('i');el.className='ball-slot'+(group?' assigned':'')+(current.sim.balls.find(b=>b.id===id)?.pocketed?' pocketed':'');if(group)el.style.background=group==='stripes'?`linear-gradient(0deg,#f7f4ef 26%,${colors[id]} 27% 74%,#f7f4ef 75%)`:colors[id];return el;}));
- container.setAttribute('aria-label',group?`${group}: ${ids.filter(id=>!current.sim.balls.find(b=>b.id===id)?.pocketed).length} remaining`:'Groups not assigned');
+ const group=current.groups[player],pocketed=current.sim.balls.filter(b=>b.pocketed).map(b=>b.id);
+ const models=slotModels(current.groups,player,pocketed);
+ container.replaceChildren(...models.map(ball=>{
+  const el=document.createElement('span');el.className='ball-slot'+(ball.preview?' preview':' assigned')+(ball.stripe?' striped':'')+(ball.pocketed?' pocketed':'');
+  el.style.setProperty('--slot-color',ball.color);
+  const numeral=document.createElement('b');numeral.className='ball-number';numeral.textContent=String(ball.id);el.append(numeral);el.setAttribute('role','listitem');
+  el.setAttribute('aria-label',`Ball ${ball.id}${ball.preview?' (unassigned preview)':''}${ball.pocketed?', pocketed':''}`);
+  return el;
+ }));
+ container.setAttribute('role','list');
+ container.setAttribute('aria-label',group?`${group}: ${models.filter(b=>!b.pocketed).length} balls remaining`:'Open table. Sample ball numbers, not assigned yet.');
 }
 function turnUI(){if(!current)return;
  const ai=current.isAI(),busy=current.sim.moving;
@@ -207,6 +219,7 @@ $('menuPractice').onclick=()=>begin('practice');$('menuSettings').onclick=openSe
 $('pauseButton').onclick=pauseMatch;$('resumeMatch').onclick=resumeMatch;
 $('pauseSettings').onclick=openSettings;$('rerack').onclick=()=>{resetMatch();resumeMatch();};$('quitMatch').onclick=quitToLobby;
 $('closeSettings').onclick=closeSettings;
+ all('[data-power-side]').forEach(b=>b.onclick=()=>{powerSide=b.dataset.powerSide;savePreference('ghostball-power-side',powerSide);syncPowerSide();});
 $('soundToggle').onchange=event=>{audio.enabled=event.target.checked;savePreference('ghostball-sound',audio.enabled?'on':'off');};
 $('motionToggle').onchange=event=>{motion=event.target.checked;savePreference('ghostball-motion',motion?'on':'off');};
 $('openSetup').onclick=openSetup;$('closeSetup').onclick=closeSetup;$('backdrop').onclick=()=>{closeSetup();closeSettings();};
@@ -286,7 +299,8 @@ window.addEventListener('keydown',e=>{
   if(e.code==='Space'){e.preventDefault();fire();}
   if(e.key.toLowerCase()==='r'){pauseMatch();}
 });
-try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';}catch{}
+try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';}catch{}
+ syncPowerSide();
 syncSpin();
 applyRoom();refreshMenu();hide('gameScreen');
 let previous=performance.now(),acc=0,uiTimer=0;

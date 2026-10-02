@@ -1,3 +1,4 @@
+import {advanceRoll} from './ball-orientation.js';
 /** Deterministic 240 Hz, browser-free pool simulation. Units: 1000 x 500 cloth. */
 export const TABLE = Object.freeze({width: 1000, height: 500, radius: 12, step: 1 / 240});
 export const POCKETS = Object.freeze([[-7,-7],[500,-13],[1007,-7],[-7,507],[500,513],[1007,507]]);
@@ -17,7 +18,7 @@ export const JAWS = Object.freeze([
   [43,12],[12,43],[957,12],[988,43], [43,488],[12,457],[957,488],[988,457],
   [461,12],[539,12],[461,488],[539,488],
 ]);
-export function makeBall(id,x,y){return {id,x,y,vx:0,vy:0,spin:0,follow:0,aimX:1,aimY:0,slipX:0,slipY:0,pocketed:false,color:BALL_COLORS[id],rotation:0};}
+export function makeBall(id,x,y){return {id,x,y,vx:0,vy:0,spin:0,follow:0,aimX:1,aimY:0,slipX:0,slipY:0,pocketed:false,color:BALL_COLORS[id],rotation:0,orientation:[1,0,0,0]};}
 /** Standard triangular layout: opposite groups in the rear corners; eight in the center. */
 export function rack(seed=0){
   const balls=[makeBall(0,252,250)];
@@ -123,7 +124,7 @@ export class Simulation{
     for(const b of this.balls){
       if(b.pocketed)continue;
       slowBall(b,dt);
-      b.x+=b.vx*dt;b.y+=b.vy*dt;b.rotation+=distance(b.vx,b.vy)*dt/r;
+      const dx=b.vx*dt,dy=b.vy*dt;b.x+=dx;b.y+=dy;advanceRoll(b,dx,dy,r);
       let pocket=pocketFor(b);
       if(pocket!==-1){Object.assign(b,{pocketed:true,vx:0,vy:0,slipX:0,slipY:0});events.push({type:'pocket',id:b.id,pocket});continue;}
       // A rail is absent inside its pocket mouth. Rounded rubber jaws guard each gap.
@@ -167,6 +168,6 @@ export class Simulation{
     }
   }
   advance(seconds){const events=[];for(let i=0;i<Math.ceil(seconds/TABLE.step);i++)events.push(...this.step());return events;}
-  snapshot(){return {balls:this.balls.map(b=>({...b})),moving:this.moving,elapsed:this.elapsed,lastShot:this.lastShot&&{...this.lastShot}};}
-  loadSnapshot(state){this.balls=state.balls.map(b=>({...b}));this.moving=state.moving;this.elapsed=state.elapsed;this.lastShot=state.lastShot&&{...state.lastShot};this.events=[];}
+  snapshot(){return {balls:this.balls.map(b=>({...b,orientation:[...(b.orientation||[1,0,0,0])]})),moving:this.moving,elapsed:this.elapsed,lastShot:this.lastShot&&{...this.lastShot}};}
+  loadSnapshot(state){this.balls=state.balls.map(b=>({...b,orientation:[...(b.orientation||[1,0,0,0])]}));this.moving=state.moving;this.elapsed=state.elapsed;this.lastShot=state.lastShot&&{...state.lastShot};this.events=[];}
 }

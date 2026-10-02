@@ -34,6 +34,12 @@ v0.6 refinements:
 - [x] Show a substantial physical cue retreat while pulling, a charged power rail, short tension ticks when enabled and a quick impact stroke.
 - [ ] Physical Android testing for cue visibility, pull latency and haptic intensity, and visual review of the recorded responsive screenshot artifacts.
 
+v0.7 responsive HUD and visual roll (October 2):
+- [x] One four-column landscape HUD with separated pause control, countdown badges, player cards and responsive numbered ball slots. Unassigned groups display dim preview examples, never falsely claiming ownership.
+- [x] Rolling ball orientation tracks physical displacement, with moving stripes, number discs, and cue-ball markers. Snapshots deep-copy orientation; no collision calculation depends on graphics.
+- [x] Compact, non-scrolling landscape pause dialog and rebuilt game preferences with working left/right power bar, sound and impact switches. Only the available 2D/landscape options are shown.
+- [ ] Verify final composition on actual Android phones, including browser safe areas, very short viewports and sustained frame timing.
+
 Next, in this order:
 
 1. **Control feel benchmark on real phones:** tap/drag thresholds, sensitivity presets, aiming-wheel acceleration, touch occlusion, thumb reach, handedness/power-side switch, proper shot cancel and two-finger protection. Measure input latency before adding extra animations.
