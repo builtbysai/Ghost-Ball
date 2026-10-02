@@ -7,7 +7,7 @@ Status: 2026-10-02 · v0.6 table materials, staged entrance and tactile power lo
 
 ## Active delivery roadmap
 
-See [validated findings and prioritized exit criteria](FINDINGS-VALIDATION.md). This document retains earlier build history, including superseded experimental milestones. **Active order: P0 playable-loop reliability and guide (PR) → P1 real-device controls → P2 casual/tournament rules and AI → P3 polish/local progression → P4 online → P5 extra modes and cameras.** Do not treat unchecked historical items below as higher priority than the current phases.
+See [validated findings and prioritized exit criteria](FINDINGS-VALIDATION.md). This document retains earlier build history, including superseded experimental milestones. **Active order: P0 playable-loop reliability and guide (shipped in #12; physical-device review pending) → P1 real-device controls → P2 casual/tournament rules and AI → P3 polish/local progression → P4 online → P5 extra modes and cameras.** Do not treat unchecked historical items below as higher priority than the current phases.
 
 ## Product principles
 
