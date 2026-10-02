@@ -2,25 +2,25 @@
 .table-flight{
  position:absolute;left:0;top:0;z-index:26;display:block;
  transform-origin:center center;pointer-events:none;will-change:transform;
- filter:drop-shadow(0 16px 24px rgba(0,0,0,.38));
+ filter:drop-shadow(0 16px 24px rgba(0,0,0,.38));backface-visibility:hidden;
 }
 #app.entering-match .masthead,
 #app.entering-match .room-details,
 #app.entering-match .lobby-panel{opacity:0;transform:translateY(12px);pointer-events:none;
- transition:opacity .42s ease,transform .65s cubic-bezier(.2,.8,.2,1);}
+ transition:opacity .61s ease,transform .86s cubic-bezier(.2,.8,.2,1);}
 #app .masthead,#app .room-details,#app .lobby-panel{transition:opacity .28s ease,transform .45s ease;}
 .game-screen.entering{background:transparent;pointer-events:none;}
 .game-screen.entering::before{
  content:'';position:absolute;inset:0;pointer-events:none;
  background:radial-gradient(ellipse 85% 75% at 50% 52%,#25456b 0%,#15263e 68%,#0e172a 100%);
- animation:room-to-table 1.3s ease-in-out both;
+ animation:room-to-table 1.68s cubic-bezier(.3,.05,.18,1) both;
 }
 .game-screen.entering .table-play-area{visibility:hidden;}
 .game-screen.entering .match-hud,
 .game-screen.entering .match-footer,
 .game-screen.entering .shot-rail,
-.game-screen.entering .tools-rail{animation:match-controls-in .47s .80s both;}
-@keyframes room-to-table{0%,14%{opacity:0}100%{opacity:1}}
+.game-screen.entering .tools-rail{animation:match-controls-in .46s 1.12s both;}
+@keyframes room-to-table{0%,10%{opacity:0}55%{opacity:.93}100%{opacity:1}}
 @keyframes match-controls-in{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
 
 /* Current preferences are real controls; unreleased views are honest placeholders. */
