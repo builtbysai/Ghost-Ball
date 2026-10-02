@@ -10,6 +10,8 @@ export function wheelAngle(startAngle,deltaY,sensitivity=.004){return Math.atan2
  */
 export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},onCancel=()=>{},minimumTravel=22}){
  let pointer=null,startY=0,current=0,travel=1;
+ const rotated=()=>typeof window!=='undefined'&&window.matchMedia('(orientation:portrait) and (max-width:820px)').matches;
+ const axis=e=>rotated()?-e.clientX:e.clientY;
  const draw=p=>{
    current=clamp(p,0,1);
    if(current>0)onPower(Math.max(.08,current));
@@ -27,10 +29,10 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
  function down(e){if(pointer!==null||!canShoot())return;
    const rect=track.getBoundingClientRect(),h=handle.getBoundingClientRect();
    // Start in the thumb's generous touch target, not anywhere on the track.
-   if(e.clientY>h.bottom+16||e.clientY<h.top-16)return;
-   pointer=e.pointerId;startY=e.clientY;travel=Math.max(42,rect.height-h.height-9);track.classList.remove('held');draw(0);track.setPointerCapture?.(pointer);e.preventDefault();}
- function move(e){if(e.pointerId!==pointer)return;draw(pullPower(startY,e.clientY,travel));e.preventDefault();}
- function finish(e,cancel=false){if(e.pointerId!==pointer)return;const moved=e.clientY-startY;
+   if(rotated()?(e.clientX>h.right+16||e.clientX<h.left-16):(e.clientY>h.bottom+16||e.clientY<h.top-16))return;
+   pointer=e.pointerId;startY=axis(e);travel=Math.max(42,(rotated()?rect.width-h.width:rect.height-h.height)-9);track.classList.remove('held');draw(0);track.setPointerCapture?.(pointer);e.preventDefault();}
+ function move(e){if(e.pointerId!==pointer)return;draw(pullPower(startY,axis(e),travel));e.preventDefault();}
+ function finish(e,cancel=false){if(e.pointerId!==pointer)return;const moved=axis(e)-startY;
    if(!cancel)move(e);const valid=!cancel&&moved>=minimumTravel&&current>=.08&&canShoot();
    pointer=null;try{track.releasePointerCapture?.(e.pointerId);}catch{}
    if(valid){
@@ -56,8 +58,9 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
 }
 export function bindAimWheel({element,canAim,getAngle,setAngle}){
  let pointer=null,lastY=0;
- element.addEventListener('pointerdown',e=>{if(pointer!==null||!canAim())return;pointer=e.pointerId;lastY=e.clientY;element.setPointerCapture?.(pointer);e.preventDefault();});
- element.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;setAngle(wheelAngle(getAngle(),e.clientY-lastY));lastY=e.clientY;e.preventDefault();});
+ const axis=e=>typeof window!=='undefined'&&window.matchMedia('(orientation:portrait) and (max-width:820px)').matches?-e.clientX:e.clientY;
+ element.addEventListener('pointerdown',e=>{if(pointer!==null||!canAim())return;pointer=e.pointerId;lastY=axis(e);element.setPointerCapture?.(pointer);e.preventDefault();});
+ element.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;setAngle(wheelAngle(getAngle(),axis(e)-lastY));lastY=axis(e);e.preventDefault();});
  function stop(e){if(e.pointerId===pointer){pointer=null;try{element.releasePointerCapture?.(e.pointerId);}catch{}}}
  element.addEventListener('pointerup',stop);element.addEventListener('pointercancel',stop);
  element.addEventListener('lostpointercapture',()=>{pointer=null;});
