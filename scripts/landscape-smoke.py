@@ -4,6 +4,7 @@ from playwright.sync_api import sync_playwright
 import base64, os, re, shutil
 
 root = Path(__file__).resolve().parents[1]
+(root / 'screenshots').mkdir(exist_ok=True)
 
 def module_data(name, cache=None):
     cache = cache if cache is not None else {}
