@@ -10,7 +10,7 @@ Billiards developed from European indoor adaptations of earlier lawn games. Amer
 
 ## Controls
 
-Miniclip uses drag-to-aim plus a precision aiming wheel, separate mobile power pull, and optional cue-ball hit-position/spin. GamePigeon 8-Ball's approachable async interaction favors quick, social turns. **Decision:** do not put the finger over the cue during the power stroke; allow coarse drag anywhere on the table, separate fine aim, independent power and explicit shoot fallback. Do not obscure sightlines with floating panels.
+Miniclip uses drag-to-aim plus a precision aiming wheel, separate mobile power pull, and optional cue-ball hit-position/spin. GamePigeon 8-Ball's approachable async interaction favors quick, social turns. **Decision:** do not put the finger over the cue during the power stroke; grab and rotate the visible stick behind the cue ball (not the guideline in front), separate fine aim, independent power and explicit shoot fallback. Do not obscure sightlines with floating panels.
 
 - https://support.miniclip.com/hc/en-us/articles/35451942766865-Basic-Controls-Improving-your-skills-8-Ball-Pool
 - https://support.miniclip.com/hc/en-us/articles/203747546-How-to-Aim-with-the-Cue-8-Ball-Pool
@@ -44,10 +44,13 @@ The 2010 Mathavan et al. cushion-impact paper reports restitution around 0.98 an
 - https://support.miniclip.com/hc/en-us/articles/35451942766865-Basic-Controls-Improving-your-skills-8-Ball-Pool
 - https://support.miniclip.com/hc/en-us/articles/6630561650833--Settings-Guideline
 
-Miniclip documents separate aim, fine-aim controls, power bar, spin and configurable settings, including orientation on supported screens. We keep these jobs independent. On a tall phone, rotating the *table* upright uses the available vertical space instead of shrinking the balls to fit the viewport width. Power-release shooting requires explicit opt-in to protect users who explore the power range before shooting. The game shows a placement preview and rejects illegal ball-in-hand locations.
+Miniclip documents separate aim, fine-aim controls, power bar, spin and configurable settings, including orientation on supported screens. We keep these jobs independent. On a tall phone, rotating the *table* upright uses the available vertical space instead of shrinking the balls to fit the viewport width. Power-release shooting is on by default, with an explicit option to disable it to protect users who explore the power range before shooting. The game shows a placement preview and rejects illegal ball-in-hand locations.
 
 
-## v0.3 view architecture (2026-10-01)
+## Archived v0.3 view experiment (2026-10-01)
+
+**Retired October 2:** The below design and WebGL components are historical research, not current playable features. The earlier experimental 3D renderer and its harness were removed. Gameplay now ships top-down 2D only; a new 2.5D approach will be scoped from the user's Atelier Air Hockey reference when provided.
+
 
 The official three.js renderer documentation confirms that modern WebGLRenderer targets WebGL2 and requires explicit resource disposal; three.js performance guidance recommends avoiding uncontrolled high-DPI framebuffers. Ghost Ball has no build system or external runtime dependencies, so this milestone implements a small self-contained WebGL2 pipeline rather than adding a CDN availability dependency. Source: https://threejs.org/docs/pages/WebGLRenderer.html and https://threejs.org/manual/pages/responsive.html.
 

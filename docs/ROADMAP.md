@@ -1,6 +1,9 @@
 # Ghost Ball rebuild roadmap
 
-Status: 2026-10-01 · v0.4 landscape-first control and presentation pass. This document describes current implementation versus planned work; it is not a promise that future features already exist.
+> **Current scope (October 2):** The only playable camera is top-down 2D. The live perspective exhibition table rotates into this view, with balls gathering into the rack. Aim by dragging the visible shaft behind the cue ball, not by touching the guideline in front. The orientation blocker and live view switcher are removed. Future camera/orientation choices are disabled in Preferences. The old experimental WebGL source and its smoke harness were deleted; future 2.5D will use the user's forthcoming Atelier reference.
+
+
+Status: 2026-10-02 · v0.5 top-down-only controls and cinematic lobby transition. Historical experimental 3D milestones below are superseded; see the current-scope note first.
 
 ## Product principles
 
@@ -8,7 +11,7 @@ Status: 2026-10-01 · v0.4 landscape-first control and presentation pass. This d
 2. No dead controls, fake unlocks, mandatory ads, currency, pay-to-win or unnecessary vertical scroll.
 3. First-class touch, keyboard, desktop and accessibility. Stable aim and shot force matter more than effects.
 4. Separate simulation, rules, rendering, AI, audio, input, mode state and persistence as the project expands.
-5. 2D must stay fast and legible; elevated perspective optional; true 3D should implement the same view and input contract.
+5. Top-down 2D must stay fast and legible. Any future camera is a separate planned milestone, not currently selectable.
 
 ## Current direction: 8 Ball Pool-style gameplay foundation
 
@@ -17,12 +20,12 @@ For now, prioritize a familiar, touch- and mouse-first landscape playing experie
 Shipped in v0.4:
 
 - [x] Landscape-first game view with centered horizontal table, compact dual-player HUD and remaining-ball indicators, pull bar left, fine aim and spin on the right, bottom status. No bottom tray obstructing the felt.
-- [x] Default overhead 2D in gameplay. Existing elevated 2.5D and opt-in 3D remain in settings. PWA requests landscape; portrait shows rotate instruction and optional continue.
+- [x] Top-down 2D only in matches. Unreleased elevated/surface camera and orientation choices live in Preferences as disabled placeholders. No rotate-device blocker.
 - [x] Pointer-captured drag-to-aim and pure pointer-relative fine aiming wheel, both mouse and touch compatible. Right wheel supports keyboard arrows.
 - [x] Pull downward **then release** to shoot by default; min travel, pointercancel protection, shot-state gate, explicit Shoot button and optional release-off preference.
 - [x] Tap spin icon for 2-axis contact selection. Side spin uses existing physics, vertical follow/draw is clearly documented as an approximate first pass.
 - [x] Move cue ball behind the break line before the first shot. Ball-in-hand drag/invalid-placement preview retained.
-- [x] Visually reviewed landscape layouts at 568×320, 844×390 and 1280×720; rotate gate at 390×844. 37 Node tests plus Playwright isolated-module mouse/touch/overflow smoke.
+- [x] Existing landscape viewport and pointer controls had browser smoke coverage. The new entrance and rear-cue interactions now have unit coverage; physical-device and new visual smoke verification remain release checks.
 
 Next, in this order:
 
@@ -42,7 +45,7 @@ References: `docs/REFERENCE-CONTROLS.md`.
 - [x] Playable practice, casual 8-ball vs CPU and pass-and-play, with rack reset and ball in hand.
 - [x] Top-down 2D and projected elevated 2.5D using identical simulation state.
 - [x] Fixed-step engine, symmetric collisions, pockets, first-contact events, basic cue spin and audio events.
-- [x] Mobile/desktop controls: direct aim, precision, power pull, separate shoot and spin.
+- [x] Mobile/desktop controls: grab rear cue to aim, precision wheel, power pull, separate shoot and spin.
 - [x] Real feature gates; no fake online matchmaking.
 - [x] Small meaningful unit suite on simulation and basic AI/mode state.
 
@@ -68,10 +71,10 @@ Remaining work:
 
 ## Phase 2 — Table presentation and quality
 
-- [x] Optional dependency-free WebGL2 scene on the **existing** simulation: geometrically dimensional table/rails/legs and textured spheres, simple lighting and contact shadows. Dynamically imported only when chosen; no GPU context on lobby. Context loss/unavailability returns to 2.5D; canvas resolution budget capped at 1.3 megapixels.
-- [ ] Visual calibration and graphics QA on genuine mobile/desktop GPUs: shader compilation, ball numbering/orientation, true soft lighting/contact shadows, GPU timing and adaptive quality. Current automated graphics validation uses a mock context because local Chromium WebGL was disabled.
-- [x] Camera-to-world ray-on-felt input and portrait table mapping for 3D, with pure-math round-trip and GPU matrix parity tests.
-- [ ] Genuine mobile/desktop WebGL visual comparisons, overhead 3D camera quick-toggle and touch field testing before marking the 3D experience production-polished.
+- [ ] Future cameras (2.5D elevated/surface) will be designed from the user's Atelier reference. Old experimental WebGL implementation has been removed to keep v0 focused.
+- [ ] Visual timing and responsive QA for the new live-to-rack transition, including real Android and reduced-motion review.
+- [ ] Only implement new camera projection/unprojection together with a reviewed interaction model, rather than reviving the removed experiment.
+- [ ] Collect the Atelier 2.5D reference and scope separate graphics tests before making camera options interactive.
 - [ ] Responsive layout validation on devices with large safe-area insets, foldables, landscape and reduced-motion modes; automated screenshot comparisons.
 - [ ] Accessible labels, contrast, keyboard-only e2e, gamepad, screen-reader game status, focus trap/restore for dialogs.
 - [ ] Consolidate audio preferences with intentional global mute, separate effects and music when music exists, lifecycle and no autoplay.
@@ -86,4 +89,4 @@ Remaining work:
 
 ## Release gates
 
-Never ship incomplete modes as functional buttons. Before merge: Node tests, DOM browser smoke at portrait and landscape sizes, simulation parity, correct Pages asset base, and no JavaScript errors. Hardware-GPU visuals, Android touch and full rules fidelity are separate **release gates for promoting 3D out of preview**, not claims established by the mocked WebGL2 browser harness.
+Never ship incomplete modes as functional buttons. Before merge: JavaScript syntax, Node tests, viewport-fit browser smoke, simulated-rack continuity, and no JavaScript errors. Physical Android feel and new transition visuals remain manual review items.
