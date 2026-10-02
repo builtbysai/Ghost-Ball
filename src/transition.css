@@ -2,7 +2,7 @@
 .table-flight{
  position:absolute;left:0;top:0;z-index:26;display:block;
  transform-origin:center center;pointer-events:none;will-change:transform;
- filter:drop-shadow(0 16px 24px rgba(0,0,0,.38));
+ filter:drop-shadow(0 var(--flight-shadow,16px) 23px rgba(0,0,0,.48));
 }
 #app.entering-match .masthead,
 #app.entering-match .room-details,
@@ -22,6 +22,14 @@
 .game-screen.entering .tools-rail{animation:match-controls-in .47s .80s both;}
 @keyframes room-to-table{0%,14%{opacity:0}100%{opacity:1}}
 @keyframes match-controls-in{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+
+/* Warm pool-hall spotlight follows the one physical table through its flight. */
+.flight-stage{position:absolute;inset:0;z-index:23;pointer-events:none;opacity:0;will-change:opacity}
+.flight-stage:before{content:'';position:absolute;inset:0;
+ background:radial-gradient(ellipse 36% 31% at var(--flight-x,50%) var(--flight-y,50%),rgba(245,223,172,.2) 0%,rgba(222,184,127,.064) 55%,transparent 100%);
+}
+#app.entering-match .room{filter:brightness(.51);transition:filter .56s ease-out}
+#app .room{transition:filter .3s ease-in}
 
 /* Current preferences are real controls; unreleased views are honest placeholders. */
 .prefs-eyebrow{font-size:9px;font-weight:800;letter-spacing:.2em;color:#887c68}
@@ -56,7 +64,7 @@
  .prefs-hint{margin:4px 0}
 }
 @media(prefers-reduced-motion:reduce){
- .table-flight{display:none}
+ .table-flight,.flight-stage{display:none}
  #app.entering-match .masthead,#app.entering-match .room-details,
  #app.entering-match .lobby-panel{transition:none}
  .game-screen.entering::before,.game-screen.entering .match-hud,
