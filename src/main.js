@@ -61,8 +61,10 @@ function turnUI(){if(!current)return;
  for(const id of ['spinButton','aimLeft','aimRight'])$(id).disabled=toolsDisabled;
  $('powerTrack').classList.toggle('is-disabled',toolsDisabled);
  $('powerTrack').setAttribute('aria-disabled',String(!canAct()));$('aimWheel').setAttribute('aria-disabled',String(!canAct()));
- setText('guideBadge',current.ballInHand?'DRAG CUE BALL TO PLACE':ai?'WATCH THE SHOT':canAct()?'DRAG THE CUE STICK TO AIM':'BALLS IN MOTION');
- $('guideBadge').style.opacity=busy?'0':'.9';
+ const help=current.ballInHand?'DRAG THE WHITE BALL TO A CLEAR SPOT':current.over?'MATCH COMPLETE · PAUSE TO RESTART':'';
+ setText('guideBadge',help);
+ $('guideBadge').classList.toggle('is-visible',Boolean(help));
+ $('guideBadge').style.opacity=busy?'0':'.95';
 }
 function begin(kind){
  if(active!=='lobby')return;
