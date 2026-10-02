@@ -3,7 +3,7 @@
 > **Current scope (October 2):** The only playable camera is top-down 2D. The live perspective exhibition table rotates into this view, with balls gathering into the rack. Aim by dragging the visible shaft behind the cue ball, not by touching the guideline in front. The orientation blocker and live view switcher are removed. Future camera/orientation choices are disabled in Preferences. The old experimental WebGL source and its smoke harness were deleted; future 2.5D will use the user's forthcoming Atelier reference.
 
 
-Status: 2026-10-02 · v0.5 top-down-only controls and cinematic lobby transition. Historical experimental 3D milestones below are superseded; see the current-scope note first.
+Status: 2026-10-02 · v0.6 table materials, staged entrance and tactile power loading. Historical experimental 3D milestones below are superseded; see the current-scope note first.
 
 ## Product principles
 
@@ -26,6 +26,13 @@ Shipped in v0.4:
 - [x] Tap spin icon for 2-axis contact selection. Side spin uses existing physics, vertical follow/draw is clearly documented as an approximate first pass.
 - [x] Move cue ball behind the break line before the first shot. Ball-in-hand drag/invalid-placement preview retained.
 - [x] Existing landscape viewport and pointer controls had browser smoke coverage. The new entrance and rear-cue interactions now have unit coverage; physical-device and new visual smoke verification remain release checks.
+
+v0.6 refinements:
+- [x] Three differentiated original table finishes: detailed cushions, polished rails, grain/inlay, pocket rims and cloth lighting.
+- [x] Cache static board surfaces so per-frame physics and animated ball drawing do not redraw the full room.
+- [x] Sharpen and stage the menu-to-match flight, rolling ball gather and final seamless handoff. Preserve the reduced-motion fast path.
+- [x] Show a substantial physical cue retreat while pulling, a charged power rail, short tension ticks when enabled and a quick impact stroke.
+- [ ] Physical Android testing for cue visibility, pull latency and haptic intensity, and visual review of the recorded responsive screenshot artifacts.
 
 Next, in this order:
 
