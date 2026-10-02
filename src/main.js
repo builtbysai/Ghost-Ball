@@ -116,7 +116,8 @@ function animatePocket(event){
  ball.style.setProperty('--ball-color',pocketColors[event.id]);ball.textContent=event.id||'';
  ball.setAttribute('aria-label',event.id?'Ball '+event.id+' pocketed':'Cue ball scratched');dock.append(ball);
  const [px,py]=POCKETS[event.pocket],[x,y]=table.project(px,py),canvasBox=$('gameCanvas').getBoundingClientRect(),end=ball.getBoundingClientRect();
- const dx=canvasBox.left+x-(end.left+end.width/2),dy=canvasBox.top+y-(end.top+end.height/2);
+ const source=mobileLandscape()?{x:canvasBox.right-y,y:canvasBox.top+x}:{x:canvasBox.left+x,y:canvasBox.top+y};
+ const dx=source.x-(end.left+end.width/2),dy=source.y-(end.top+end.height/2);
  if(motion&&ball.animate&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
   const flight=ball.animate([
    {transform:`translate(${dx}px,${dy}px) scale(1.1)`,opacity:1,offset:0},
@@ -138,17 +139,17 @@ function updateClocks(elapsed){
 }
 // Cue aiming is acquired on the stick behind the cue ball, not the guide in
 // front. Offset-preserving relative rotation avoids a jump when grabbed.
-function cuePoint(clientX,clientY){
- const rect=$('gameCanvas').getBoundingClientRect();
- return table.unproject(clientX-rect.left,clientY-rect.top);
-}
+function mobileLandscape(){return window.matchMedia('(orientation:portrait) and (max-width:820px)').matches;}
+function localCanvasPoint(clientX,clientY){const rect=$('gameCanvas').getBoundingClientRect();
+ return mobileLandscape()?{x:clientY-rect.top,y:rect.right-clientX}:{x:clientX-rect.left,y:clientY-rect.top};}
+function cuePoint(clientX,clientY){const p=localCanvasPoint(clientX,clientY);return table.unproject(p.x,p.y);}
 let rearGesture=null;
 function startCueDrag(e,pt,cue){
  const rect=$('gameCanvas').getBoundingClientRect(),geo=cueGeometry(cue,angle,pullProgress);
  const [cx,cy]=table.project(cue.x,cue.y);
  const [tx,ty]=table.project(geo.tip.x,geo.tip.y);
  const [bx,by]=table.project(geo.butt.x,geo.butt.y);
- const p={x:e.clientX-rect.left,y:e.clientY-rect.top};
+ const p=localCanvasPoint(e.clientX,e.clientY);
  if(!cueShaftHit(p,{x:cx,y:cy},{x:tx,y:ty},{x:bx,y:by},e.pointerType==='touch'?32:20))return false;
  const bearing=rearAimAngle(cue,pt);
  if(bearing===null)return false;
@@ -230,7 +231,9 @@ function closeSpin(){hide('spinShade');hide('spinSheet');$('spinButton').focus()
 $('spinDone').onclick=closeSpin;$('spinShade').onclick=closeSpin;
 $('spinReset').onclick=()=>{spin={x:0,y:0};syncSpin();};
 let spinPointer=null;
-function spinPosition(e){spin=spinFromPoint(e.clientX,e.clientY,$('spinBall').getBoundingClientRect());syncSpin();}
+function spinPosition(e){const rect=$('spinBall').getBoundingClientRect();
+ if(mobileLandscape()){spin=spinFromPoint(e.clientY-rect.top,rect.right-e.clientX,{left:0,top:0,width:rect.height,height:rect.width});}
+ else spin=spinFromPoint(e.clientX,e.clientY,rect);syncSpin();}
 $('spinBall').addEventListener('pointerdown',e=>{if(spinPointer!==null)return;spinPointer=e.pointerId;$('spinBall').setPointerCapture?.(spinPointer);spinPosition(e);});
 $('spinBall').addEventListener('pointermove',e=>{if(e.pointerId===spinPointer)spinPosition(e);});
 $('spinBall').addEventListener('pointerup',e=>{if(e.pointerId!==spinPointer)return;spinPosition(e);spinPointer=null;});
