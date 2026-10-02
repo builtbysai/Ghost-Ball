@@ -18,3 +18,18 @@ jobs:
           find src -name '*.js' -exec node --check {} \;
       - name: Simulation and rules unit tests
         run: npm test
+      - name: Browser smoke dependencies
+        if: github.event_name == 'pull_request'
+        run: python3 -m pip install playwright
+      - name: Responsive browser smoke and screenshots
+        if: github.event_name == 'pull_request'
+        env:
+          CHROMIUM_BIN: /usr/bin/google-chrome
+        run: python3 scripts/landscape-smoke.py
+      - name: Save viewport screenshots
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghost-ball-viewports
+          path: screenshots/
+          if-no-files-found: ignore
