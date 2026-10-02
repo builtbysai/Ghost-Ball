@@ -53,6 +53,11 @@ with sync_playwright() as p:
         page.locator('#prevRoom').click()
         page.screenshot(path=str((root / 'screenshots' / f'menu-{width}x{height}.png').resolve()))
         # Verify actual pointer hit targets, not force-click bypasses.
+        if width<900:
+            hit=page.locator('#menuBtn').bounding_box()
+            page.touchscreen.tap(hit['x']+hit['width']/2,hit['y']+hit['height']/2)
+            assert page.locator('#clubMenu').is_visible(), 'actual touch could not open menu'
+            page.locator('#closeMenu').click()
         page.locator('#menuBtn').click()
         assert page.locator('#clubMenu').is_visible()
         page.locator('#closeMenu').click()
@@ -102,6 +107,17 @@ with sync_playwright() as p:
         page.locator('#rerack').click()
         assert page.locator('#gameScreen').get_attribute('data-shots') == '0', 'restart failed'
         assert page.locator('#pauseMenu').is_hidden(), 'restart remained paused'
+        if width<900:
+            # Genuine touch events catch mobile pointer capture regressions.
+            cdp=context.new_cdp_session(page)
+            cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':start[0],'y':start[1]}]})
+            for i in range(1,12):
+                x=start[0]+(end[0]-start[0])*i/11
+                y=start[1]+(end[1]-start[1])*i/11
+                cdp.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':x,'y':y}]})
+            cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
+            page.wait_for_timeout(90)
+            assert page.locator('#gameScreen').get_attribute('data-shots')=='1', 'touch release failed to shoot'
         page.locator('#pauseButton').click()
         page.locator('#quitMatch').click()
         page.wait_for_timeout(500)
