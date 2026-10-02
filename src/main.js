@@ -6,6 +6,7 @@ import {Audio} from './audio.js';
 import {bindPower,bindAimWheel,spinFromPoint,cueShaftHit,rearAimAngle,wrapAngle} from './touch-controls.js';
 import {flyTable} from './table-transition.js';
 import {cueGeometry,tensionStage} from './cue-feel.js';
+import {nearbyLegalCuePlacement} from './placement-guide.js';
 const $=id=>document.getElementById(id);
 const all=(query)=>[...document.querySelectorAll(query)];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -14,6 +15,7 @@ let current=null,active='lobby',motion=true,placement=null,pointerMode=null;
 let settingsOrigin='lobby',updateWaiting=false,powerSide='left';
 let matchElapsed=0,lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
+let previousShotAngles=[0,0];
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
 const setText=(id,value)=>{$(id).textContent=value;};
@@ -83,14 +85,14 @@ function turnUI(){if(!current)return;
  for(const id of ['spinButton','aimLeft','aimRight'])$(id).disabled=toolsDisabled;
  $('powerTrack').classList.toggle('is-disabled',toolsDisabled);
  $('powerTrack').setAttribute('aria-disabled',String(!canAct()));$('aimWheel').setAttribute('aria-disabled',String(!canAct()));
- const help=current.ballInHand&&!current.over?'DRAG THE WHITE BALL TO A CLEAR SPOT':'';
+ const help=current.ballInHand&&!current.over&&!current.isAI()?'DRAG TO PLACE · GREEN SHOWS A CLEAR SPOT':'';
  setText('guideBadge',help);
  $('guideBadge').classList.toggle('is-visible',Boolean(help));
  $('guideBadge').style.opacity=busy?'0':'.95';
 }
 function begin(kind){
  if(active!=='lobby')return;
- lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;$('collectedBalls').replaceChildren();hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
+ lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];$('collectedBalls').replaceChildren();hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  current=new Game({kind,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',notify,onPocket:animatePocket});
  if(kind==='attract'){current.turn=0;notify('An exhibition between our house rivals.');}
@@ -135,7 +137,7 @@ function pauseMatch(){
 }
 function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('pauseButton').focus();turnUI();}
 function resetMatch(){
- if(!current)return;current.reset();lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;
+ if(!current)return;current.reset();lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];
  $('collectedBalls').replaceChildren();placement=null;angle=0;spin={x:0,y:0};syncAim();syncSpin();
  setPower(50);powerControl.reset();$('powerTrack').classList.remove('impact');turnUI();
 }
@@ -194,7 +196,10 @@ function moveCueDrag(clientX,clientY){
 function previewPlacement(clientX,clientY){
   if(!current||(!current.ballInHand&&pointerMode!=='break-place')||current.sim.moving)return;
   const pt=cuePoint(clientX,clientY);
-  placement={...pt,legal:current.sim.canPlaceCue(pt.x,pt.y)&&(pointerMode!=='break-place'||pt.x<=265)};
+  const isBreak=pointerMode==='break-place';
+   const direct=current.sim.canPlaceCue(pt.x,pt.y)&&(!isBreak||pt.x<=265);
+   const nearby=direct?null:nearbyLegalCuePlacement(current.sim,pt.x,pt.y,{breakOnly:isBreak,maxDistance:48});
+   placement={...pt,legal:direct,suggestion:nearby?.snapped?nearby:null};
 }
 function syncAim(){angle=Math.atan2(Math.sin(angle),Math.cos(angle));$('aimRange').value=String(angle*180/Math.PI);$('aimWheel').setAttribute('aria-valuenow',String(Math.round(angle*180/Math.PI)));}
 function fire(){
@@ -202,6 +207,7 @@ function fire(){
  const strikingCue=current.sim.cue(),strength=power,shotAngle=angle;
  audio.unlock();
  if(current.beginShot(shotAngle,strength,spin)){
+  previousShotAngles[current.turn]=shotAngle;
   powerControl.reset();$('powerTrack').classList.remove('held');
   if(!$('controlsHint').hidden){hide('controlsHint');savePreference('ghostball-controls-taught','yes');}
   shotMotion=motion&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -252,7 +258,10 @@ const powerControl=bindPower({
  onShoot:()=>{fire();return true;},
  onCancel:()=>{setPower(50);}
 });
-bindAimWheel({element:$('aimWheel'),canAim:()=>Boolean(canAct()),getAngle:()=>angle,setAngle:n=>{angle=n;syncAim();}});
+bindAimWheel({element:$('aimWheel'),canAim:()=>Boolean(canAct()),getAngle:()=>angle,
+ setAngle:n=>{angle=n;syncAim();},
+ onReset:()=>{angle=previousShotAngles[current?.turn||0]||0;syncAim();
+  notify('Aim restored to the previous shot direction.');}});
 function syncSpin(){
  const label=spin.y>.18?'FOLLOW':spin.y<-.18?'DRAW':'CENTER';
  const side=spin.x>.18?'RIGHT':spin.x<-.18?'LEFT':'';
@@ -273,7 +282,7 @@ $('spinBall').addEventListener('pointerup',e=>{if(e.pointerId!==spinPointer)retu
 $('spinBall').addEventListener('pointercancel',()=>{spinPointer=null;});
 let pointerId=null;
 $('gameCanvas').addEventListener('pointerdown',e=>{
- if(!canAct()&&!(active==='game'&&current?.ballInHand))return;
+ if(!canAct()&&!(active==='game'&&current?.ballInHand&&!current?.isAI()))return;
  if(pointerId!==null)return;
  const cue=current.sim.cue(),pt=cuePoint(e.clientX,e.clientY);
  const place=current.ballInHand?'place':current.break&&current.shots===0&&cue&&Math.hypot(cue.x-pt.x,cue.y-pt.y)<35?'break-place':null;
@@ -295,7 +304,8 @@ $('gameCanvas').addEventListener('pointerup',e=>{
  if(pointerMode==='cue-aim')moveCueDrag(e.clientX,e.clientY);
  if(pointerMode==='place'||pointerMode==='break-place'){
   previewPlacement(e.clientX,e.clientY);
-  if(placement?.legal&&(pointerMode==='break-place'?current.placeBreakCue(placement.x,placement.y):current.placeCue(placement.x,placement.y))){
+  const drop=placement?.legal?placement:placement?.suggestion;
+  if(drop&&(pointerMode==='break-place'?current.placeBreakCue(drop.x,drop.y):current.placeCue(drop.x,drop.y))){
    placement=null;turnUI();
   }
  }
@@ -334,7 +344,9 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
    const strike=shotMotion&&strokeTime<1?{...shotMotion,progress:Math.max(0,strokeTime)}:null;
    if(shotMotion&&strokeTime>=1){shotMotion=null;$('powerTrack').classList.remove('impact');}
    const cpuPose=g.isAI()?g.presentedCue:null;
-   const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over,aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike},placement,fx:motion?g.fx:[]};
+   const zone=active==='game'&&!g.over&&!g.sim.moving&&!g.isAI()
+     ?g.ballInHand?'all':pointerMode==='break-place'?'break':null:null;
+    const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over,aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike},placement,placementZone:zone,fx:motion?g.fx:[]};
    table.draw(g.sim,frame);uiTimer+=elapsed;if(uiTimer>.2){turnUI();uiTimer=0;}}
 }
 requestAnimationFrame(frame);
