@@ -250,7 +250,7 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
   if(iterations>=14)acc=0;
   g.update(elapsed,{audio,haptics:motion});
   if(active==='lobby'){ambient.draw(g.sim,{fx:motion?g.fx:[]});}
-  else{const elapsedShot=shotFx?(now-shotFx.started)/195:1;
+  else{const elapsedShot=shotFx?(now-shotFx.started)/112:1;
    if(elapsedShot>=1)shotFx=null;
    const stroke=shotFx?{...shotFx,progress:Math.max(0,elapsedShot)}:null;
    const frame={interactive:!g.isAI()&&!g.over,aim:{angle,power,drawback:pullTension},placement,fx:motion?g.fx:[],stroke};
