@@ -37,3 +37,14 @@ test('gathering balls keep their physical footprint throughout the transition',(
   assert.deepEqual(movingRack(before,target,t),positions,'animation must not depend on frame history');
  }
 });
+
+test('gathering balls roll along the curved transition and end with portable orientation',()=>{
+ const old=[{id:0,x:240,y:250,rotation:0,orientation:[1,0,0,0]},{id:1,x:410,y:135,rotation:0,orientation:[1,0,0,0]}];
+ const target=[{id:0,x:225,y:250,rotation:0,orientation:[1,0,0,0]},{id:1,x:760,y:250,rotation:0,orientation:[1,0,0,0]}];
+ const mid=movingRack(old,target,.65),end=movingRack(old,target,1);
+ assert.notDeepEqual(mid[1].orientation,[1,0,0,0]);
+ assert.ok(mid[1].rotation>0);
+ assert.deepEqual(end.map(b=>[b.x,b.y]),target.map(b=>[b.x,b.y]));
+ assert.ok(end.every(b=>b.orientation.length===4&&b.orientation.every(Number.isFinite)));
+ assert.deepEqual(movingRack(old,target,.65),mid,'rolling animation remains deterministic');
+});

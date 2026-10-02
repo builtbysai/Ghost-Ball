@@ -1,4 +1,6 @@
 import {TableRenderer} from './render.js';
+import {TABLE} from './physics.js';
+import {advanceRoll} from './ball-orientation.js';
 
 // One physical table travels from the live exhibition into the chosen game.
 export const smooth=t=>{const x=Math.max(0,Math.min(1,t));return x*x*(3-2*x);};
@@ -19,7 +21,7 @@ export function cameraFlight(progress){
  */
 export function movingRack(before,after,progress){
  const t=Math.max(0,Math.min(1,progress));
- if(t>=1)return after.map(b=>({...b,pocketed:false,opacity:1,trail:null}));
+ const endFrame=t>=1;
  const origins=new Map(before.map(b=>[b.id,b]));
  const positions=after.map(ball=>{
   const from=origins.get(ball.id)||ball;
@@ -55,6 +57,31 @@ export function movingRack(before,after,progress){
   }
   if(!moved)break;
  }
+ // Integrate the curved path from its start, not from the preceding frame.
+ // This keeps rolling visuals reproducible under dropped frames and reflows.
+ for(const pose of positions){
+  const from=origins.get(pose.id)||after.find(b=>b.id===pose.id);
+  const target=after.find(b=>b.id===pose.id);
+  const distance=Math.hypot(target.x-from.x,target.y-from.y);
+  const stagger=pose.id===0?0:((pose.id*7)%17)/17*.19;
+  const start=.12+stagger,span=.69-stagger,side=pose.id%2?1:-1;
+  const dx=(target.x-from.x)/(distance||1),dy=(target.y-from.y)/(distance||1);
+  let prevX=from.x,prevY=from.y;
+  pose.orientation=[...(from.orientation||[1,0,0,0])];
+  pose.rotation=from.rotation||0;
+  for(let step=1;step<=12;step++){
+   const u=t*step/12,move=smooth((u-start)/span);
+   const curve=Math.sin(move*Math.PI)*Math.min(47,distance*.092)*side;
+   const x=mix(from.x,target.x,move)-dy*curve;
+   const y=mix(from.y,target.y,move)+dx*curve;
+   advanceRoll(pose,x-prevX,y-prevY,TABLE.radius);
+   prevX=x;prevY=y;
+  }
+  // The separation solver can slightly displace the drawn ball at its final step.
+  advanceRoll(pose,pose.x-prevX,pose.y-prevY,TABLE.radius);
+ }
+ if(endFrame)return after.map((ball,i)=>({...ball,pocketed:false,opacity:1,trail:null,
+  rotation:positions[i].rotation,orientation:[...positions[i].orientation]}));
  return positions;
 }
 export function flyTable({app,source,target,from,to,hall,gameRenderer,done,reverse=false,isActive=()=>true}){
@@ -117,7 +144,15 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done,rever
   halo.style.opacity=String(Math.min(1,t*7,Math.max(0,(1-t)*10)));
   flight.draw({balls:movingRack(originals,rack,t),moving:false});
   if(t<1)requestAnimationFrame(tick);
-  else{canvas.remove();halo.remove();done();}
+  else{
+   // Carry the exact final visual orientation into the destination simulation:
+   // no pop from a rolled number/stripe to the default rack texture at handoff.
+   const final=movingRack(originals,rack,1),byId=new Map(final.map(b=>[b.id,b]));
+   for(const ball of to.balls){const pose=byId.get(ball.id);
+    if(pose){ball.orientation=[...pose.orientation];ball.rotation=pose.rotation;}
+   }
+   canvas.remove();halo.remove();done();
+  }
  }
  requestAnimationFrame(tick);
 }
