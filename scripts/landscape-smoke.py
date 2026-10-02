@@ -19,7 +19,7 @@ def module_data(name, cache=None):
 
 def html_source():
     doc = (root / 'index.html').read_text()
-    for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css']:
+    for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css', 'responsive-ui.css']:
         doc = re.sub(fr'<link rel="stylesheet" href="src/{re.escape(name)}(?:\?[^"]*)?">',
                      f'<style>{(root / "src" / name).read_text()}</style>', doc)
     doc = doc.replace('<link rel="manifest" href="manifest.webmanifest">', '')
@@ -30,6 +30,18 @@ def inside_viewport(rect, width, height, tolerance=2):
     return rect['x'] >= -tolerance and rect['y'] >= -tolerance and (
         rect['x'] + rect['width'] <= width + tolerance and
         rect['y'] + rect['height'] <= height + tolerance)
+
+def separate(a,b,label,tolerance=1):
+    if not a or not b: raise AssertionError(f'{label}: missing geometry')
+    x=min(a['x']+a['width'],b['x']+b['width'])-max(a['x'],b['x'])
+    y=min(a['y']+a['height'],b['y']+b['height'])-max(a['y'],b['y'])
+    assert x<=tolerance or y<=tolerance, f'{label} overlap: {a} vs {b}'
+
+def within(inner,outer,label,tolerance=1):
+    assert inner and outer, f'{label}: missing bounds'
+    assert inner['x']>=outer['x']-tolerance and inner['y']>=outer['y']-tolerance and (
+        inner['x']+inner['width']<=outer['x']+outer['width']+tolerance and
+        inner['y']+inner['height']<=outer['y']+outer['height']+tolerance), f'{label} clipped'
 
 with sync_playwright() as p:
     chrome = os.environ.get('CHROMIUM_BIN') or shutil.which('chromium') or shutil.which('google-chrome')
@@ -79,11 +91,34 @@ with sync_playwright() as p:
         game_canvas = page.locator('#gameCanvas').bounding_box()
         assert inside_viewport(game_canvas, width, height), f'table clipped: {game_canvas}'
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight')
+        # The pause button, rival cards, center label, tokens and numbered slots
+        # must have dedicated geometry, including the smallest landscape layouts.
+        hud=[page.locator(s).bounding_box() for s in ['#pauseButton','#oneCard','.match-center','#twoCard']]
+        for i in range(len(hud)):
+            for j in range(i+1,len(hud)): separate(hud[i],hud[j],f'{width}x{height}: HUD {i}/{j}')
+        for card,token,slots in [('#oneCard','#oneCard .player-token','#ballsOne'),('#twoCard','#twoCard .player-token','#ballsTwo')]:
+            separate(page.locator(token).bounding_box(),page.locator(slots).bounding_box(),f'{width}x{height}: {card} token/balls')
+            within(page.locator(slots).bounding_box(),page.locator(card).bounding_box(),f'{width}x{height}: {card} slots')
+        assert page.locator('#ballsOne .ball-number').all_text_contents()==['1','2','3','4','5','6','7']
+        assert page.locator('#ballsTwo .ball-number').all_text_contents()==['9','10','11','12','13','14','15']
         page.screenshot(path=str((root / 'screenshots' / f'match-{width}x{height}.png').resolve()))
         page.locator('#pauseButton').click()
         assert page.locator('#pauseMenu').is_visible(), 'pause panel missing'
+        pause=page.locator('.pause-card').bounding_box()
+        within(pause,page.locator('#pauseMenu').bounding_box(),f'{width}x{height}: pause panel')
+        assert page.locator('.pause-card').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'pause has internal overflow'
+        for b in page.locator('.pause-actions button').all(): within(b.bounding_box(),pause,f'{width}x{height}: pause action')
+        page.screenshot(path=str((root/'screenshots'/f'pause-{width}x{height}.png').resolve()))
         page.locator('#pauseSettings').click()
         assert page.locator('#settingsSheet').is_visible(), 'pause preferences missing'
+        prefs=page.locator('.prefs-panel').bounding_box()
+        assert inside_viewport(prefs,width,height), f'preferences clipped: {prefs}'
+        assert page.locator('.prefs-panel').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'preferences have internal overflow'
+        page.locator('[data-power-side="right"]').click()
+        assert page.locator('#gameScreen').evaluate("(el)=>el.classList.contains('power-right')"), 'power-side preference unresponsive'
+        page.locator('[data-power-side="left"]').click()
+        assert not page.locator('#gameScreen').evaluate("(el)=>el.classList.contains('power-right')"), 'power-side reset failed'
+        page.screenshot(path=str((root/'screenshots'/f'preferences-{width}x{height}.png').resolve()))
         page.locator('#closeSettings').click()
         assert page.locator('#pauseMenu').is_visible(), 'pause did not survive preferences'
         page.locator('#resumeMatch').click()

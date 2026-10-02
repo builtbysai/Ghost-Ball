@@ -28,7 +28,8 @@
 #gameScreen .ball-slot.striped{background:linear-gradient(#f7f5ed 0 26%,var(--slot-color) 27% 72%,#f7f5ed 73% 100%)}
 #gameScreen .ball-slot::before{content:'';position:absolute;z-index:0;width:65%;height:65%;border-radius:50%;background:#faf8f3e8}
 #gameScreen .ball-slot{isolation:isolate}
-#gameScreen .ball-slot::before{z-index:-1}
+#gameScreen .ball-slot::before{z-index:0}
+#gameScreen .ball-number{position:relative;z-index:1;font:inherit;color:#161b21}
 #gameScreen .ball-slot.preview{opacity:.51;filter:saturate(.6)}
 #gameScreen .ball-slot.pocketed{opacity:.22;filter:grayscale(1)}
 #gameScreen .match-center small{font-size:clamp(6px,.72vw,10px);letter-spacing:.045em}

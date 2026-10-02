@@ -47,7 +47,7 @@ function ballSlots(container,player){
  container.replaceChildren(...models.map(ball=>{
   const el=document.createElement('span');el.className='ball-slot'+(ball.preview?' preview':' assigned')+(ball.stripe?' striped':'')+(ball.pocketed?' pocketed':'');
   el.style.setProperty('--slot-color',ball.color);
-  el.textContent=String(ball.id);el.setAttribute('role','listitem');
+  const numeral=document.createElement('b');numeral.className='ball-number';numeral.textContent=String(ball.id);el.append(numeral);el.setAttribute('role','listitem');
   el.setAttribute('aria-label',`Ball ${ball.id}${ball.preview?' (unassigned preview)':''}${ball.pocketed?', pocketed':''}`);
   return el;
  }));
