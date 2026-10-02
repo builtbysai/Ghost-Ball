@@ -90,10 +90,15 @@ with sync_playwright() as p:
         page.mouse.move(clear['x'],clear['y'])
         page.mouse.down()
         rect=page.locator('#gameCanvas').bounding_box()
-        page.mouse.move(rect['x']+rect['width']+65,rect['y']+rect['height']+65,steps=4)
+        page.mouse.move(rect['x']+rect['width']+32,rect['y']+rect['height']/2,steps=4)
         page.mouse.up()
         cancelled=page.evaluate('window.__ghostTest.snapshot()')
         assert cancelled['ballInHand'],'off-canvas placement was unexpectedly accepted'
+        retry=page.evaluate('window.__ghostTest.worldToScreen(440,300)')
+        page.mouse.move(retry['x'],retry['y'])
+        page.mouse.down()
+        page.mouse.up()
+        assert not page.evaluate('window.__ghostTest.snapshot()')['ballInHand'], 'input remained stuck after cancellation'
         assert not errors,errors
         print(f'{width}x{height}: foul announcement and legal touch/click placement OK')
         context.close()
