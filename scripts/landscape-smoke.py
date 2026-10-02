@@ -133,6 +133,14 @@ with sync_playwright() as p:
         page.mouse.down()
         page.mouse.up()
         assert page.locator('#gameScreen').get_attribute('data-shots') == '0', 'tap fired'
+        # Pointer capture must not turn a sideways / outside release into a shot.
+        page.mouse.move(*start)
+        page.mouse.down()
+        page.mouse.move(*end, steps=10)
+        unsafe=(end[0],track['y']+track['height']+65) if sideways else (track['x']+track['width']+80,end[1])
+        page.mouse.move(*unsafe, steps=4)
+        page.mouse.up()
+        assert page.locator('#gameScreen').get_attribute('data-shots') == '0', 'outside pull fired'
         page.mouse.move(*start)
         page.mouse.down()
         page.mouse.move(*end, steps=10)
