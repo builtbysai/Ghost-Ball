@@ -79,8 +79,12 @@ with sync_playwright() as p:
         assert page.locator('#guideBadge').is_visible(),'placement hint did not return'
         page.screenshot(path=str(root/'screenshots'/f'placement-hint-{width}x{height}.png'))
         page.mouse.up()
+        staged=page.evaluate('window.__ghostTest.snapshot()')
+        assert staged['ballInHand'] and staged['placement']['candidate'], 'tap should stage placement'
+        assert page.locator('#placeCueConfirm').is_enabled(),'valid draft cannot be confirmed'
+        page.locator('#placeCueConfirm').click()
         after=page.evaluate('window.__ghostTest.snapshot()')
-        assert not after['ballInHand'] and after['legal'], 'suggested location did not place cue legally'
+        assert not after['ballInHand'] and after['legal'], 'confirmed suggestion did not place cue legally'
         assert abs(after['cue']['x']-suggestion['x'])<.01
         assert abs(after['cue']['y']-suggestion['y'])<.01
         # Captured drags ending outside the entire canvas are cancellations.
@@ -97,8 +101,9 @@ with sync_playwright() as p:
         retry=page.evaluate('window.__ghostTest.worldToScreen(440,300)')
         page.mouse.move(retry['x'],retry['y'])
         page.mouse.down()
+        page.mouse.move(retry['x']+32,retry['y']+4,steps=6)
         page.mouse.up()
-        assert not page.evaluate('window.__ghostTest.snapshot()')['ballInHand'], 'input remained stuck after cancellation'
+        assert not page.evaluate('window.__ghostTest.snapshot()')['ballInHand'], 'drag release remained stuck after cancellation'
         assert not errors,errors
         print(f'{width}x{height}: foul announcement and legal touch/click placement OK')
         context.close()
