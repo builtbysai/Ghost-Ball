@@ -14,12 +14,14 @@ let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
 const setText=(id,value)=>{$(id).textContent=value;};
+function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
+
 function notify(message){if(message)setText('status',message);}
 function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);
   document.documentElement.style.setProperty('--hall',h.felt);document.documentElement.style.setProperty('--room-aura',h.aura);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
   setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
   setText('playText',mode==='practice'?`Practice at ${h.name}`:`Break at ${h.name}`);
-  if(current)setText('roundLabel',`${h.name.toUpperCase()} · ${current.kind==='practice'?'PRACTICE':'CASUAL 8-BALL'}`);
+  if(current)setText('roundLabel',h.name.toUpperCase());
 }
 function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
 function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';show('backdrop');show('setupSheet');$('closeSetup').focus();}
@@ -56,7 +58,7 @@ function turnUI(){if(!current)return;
 function begin(kind){
  if(active!=='lobby')return;
  lastScoreSignature='';hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
- angle=0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);syncSpin();powerControl?.reset();
+ angle=0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  current=new Game({kind,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',notify});
  if(kind==='attract'){current.turn=0;setText('status','An exhibition between our house rivals.');}
  active='transition';show('gameScreen');$('lobby').setAttribute('aria-hidden','true');
@@ -72,7 +74,7 @@ function begin(kind){
   turnUI();
  };
  try{flyTable({app:$('app'),source:$('attractCanvas'),target:$('tableArea'),
-   from:attract.sim,to:current.sim,hall:room,gameRenderer:table,done:finish});}
+   from:attract.sim,to:current.sim,hall:room,gameRenderer:table,done:finish,isActive:()=>active==='transition'});}
  catch(err){console.warn('Table entrance skipped',err);finish();}
 }
 function exit(){
@@ -117,13 +119,14 @@ function fire(){
  const strikingCue=current.sim.cue(),strength=power,shotAngle=angle;
  audio.unlock();
  if(current.beginShot(shotAngle,strength,spin)){
+  powerControl.reset();$('powerTrack').classList.remove('held');
   shotMotion=motion&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches
    ?{cue:{x:strikingCue.x,y:strikingCue.y},angle:shotAngle,power:strength,start:performance.now()}:null;
   placement=null;
   if(motion)navigator.vibrate?.(strength>.7?[15,18,7]:[Math.round(4+strength*12)]);
   audio.play({type:'strike',power:strength});
   if(shotMotion)$('powerTrack').classList.add('impact');
-  notify('Balls in motion…');setPower(50);turnUI();
+  notify('Balls in motion…');setPower(50);setText('powerValue','PULL ↓');turnUI();
  }
 }
 function onPull(amount){
@@ -136,16 +139,16 @@ function onPull(amount){
  tensionLevel=stage;
  $('powerTrack').classList.toggle('armed',amount>=.68);
  if(amount>.005)setText('powerValue',Math.round(Math.max(.08,amount)*100)+'%');
- else setText('powerValue',releaseToShoot?'PULL ↓':Math.round(power*100)+'%');
+ else setText('powerValue','PULL ↓');
 }
 function setPower(n){power=clamp(Number(n)/100,.08,1);setText('powerValue',`${Math.round(power*100)}%`);}
 $('menuBtn').onclick=openMenu;$('closeMenu').onclick=()=>hide('clubMenu');
 $('menuPractice').onclick=()=>begin('practice');$('menuSettings').onclick=openSettings;
 $('inGameSettings').onclick=openSettings;
 $('closeSettings').onclick=closeSettings;
-$('soundToggle').onchange=event=>{audio.enabled=event.target.checked;localStorage.setItem('ghostball-sound',audio.enabled?'on':'off');};
-$('motionToggle').onchange=event=>{motion=event.target.checked;localStorage.setItem('ghostball-motion',motion?'on':'off');};
-$('releaseToggle').onchange=event=>{releaseToShoot=event.target.checked;localStorage.setItem('ghostball-release',releaseToShoot?'on':'off');$('powerTrack').setAttribute('aria-label',releaseToShoot?'Drag downward and release to shoot':'Drag downward to set power; use Shoot to fire');};
+$('soundToggle').onchange=event=>{audio.enabled=event.target.checked;savePreference('ghostball-sound',audio.enabled?'on':'off');};
+$('motionToggle').onchange=event=>{motion=event.target.checked;savePreference('ghostball-motion',motion?'on':'off');};
+$('releaseToggle').onchange=event=>{releaseToShoot=event.target.checked;savePreference('ghostball-release',releaseToShoot?'on':'off');$('powerTrack').setAttribute('aria-label',releaseToShoot?'Drag downward and release to shoot':'Drag downward to set power; use Shoot to fire');};
 $('openSetup').onclick=openSetup;$('closeSetup').onclick=closeSetup;$('backdrop').onclick=()=>{closeSetup();closeSettings();};
 $('prevRoom').onclick=()=>{room=(room-1+halls.length)%halls.length;applyRoom();};
 $('nextRoom').onclick=()=>{room=(room+1)%halls.length;applyRoom();};
@@ -163,7 +166,7 @@ const powerControl=bindPower({
  track:$('powerTrack'),handle:$('pullHandle'),canShoot:()=>Boolean(canAct()),
  onPower:n=>{setPower(n*100);audio.unlock();},
  onPull,
- onShoot:()=>{if(releaseToShoot)fire();else notify('Power set. Press SHOOT.');},
+ onShoot:()=>{if(releaseToShoot){fire();return true;}notify('Power ready. Press SHOOT.');setText('powerValue',Math.round(power*100)+'% READY');return false;},
  onCancel:()=>{setPower(50);}
 });
 bindAimWheel({element:$('aimWheel'),canAim:()=>Boolean(canAct()),getAngle:()=>angle,setAngle:n=>{angle=n;syncAim();}});
@@ -239,7 +242,7 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
   if(iterations>=14)acc=0;
   g.update(elapsed,{audio,haptics:motion});
   if(active==='lobby'){ambient.draw(g.sim,{fx:motion?g.fx:[]});}
-  else{const strokeTime=shotMotion?(now-shotMotion.start)/155:1;
+  else{const strokeTime=shotMotion?(now-shotMotion.start)/115:1;
    const strike=shotMotion&&strokeTime<1?{...shotMotion,progress:Math.max(0,strokeTime)}:null;
    if(shotMotion&&strokeTime>=1){shotMotion=null;$('powerTrack').classList.remove('impact');}
    const frame={interactive:!g.isAI()&&!g.over,aim:{angle,power,drawback:pullProgress,strike},placement,fx:motion?g.fx:[]};

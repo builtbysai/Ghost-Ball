@@ -28,12 +28,17 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
    const rect=track.getBoundingClientRect(),h=handle.getBoundingClientRect();
    // Start in the thumb's generous touch target, not anywhere on the track.
    if(e.clientY>h.bottom+16||e.clientY<h.top-16)return;
-   pointer=e.pointerId;startY=e.clientY;travel=Math.max(42,rect.height-h.height-9);draw(0);track.setPointerCapture?.(pointer);e.preventDefault();}
+   pointer=e.pointerId;startY=e.clientY;travel=Math.max(42,rect.height-h.height-9);track.classList.remove('held');draw(0);track.setPointerCapture?.(pointer);e.preventDefault();}
  function move(e){if(e.pointerId!==pointer)return;draw(pullPower(startY,e.clientY,travel));e.preventDefault();}
  function finish(e,cancel=false){if(e.pointerId!==pointer)return;const moved=e.clientY-startY;
    if(!cancel)move(e);const valid=!cancel&&moved>=minimumTravel&&current>=.08&&canShoot();
    pointer=null;try{track.releasePointerCapture?.(e.pointerId);}catch{}
-   if(valid){track.classList.add('releasing');onShoot();}else onCancel();draw(0);if(valid)setTimeout(()=>track.classList.remove('releasing'),220);e.preventDefault();}
+   if(valid){
+    const retained=onShoot()===false;
+    if(retained){track.classList.add('held');}
+    else{track.classList.add('releasing');draw(0);setTimeout(()=>track.classList.remove('releasing'),220);}
+   }else{onCancel();draw(0);}
+   e.preventDefault();}
  track.addEventListener('pointerdown',down);
  track.addEventListener('pointermove',move);
  track.addEventListener('pointerup',e=>finish(e));
@@ -45,9 +50,9 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
    else if(['ArrowUp','ArrowLeft'].includes(e.key))draw(clamp(old-.05,.08,1));
    else if(e.key==='Home')draw(.08);
    else if(e.key==='End')draw(1);
-   else if(e.key==='Enter'||e.key===' '){onPower(Math.max(.08,current));track.classList.add('releasing');onShoot();draw(0);setTimeout(()=>track.classList.remove('releasing'),220);}
+   else if(e.key==='Enter'||e.key===' '){onPower(Math.max(.08,current));const retained=onShoot()===false;if(retained)track.classList.add('held');else{track.classList.add('releasing');draw(0);setTimeout(()=>track.classList.remove('releasing'),220);}}
    else return;e.preventDefault();});
- return {reset:()=>draw(0),isDragging:()=>pointer!==null};
+ return {reset:()=>{track.classList.remove('held','releasing');draw(0);},isDragging:()=>pointer!==null,getProgress:()=>current};
 }
 export function bindAimWheel({element,canAim,getAngle,setAngle}){
  let pointer=null,lastY=0;
