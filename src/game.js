@@ -132,7 +132,7 @@ export class Game {
        if(this.shotRemaining===0)this.expireShotClock();
      }
    }
-   this.fx=this.fx.filter(effect=>(effect.life-=dt*1.8)>0);
+   this.fx=this.fx.filter(effect=>(effect.life-=dt*(effect.type==='pocket'?5:1.8))>0);
  }
  step({audio=null,haptics=false}={}){
    const events=this.sim.step();if(this.sim.moving)this.timer=0;
@@ -141,7 +141,8 @@ export class Game {
      if(event.type==='rail'&&this.turnShot?.first)this.turnShot.rail=true;
      if(event.type==='pocket'){this.onPocket(event);}
      if(event.type==='pocket'&&this.turnShot){this.turnShot.pots.push(event.id);
-       const [px,py]=POCKETS[event.pocket];this.fx.push({x:px,y:Math.max(0,Math.min(500,py)),life:1});
+       const [px,py]=POCKETS[event.pocket],ball=this.sim.balls.find(b=>b.id===event.id);
+       this.fx.push({type:'pocket',x:px,y:py,sourceX:ball?.x??px,sourceY:ball?.y??py,color:ball?.color,life:1});
        if(haptics&&this.kind!=='attract')navigator.vibrate?.(12);}
      if(event.type==='settled'&&this.turnShot){this.resolve();}
      if(event.type!=='settled'&&this.kind!=='attract')audio?.play(event);
