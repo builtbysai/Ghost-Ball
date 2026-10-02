@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {pullPower,wheelAngle,spinFromPoint} from '../src/touch-controls.js';
+import {pullPower,wheelAngle,spinFromPoint,cueShaftHit,rearAimAngle,wrapAngle} from '../src/touch-controls.js';
 import {Game} from '../src/game.js';
 import {Simulation,makeBall,TABLE} from '../src/physics.js';
 test('downward pull is zero above start and clamps to full travel',()=>{
@@ -37,4 +37,19 @@ test('a 2-axis spin shot records finite states and changes follow behavior',()=>
   return sim.cue().vx;}
  const top=setup(.8),bottom=setup(-.8);
  assert.ok(top>bottom,`top ${top} should be ahead of bottom ${bottom}`);
+});
+
+test('cue only grabs behind its ball and within the visible shaft',()=>{
+ const ball={x:100,y:100},tip={x:78,y:100},butt={x:8,y:100};
+ assert.equal(cueShaftHit({x:45,y:115},ball,tip,butt,20),true);
+ assert.equal(cueShaftHit({x:140,y:100},ball,tip,butt,30),false);
+ assert.equal(cueShaftHit({x:45,y:150},ball,tip,butt,20),false);
+ assert.equal(cueShaftHit({x:45,y:115},ball,tip,butt,10),false);
+});
+test('rear cue dragging has the inverse shot bearing without angle jumps',()=>{
+ const cue={x:200,y:100};
+ assert.equal(rearAimAngle(cue,{x:100,y:100}),0);
+ assert.ok(Math.abs(rearAimAngle(cue,{x:200,y:160})+Math.PI/2)<1e-10);
+ const across=wrapAngle(wrapAngle(-Math.PI+.02)-wrapAngle(Math.PI-.02));
+ assert.ok(Math.abs(across-.04)<1e-10);
 });
