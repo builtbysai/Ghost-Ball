@@ -1,8 +1,8 @@
 # Ghost Ball: findings validation and execution plan
-_Reviewed 2026-10-02 against main tree `a269d1824db690e63ff8f7cda0c2e5e07a980298`; implementation tracked on `dev/validated-findings-p0-shot-guide`._
+_Reviewed 2026-10-02 against main tree `a269d1824db690e63ff8f7cda0c2e5e07a980298`. The initial implementation was merged to `main` in [PR #12](https://github.com/builtbysai/Ghost-Ball/pull/12)._
 
 ## Evidence quality
-The supplied audit contains a claimed 101-shot browser match. That observation and its numerical details are **reported**, not independently reproduced in this code review. Source-level defects below were checked directly against the matching commit. PR CI must independently run syntax, unit, landscape screenshot and HTTP-module checks before merging. Physical Android testing remains an explicit release gate.
+The supplied audit contains a claimed 101-shot browser match. That observation and its numerical details are **reported**, not independently reproduced in this code review. Source-level defects below were checked directly against the matching commit. PR #12 passed JavaScript syntax, unit, responsive browser screenshot and HTTP-module checks before merging; the subsequent main checks and Pages build also succeeded. Physical Android testing and a completion-screen device review remain release gates.
 
 ## Confirmed source defects
 | Priority | Finding | Evidence at reviewed commit | Implementation on this branch |
@@ -33,7 +33,7 @@ The supplied audit contains a claimed 101-shot browser match. That observation a
 - [x] Make result header fit and provide direct rematch and quit.
 - [x] Suspend audio on tab hide; resume only an already-started enabled context.
 - [x] Add calculated first-contact guidance, visual spin strike-point cue, first-break help.
-- [ ] Pass PR syntax, unit and responsive browser checks; visually inspect uploaded viewport screenshots.
+- [x] Pass PR syntax, unit and responsive browser checks; inspect the generated screenshot set (1280×720, 844×390, 568×320, and 390×844).
 - [ ] Verify on physical Android in landscape and in physically portrait orientation using the rotated landscape UI.
 
 **Exit:** Entire match can begin, pause, time out, foul, finish, rematch and quit, all through touch and mouse, without dead controls or clipping.
