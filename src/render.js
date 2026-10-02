@@ -80,6 +80,15 @@ export class TableRenderer{
   }finally{this.project=ownProject;}
  }
  drawBall(ball){const g=this.g,[sx,sy,k]=this.project(ball.x,ball.y),r=Math.max(3,TABLE.radius*this.bw/1000*k),side=1+.02*(1-this.blend);
+  if(ball.trail&&ball.trail.opacity>.005){
+   const [px,py]=this.project(ball.trail.x,ball.trail.y);
+   g.save();g.lineCap='round';
+   const sheen=g.createLinearGradient(px,py,sx,sy);
+   sheen.addColorStop(0,'rgba(255,242,208,0)');sheen.addColorStop(1,ball.color);
+   g.globalAlpha=ball.trail.opacity*(ball.opacity??1);
+   g.beginPath();g.moveTo(px,py);g.lineTo(sx,sy);
+   g.strokeStyle=sheen;g.lineWidth=Math.max(1.2,r*.85);g.stroke();g.restore();
+  }
   g.save();g.globalAlpha=ball.opacity??1;g.translate(sx,sy);g.scale(1,side);
   g.beginPath();g.ellipse(1.5,3,r*1.06,r*.72,0,0,TAU);g.fillStyle='rgba(0,0,0,.32)';g.fill();
   g.beginPath();g.arc(0,0,r,0,TAU);g.clip();const shade=g.createRadialGradient(-r*.38,-r*.52,r*.1,0,0,r*1.5);
