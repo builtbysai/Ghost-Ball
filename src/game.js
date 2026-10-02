@@ -32,9 +32,9 @@ export function chooseShot(sim,group='open',difficulty='rookie',random=createRan
  return nearest?{angle:Math.atan2(nearest.y-cue.y,nearest.x-cue.x)+(random()-.5)*.045,power:.52}:{angle:0,power:.5};
 }
 export class Game {
- constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),notify=()=>{}}={}){
+ constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),notify=()=>{},onPocket=()=>{}}={}){
   this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;
-  this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
+  this.onPocket=onPocket;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
  reset(){this.rackSeed=this.random()*100000|0;this.sim=new Simulation(rack(this.rackSeed));this.turn=0;this.groups=[null,null];this.break=true;this.foul=false;this.ballInHand=false;this.over=false;this.winner=null;this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;
   this.history=[];
   this.notify('A fresh rack. Take your time.');}
@@ -73,6 +73,7 @@ export class Game {
    for(const event of events){
      if(event.type==='contact'&&this.turnShot&&!this.turnShot.first&&(event.a===0||event.b===0))this.turnShot.first=event.a===0?event.b:event.a;
      if(event.type==='rail'&&this.turnShot?.first)this.turnShot.rail=true;
+     if(event.type==='pocket'){this.onPocket(event);}
      if(event.type==='pocket'&&this.turnShot){this.turnShot.pots.push(event.id);
        const [px,py]=POCKETS[event.pocket];this.fx.push({x:px,y:Math.max(0,Math.min(500,py)),life:1});
        if(haptics&&this.kind!=='attract')navigator.vibrate?.(12);}
