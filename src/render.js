@@ -13,7 +13,7 @@ export {halls};
 function polygon(g,vertices){g.beginPath();g.moveTo(...vertices[0]);for(let i=1;i<vertices.length;i++)g.lineTo(...vertices[i]);g.closePath();}
 function hexToRgb(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
 export class TableRenderer{
- constructor(canvas,{view='perspective',hall=0}={}){this.canvas=canvas;this.g=canvas.getContext('2d');this.view=view;this.projectionBlend=view==='flat'?1:0;this.hall=hall;this.drawCount=0;this.resize();}
+ constructor(canvas,{view='perspective',hall=0,cacheStatic=true}={}){this.cacheStatic=cacheStatic;this.surface=null;this.surfaceKey='';this.canvas=canvas;this.g=canvas.getContext('2d');this.view=view;this.projectionBlend=view==='flat'?1:0;this.hall=hall;this.drawCount=0;this.resize();}
  resize(){const box=this.canvas.getBoundingClientRect();this.w=Math.max(1,box.width);this.h=Math.max(1,box.height);this.dpr=Math.min(2,window.devicePixelRatio||1);this.canvas.width=Math.round(this.w*this.dpr);this.canvas.height=Math.round(this.h*this.dpr);this.g.setTransform(this.dpr,0,0,this.dpr,0,0);this.geometry();}
  geometry(){
    // An upright table gives portrait phones a much larger aiming surface.
@@ -48,12 +48,23 @@ export class TableRenderer{
  }
  clear(){this.g.clearRect(0,0,this.w,this.h);}
  draw(sim,{aim=null,interactive=false,placement=null,fx=[]}={}){
-  const g=this.g,h=halls[this.hall],finish=FINISHES[this.hall],P=(x,y)=>this.project(x,y),margin=TABLE.radius*1.8;
+  const g=this.g,P=(x,y)=>this.project(x,y);
   this.clear();g.save();
-  paintFrame(g,{P,h,finish,bw:this.bw,blend:this.blend,portrait:this.portrait,margin});
-  paintCloth(g,{P,h,finish,bw:this.bw,blend:this.blend});
-  paintRailDetails(g,{P,finish,bw:this.bw,margin});
-  paintPockets(g,{P,finish,bw:this.bw,blend:this.blend});
+  if(this.cacheStatic&&typeof document!=='undefined'){
+   const key=[this.canvas.width,this.canvas.height,this.hall,this.blend,this.portrait].join(':');
+   if(!this.surface||this.surfaceKey!==key){
+    this.surface??=document.createElement('canvas');
+    if(this.surface.width!==this.canvas.width||this.surface.height!==this.canvas.height){
+     this.surface.width=this.canvas.width;this.surface.height=this.canvas.height;
+    }
+    const surface=this.surface.getContext('2d');
+    surface.setTransform(this.dpr,0,0,this.dpr,0,0);
+    surface.clearRect(0,0,this.w,this.h);
+    this.paintSurface(surface);
+    this.surfaceKey=key;
+   }
+   g.drawImage(this.surface,0,0,this.w,this.h);
+  }else this.paintSurface(g);
   if(interactive&&aim&&!sim.moving&&!sim.cue()?.pocketed)this.drawAim(sim,aim);
   else if(aim?.strike&&aim.strike.progress<1)this.drawStroke(aim.strike);
   for(const ball of [...sim.balls].filter(b=>!b.pocketed).sort((a,b)=>a.y-b.y))this.drawBall(ball);
@@ -65,19 +76,12 @@ export class TableRenderer{
   for(const effect of fx){const [sx,sy]=P(effect.x,effect.y);g.beginPath();g.arc(sx,sy,(1-effect.life)*28,0,TAU);g.strokeStyle=`rgba(239,207,139,${effect.life*.65})`;g.lineWidth=2;g.stroke();}
   g.restore();this.drawCount++;
  }
- drawOverlay(sim,{aim=null,interactive=false,placement=null,fx=[]}={},projector){
-  // The overlay is 2D by design: labels and aim remain sharp while the balls
-  // and table beneath them are actual geometry drawn by WebGL.
-  this.clear();const ownProject=this.project;
-  this.project=(x,y)=>projector.project(x,y);
-  try{
-   if(interactive&&aim&&!sim.moving&&!sim.cue()?.pocketed)this.drawAim(sim,aim);
-   const g=this.g;
-   if(placement){const [sx,sy]=this.project(placement.x,placement.y),[rx,ry]=this.project(Math.min(1000,placement.x+TABLE.radius),placement.y),r=Math.max(5,Math.hypot(rx-sx,ry-sy));
-    g.beginPath();g.arc(sx,sy,r,0,TAU);g.fillStyle=placement.legal?'#eee8debb':'#c9654ab0';g.fill();
-    g.beginPath();g.arc(sx,sy,r*1.4,0,TAU);g.strokeStyle=placement.legal?'#edc982':'#e97b64';g.lineWidth=2;g.stroke();}
-   for(const effect of fx){const [sx,sy]=this.project(effect.x,effect.y);g.beginPath();g.arc(sx,sy,(1-effect.life)*28,0,TAU);g.strokeStyle=`rgba(239,207,139,${effect.life*.65})`;g.lineWidth=2;g.stroke();}
-  }finally{this.project=ownProject;}
+ paintSurface(g){
+  const h=halls[this.hall],finish=FINISHES[this.hall],P=(x,y)=>this.project(x,y),margin=TABLE.radius*1.8;
+  paintFrame(g,{P,h,finish,bw:this.bw,blend:this.blend,portrait:this.portrait,margin});
+  paintCloth(g,{P,h,finish,bw:this.bw,blend:this.blend});
+  paintRailDetails(g,{P,finish,bw:this.bw,margin});
+  paintPockets(g,{P,finish,bw:this.bw,blend:this.blend});
  }
  drawBall(ball){const g=this.g,[sx,sy,k]=this.project(ball.x,ball.y),r=Math.max(3,TABLE.radius*this.bw/1000*k),side=1+.02*(1-this.blend);
   if(ball.trail&&ball.trail.opacity>.005){
