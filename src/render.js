@@ -224,6 +224,7 @@ export class TableRenderer{
   g.beginPath();g.arc(ex,ey,Math.max(5,r*this.bw/1000),0,TAU);g.strokeStyle='rgba(242,217,160,.65)';g.stroke();
   if(target&&limit<rail){const [tx,ty]=this.project(target.x,target.y);g.beginPath();g.moveTo(tx,ty);g.lineTo(tx+(tx-ex)*2.4,ty+(ty-ey)*2.4);g.setLineDash([3,5]);g.strokeStyle='rgba(230,207,152,.45)';g.stroke();g.setLineDash([]);}
   g.restore();this.drawCueStick(cue,angle,drawback);
+ }
 
  // Both dragging hit targets and the graphic use cueGeometry, so the
  // visible, pulled-back shaft stays touchable even at full power.
