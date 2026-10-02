@@ -3,7 +3,15 @@
 > **Current scope (October 2):** The only playable camera is top-down 2D. The live perspective exhibition table rotates into this view, with balls gathering into the rack. Aim by dragging the visible shaft behind the cue ball, not by touching the guideline in front. The orientation blocker and live view switcher are removed. Future camera/orientation choices are disabled in Preferences. The old experimental WebGL source and its smoke harness were deleted; future 2.5D will use the user's forthcoming Atelier reference.
 
 
-Status: 2026-10-02 · v0.5 top-down-only controls and cinematic lobby transition. Historical experimental 3D milestones below are superseded; see the current-scope note first.
+Status: 2026-10-02 · v0.6 premium table finishes, cinematic entrance polish and tactile power pull. Historical experimental 3D milestones below are superseded; see the current-scope note first.
+
+## Newly polished in v0.6
+
+- [x] Three differentiated rail, felt and metal finishes; cached board graphics and corrected stripe treatment on numbered balls.
+- [x] Lift, projection morph and staggered rack formation on entering a match; still one simulation and one playable 2D camera.
+- [x] A substantially more noticeable rear-cue setback, progressive power-bar lighting, three optional tactile strength cues, and fast forward stroke.
+- [x] Shortened post-shot cue animation, safe storage fallback for preferences, screenshot-driven mobile/desktop visual QA.
+- [ ] Confirm physical Android haptics, exact fingertip ergonomics and visual motion timing on the user's phone.
 
 ## Product principles
 

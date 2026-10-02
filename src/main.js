@@ -21,7 +21,7 @@ function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(roo
   document.documentElement.style.setProperty('--hall',h.felt);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
   setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
   setText('playText',mode==='practice'?`Practice at ${h.name}`:`Break at ${h.name}`);
-  if(current)setText('roundLabel',`${h.name.toUpperCase()} · ${current.kind==='practice'?'PRACTICE':'CASUAL 8-BALL'}`);
+  if(current)setText('roundLabel',h.name.toUpperCase());
 }
 function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
 function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';show('backdrop');show('setupSheet');$('closeSetup').focus();}
@@ -58,7 +58,7 @@ function turnUI(){if(!current)return;
 function begin(kind){
  if(active!=='lobby')return;
  lastScoreSignature='';hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
- angle=0;spin={x:0,y:0};power=.50;pullTension=0;shotFx=null;lastDetent=0;syncAim();setPower(50);syncSpin();powerControl?.reset();
+ angle=0;spin={x:0,y:0};power=.50;pullTension=0;shotFx=null;lastDetent=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  $('powerTrack').classList.remove('is-pulling','is-ready');
  current=new Game({kind,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',notify});
  if(kind==='attract'){current.turn=0;setText('status','An exhibition between our house rivals.');}
@@ -127,7 +127,7 @@ function fire(){
  powerControl.reset();placement=null;
  if(motion)navigator.vibrate?.(Math.round(5+power*16));
  audio.play({type:'strike',power});
- notify('Balls in motion…');setPower(50);turnUI();return true;
+ notify('Balls in motion…');setPower(50);setText('powerValue','PULL ↓');turnUI();return true;
 }
 function setPower(n){power=clamp(Number(n)/100,.08,1);setText('powerValue',`${Math.round(power*100)}%`);}
 $('menuBtn').onclick=openMenu;$('closeMenu').onclick=()=>hide('clubMenu');

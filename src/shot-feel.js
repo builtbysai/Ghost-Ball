@@ -8,7 +8,6 @@ export function cueGeometry(radius,drawback=0){
 export function tensionStage(p){const n=clamp01(p);return n>=.82?3:n>=.55?2:n>=.27?1:0;}
 export function strokeOffset(progress,power=0.5){
  const t=clamp01(progress);
- const strength=.65+.35*clamp01(power);
  // Fast forward stroke into the ball, then rebound and disappear.
  if(t<.39)return (142*Math.pow(clamp01(power),.88)+8)*Math.pow(t/.39,1.8);
  return (142*Math.pow(clamp01(power),.88)+8)*Math.exp(-(t-.39)*10);

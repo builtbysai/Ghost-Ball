@@ -2,9 +2,13 @@
 
 An independent, lightweight browser pool game. The Clubhouse rebuild follows the supplied **Clubhouse v3** direction and has a live exhibition playing on the lobby table rather than static decoration.
 
-**Status:** v0.5 interaction and presentation pass. Top-down 2D is the only playable view; the live lobby table rotates and its balls assemble into the match rack. Full WPA tournament rules, other cameras and online play are still planned.
+**Status:** v0.6 table-craft and tactile shot-feel pass. Top-down 2D is the only playable view; the live lobby table rotates and its balls assemble into the match rack. Full WPA tournament rules, other cameras and online play are still planned.
 
 ## Available now
+
+- Three individually finished 2D halls with restrained felt texture, wood grain, pocket liners and metallic sight marks. The static board is cached rather than redrawn each frame.
+- Cinematic ~1.7-second live-table entrance with a floating camera move, gradual overhead projection change, staggered ball gathering, and a clean reduced-motion fallback.
+- Direct finger-following cue setback, charged power rail, three gentle optional haptic/audio strength detents, and a fast cue follow-through. Manual Shoot mode holds the drawn-back cue and selected strength. Haptics vary by browser and device.
 
 - Responsive Clubhouse inspired by the provided mockup: three tables, working room controls, live AI exhibition, Watch, playable Quick Match vs Rookie or Club Pro, local pass-and-play, and free Practice.
 - One active gameplay camera: top-down 2D. The live perspective lobby exhibition becomes that same physical table in a seamless rotation/zoom/rack-assembly transition. The layout works in both device orientations without blocking play.
