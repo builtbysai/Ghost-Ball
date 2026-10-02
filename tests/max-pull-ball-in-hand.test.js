@@ -80,8 +80,9 @@ test('directional release differs from accidentally leaving the hit target',()=>
  assert.equal(safePowerRelease({x:32,y:268},r),false);
  assert.equal(alignedMaxPull({x:32,y:268},r),true);
  assert.equal(alignedMaxPull({x:145,y:268},r),false);
- assert.equal(alignedMaxPull({x:-3,y:32},r,{rotated:true}),true);
- assert.equal(alignedMaxPull({x:-3,y:145},r,{rotated:true}),false);
+ const rotated={left:10,right:230,top:10,bottom:58};
+ assert.equal(alignedMaxPull({x:-3,y:32},rotated,{rotated:true}),true);
+ assert.equal(alignedMaxPull({x:-3,y:145},rotated,{rotated:true}),false);
 });
 test('ball-in-hand draft has one legal candidate and never changes physics',()=>{
  const sim=new Simulation([makeBall(0,250,250),makeBall(1,500,250)]);
