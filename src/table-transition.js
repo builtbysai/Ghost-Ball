@@ -45,6 +45,9 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done,isAct
  if(resolution>flight.dpr){flight.dpr=resolution;canvas.width=Math.round(flight.w*resolution);canvas.height=Math.round(flight.h*resolution);flight.g.setTransform(resolution,0,0,resolution,0,0);}
  const start={x:sourceBox.left-appBox.left+sourceBox.width/2,y:sourceBox.top-appBox.top+sourceBox.height/2};
  const origins=from.balls.map(b=>({...b})),destination=to.balls.map(b=>({...b}));
+ // Match the exact existing table on the first paint, before the next RAF.
+ canvas.style.transform='translate3d('+(start.x-sourceBox.width/2)+'px,'+(start.y-sourceBox.height/2)+'px,0)';
+ flight.draw({balls:origins,moving:false});
  let started=null;
  const duration=1680;
  function tick(now){
@@ -57,14 +60,12 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done,isAct
    const tableBox=target.getBoundingClientRect(),root=app.getBoundingClientRect();
    const finish={x:tableBox.left-root.left+tableBox.width/2,y:tableBox.top-root.top+tableBox.height/2};
    // Recalculate only the visual target, so a resize mid-flight does not snap.
-   const portrait=gameRenderer.portrait;
    const scaleX=gameRenderer.bw/Math.max(1,flight.bw);
    const scaleY=gameRenderer.bh/Math.max(1,flight.bh);
    const sx=mix(1,scaleX,pose.travel)*pose.scale,sy=mix(1,scaleY,pose.travel)*pose.scale;
    const x=mix(start.x,finish.x,pose.travel)-sourceBox.width/2;
    const y=mix(start.y,finish.y,pose.travel)-sourceBox.height/2+pose.lift;
    canvas.style.transform='translate3d('+x+'px,'+y+'px,0) rotate('+pose.rotation+'deg) scale('+sx+','+sy+')';
-   canvas.style.filter='drop-shadow(0 '+(16+24*Math.sin(Math.PI*pose.travel))+'px '+(23+15*Math.sin(Math.PI*pose.travel))+'px rgba(0,0,0,.40))';
    const sim={balls:movingRack(origins,destination,t),moving:false};
    const glow=t>.83?[{x:805,y:250,life:Math.max(0,1-(t-.83)/.17)}]:[];
    flight.draw(sim,{fx:glow});
