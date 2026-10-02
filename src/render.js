@@ -14,7 +14,7 @@ function polygon(g,vertices){g.beginPath();g.moveTo(...vertices[0]);for(let i=1;
 function hexToRgb(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
 export class TableRenderer{
  constructor(canvas,{view='perspective',hall=0,cacheStatic=true}={}){this.cacheStatic=cacheStatic;this.surface=null;this.surfaceKey='';this.canvas=canvas;this.g=canvas.getContext('2d');this.view=view;this.projectionBlend=view==='flat'?1:0;this.hall=hall;this.drawCount=0;this.resize();}
- resize(){const box=this.canvas.getBoundingClientRect();this.w=Math.max(1,box.width);this.h=Math.max(1,box.height);this.dpr=Math.min(2,window.devicePixelRatio||1);this.canvas.width=Math.round(this.w*this.dpr);this.canvas.height=Math.round(this.h*this.dpr);this.g.setTransform(this.dpr,0,0,this.dpr,0,0);this.geometry();}
+ resize(){const box=this.canvas.getBoundingClientRect();this.w=Math.max(1,this.canvas.offsetWidth||box.width);this.h=Math.max(1,this.canvas.offsetHeight||box.height);this.dpr=Math.min(2,window.devicePixelRatio||1);this.canvas.width=Math.round(this.w*this.dpr);this.canvas.height=Math.round(this.h*this.dpr);this.g.setTransform(this.dpr,0,0,this.dpr,0,0);this.geometry();}
  geometry(){
    // An upright table gives portrait phones a much larger aiming surface.
    // Both layouts share the same physical world and a reversible projection.
@@ -27,8 +27,8 @@ export class TableRenderer{
      return;
    }
    const ratio=.375+.125*this.blend;
-   let bw=Math.min(this.w*.92,(this.h*.88)/ratio);let bh=bw*ratio;
-   if(bh>this.h*.88){bh=this.h*.88;bw=bh/ratio;}
+   const verticalRoom=this.view==='flat'?.82:.88;let bw=Math.min(this.w*.89,(this.h*verticalRoom)/ratio);let bh=bw*ratio;
+   if(bh>this.h*verticalRoom){bh=this.h*verticalRoom;bw=bh/ratio;}
    this.bw=bw;this.bh=bh;this.top=(this.h-bh)/2;this.center=this.w/2;}
  get blend(){return this.projectionBlend??(this.view==='flat'?1:0);}
  setView(view){this.view=view;this.projectionBlend=view==='flat'?1:0;this.geometry();}
