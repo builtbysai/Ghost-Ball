@@ -40,11 +40,12 @@ export class Game {
   this.notify('A fresh rack. Take your time.');}
  get group(){const group=this.groups[this.turn];if(!group)return 'open';return this.sim.balls.some(b=>!b.pocketed&&(group==='solids'?b.id<8&&b.id>0:b.id>8))?group:'eight';}
  isAI(){return this.kind==='attract'||(this.players==='cpu'&&this.turn===1);}
-  beginShot(angle,power,english=0){if(this.over||this.ballInHand||!this.sim.strike(angle,power,english))return false;
+  beginShot(angle,power,spin=0){if(this.over||this.ballInHand||!this.sim.strike(angle,power,spin))return false;
   // Pre-strike state is obtained from the new sim snapshot; the velocities are
   // replaced by zeros for deterministic playback/bug reports without a giant log.
-  this.history.push({angle,power,english,turn:this.turn,shot:this.shots+1});
+  this.history.push({angle,power,spin:typeof spin==='number'?{x:spin,y:0}:{...spin},turn:this.turn,shot:this.shots+1});
   this.turnShot={first:null,pots:[],rail:false};this.shots++;this.notify('');return true;}
+ placeBreakCue(x,y){if(!this.break||this.shots||this.sim.moving||this.over||x>265||!this.sim.placeCue(x,y))return false;this.history.push({kind:'break-placement',x,y});this.notify('Cue positioned. Line up your break.');return true;}
  placeCue(x,y){if(!this.ballInHand)return false;const placed=this.sim.placeCue(x,y);if(placed){this.history.push({kind:'placement',x,y});this.ballInHand=false;this.notify('Cue ball placed. Line up your shot.');}return placed;}
  spotEight(){
    const eight=this.sim.balls.find(b=>b.id===8);if(!eight)return false;

@@ -17,7 +17,7 @@ export const JAWS = Object.freeze([
   [43,12],[12,43],[957,12],[988,43], [43,488],[12,457],[957,488],[988,457],
   [461,12],[539,12],[461,488],[539,488],
 ]);
-export function makeBall(id,x,y){return {id,x,y,vx:0,vy:0,spin:0,slipX:0,slipY:0,pocketed:false,color:BALL_COLORS[id],rotation:0};}
+export function makeBall(id,x,y){return {id,x,y,vx:0,vy:0,spin:0,follow:0,aimX:1,aimY:0,slipX:0,slipY:0,pocketed:false,color:BALL_COLORS[id],rotation:0};}
 /** Standard triangular layout: opposite groups in the rear corners; eight in the center. */
 export function rack(seed=0){
   const balls=[makeBall(0,252,250)];
@@ -92,15 +92,20 @@ export class Simulation{
   }
   placeCue(x,y){
     if(!this.cue()||!this.atRest()||!this.canPlaceCue(x,y))return false;
-    Object.assign(this.cue(),{x,y,vx:0,vy:0,spin:0,slipX:0,slipY:0,pocketed:false});return true;
+    Object.assign(this.cue(),{x,y,vx:0,vy:0,spin:0,follow:0,aimX:1,aimY:0,slipX:0,slipY:0,pocketed:false});return true;
   }
-  strike(angle,power,english=0){
+  strike(angle,power,spin=0){
     const cue=this.cue();if(!Number.isFinite(angle)||!Number.isFinite(power)||!this.atRest()||!cue||cue.pocketed)return false;
     const speed=clamp(power,.06,1)*PHYSICS.maxSpeed;
     cue.vx=Math.cos(angle)*speed;cue.vy=Math.sin(angle)*speed;
     cue.slipX=cue.vx*.65;cue.slipY=cue.vy*.65;
+    // Number signature stays supported for archived replays and regression fixtures.
+    const english=typeof spin==='number'?spin:spin?.x??0;
+    const vertical=typeof spin==='number'?0:spin?.y??0;
+    if(!Number.isFinite(english)||!Number.isFinite(vertical))return false;
     cue.spin=clamp(english,-1,1)*speed*.12;
-    this.lastShot={angle,power,english};this.moving=true;this.events=[{type:'strike',power}];return true;
+    cue.follow=clamp(vertical,-1,1);cue.aimX=Math.cos(angle);cue.aimY=Math.sin(angle);
+    this.lastShot={angle,power,english,vertical};this.moving=true;this.events=[{type:'strike',power}];return true;
   }
   step(dt=TABLE.step){
     if(!Number.isFinite(dt)||dt<=0)return [];
@@ -150,6 +155,13 @@ export class Simulation{
       const tangent=clamp(-slip*.16,-impulse*.13,impulse*.13);
       a.vx-=tangent*tx;a.vy-=tangent*ty;b.vx+=tangent*tx;b.vy+=tangent*ty;
       a.spin+=tangent*.14;b.spin+=tangent*.14;
+      // Lightweight follow/draw approximation: a charged cue retains / loses
+      // forward travel after its first object-ball contact. A physically complete
+      // model must replace this with angular contact impulses.
+      for(const cue of [a,b])if(cue.id===0&&Math.abs(cue.follow)>.01){
+        const effect=cue.follow*Math.min(300,impulse*.4);
+        cue.vx+=cue.aimX*effect;cue.vy+=cue.aimY*effect;cue.follow=0;
+      }
       for(const ball of [a,b]){ball.slipX=ball.vx*.2;ball.slipY=ball.vy*.2;}
       events.push({type:'contact',a:a.id,b:b.id,speed:-closing});
     }

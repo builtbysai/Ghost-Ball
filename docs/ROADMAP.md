@@ -1,6 +1,6 @@
 # Ghost Ball rebuild roadmap
 
-Status: 2026-10-01 · v0.3 optional WebGL2 presentation pass. This document describes current implementation versus planned work; it is not a promise that future features already exist.
+Status: 2026-10-01 · v0.4 landscape-first control and presentation pass. This document describes current implementation versus planned work; it is not a promise that future features already exist.
 
 ## Product principles
 
@@ -9,6 +9,30 @@ Status: 2026-10-01 · v0.3 optional WebGL2 presentation pass. This document desc
 3. First-class touch, keyboard, desktop and accessibility. Stable aim and shot force matter more than effects.
 4. Separate simulation, rules, rendering, AI, audio, input, mode state and persistence as the project expands.
 5. 2D must stay fast and legible; elevated perspective optional; true 3D should implement the same view and input contract.
+
+## Current direction: 8 Ball Pool-style gameplay foundation
+
+For now, prioritize a familiar, touch- and mouse-first landscape playing experience inspired by Miniclip's publicly documented control model and the user-provided reference screenshot. Retain Ghost Ball's own assets and identity. **Do not** expand monetization, social menus, progression systems or unrelated game modes until the core match plays beautifully.
+
+Shipped in v0.4:
+
+- [x] Landscape-first game view with centered horizontal table, compact dual-player HUD and remaining-ball indicators, pull bar left, fine aim and spin on the right, bottom status. No bottom tray obstructing the felt.
+- [x] Default overhead 2D in gameplay. Existing elevated 2.5D and opt-in 3D remain in settings. PWA requests landscape; portrait shows rotate instruction and optional continue.
+- [x] Pointer-captured drag-to-aim and pure pointer-relative fine aiming wheel, both mouse and touch compatible. Right wheel supports keyboard arrows.
+- [x] Pull downward **then release** to shoot by default; min travel, pointercancel protection, shot-state gate, explicit Shoot button and optional release-off preference.
+- [x] Tap spin icon for 2-axis contact selection. Side spin uses existing physics, vertical follow/draw is clearly documented as an approximate first pass.
+- [x] Move cue ball behind the break line before the first shot. Ball-in-hand drag/invalid-placement preview retained.
+- [x] Visually reviewed landscape layouts at 568×320, 844×390 and 1280×720; rotate gate at 390×844. 37 Node tests plus Playwright isolated-module mouse/touch/overflow smoke.
+
+Next, in this order:
+
+1. **Control feel benchmark on real phones:** tap/drag thresholds, sensitivity presets, aiming-wheel acceleration, touch occlusion, thumb reach, handedness/power-side switch, proper shot cancel and two-finger protection. Measure input latency before adding extra animations.
+2. **Complete shot affordances:** cue-angle control; ball/ghost-ball contact guide accuracy, target trajectory and scratch-risk preview bounded by ability; clearer spin previews, smart shot sound and pocket effects; compare exact timings with personal screenshots/video rather than copying artwork.
+3. **Match rules and HUD reliability:** separate official 8-ball rules from Casual. Complete WPA break rules, open table, group assignment, fouls, called 8 pocket, legal game endings and ball-in-hand exceptions. Display pocketed balls and active turn accurately.
+4. **Opponent experience:** smarter legal shot planning, sensible rookie/pro tiers, defensive decisions and natural turn pace. Never modify physics in secret to favor opponents.
+5. **QA:** full-rack device sessions in multiple orientations; real WebGL/shader validation and fallback; keyboard and assistive-mode checks; replay logs for misfires.
+
+References: `docs/REFERENCE-CONTROLS.md`.
 
 ## Phase 0 — Established in this rebuild
 

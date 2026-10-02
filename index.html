@@ -2,7 +2,7 @@
 <html lang="en"><head>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
  <meta name="theme-color" content="#0b1510"><meta name="description" content="Ghost Ball. A beautifully tactile billiards clubhouse.">
- <title>Ghost Ball | The Clubhouse</title><link rel="stylesheet" href="src/style.css">
+ <title>Ghost Ball | The Clubhouse</title><link rel="stylesheet" href="src/style.css"><link rel="stylesheet" href="src/landscape.css"><link rel="manifest" href="manifest.webmanifest">
 </head><body>
 <main id="app">
  <div class="room" aria-hidden="true"><div class="room-wall"></div><div class="frames"><div class="art">THE PARLOR</div><div class="art badge-art">1893</div></div><div class="wainscot"></div><div class="room-floor"></div><div class="room-lamp"><span></span></div><div class="light-beam"></div></div>
@@ -19,19 +19,38 @@
  <section class="sheet" id="setupSheet" aria-label="Match setup" role="dialog" aria-modal="true" hidden><div class="grab"></div><header><span><small>MATCH SETUP</small><h2>Choose the frame.</h2></span><button id="closeSetup" class="close-sheet">DONE</button></header>
   <div class="setting"><label>GAME</label><div class="choice-row"><button class="selected">8-BALL</button><button disabled>9-BALL <small>SOON</small></button><button disabled>STRAIGHT <small>SOON</small></button></div></div>
   <div class="setting"><label>OPPONENT</label><div class="choice-row" id="rivals"><button class="selected" data-rival="rookie">ROOKIE</button><button data-rival="club">CLUB PRO</button><button data-rival="local">2 PLAYERS</button></div></div>
-  <div class="setting"><label>TABLE VIEW</label><div class="choice-row" id="lobbyViews"><button data-view="flat">TOP DOWN / 2D</button><button data-view="perspective" class="selected">ELEVATED / 2.5D</button><button data-view="webgl">TRUE 3D</button></div></div>
+  <div class="setting"><label>TABLE VIEW</label><div class="choice-row" id="lobbyViews"><button data-view="flat" class="selected">TOP DOWN / 2D</button><button data-view="perspective" >ELEVATED / 2.5D</button><button data-view="webgl">TRUE 3D</button></div></div>
   <p class="footnote">Casual 8-ball is the first playable ruleset. Tournament called-shot rules and more formats are on the roadmap.</p>
  </section>
  <section class="club-menu" id="clubMenu" aria-label="Club menu" hidden><header><div><small>GHOST BALL</small><h2>The Clubhouse</h2></div><button id="closeMenu" aria-label="Close menu" class="round">×</button></header><div class="menu-items"><button id="menuPractice"><span>◌</span> Practice <small>WORKSHOP</small></button><button disabled><span>✧</span> Challenges <small>COMING LATER</small></button><button disabled><span>◎</span> Locker <small>COMING LATER</small></button><button id="menuSettings"><span>⚙</span> Settings <small>CONTROLS & AUDIO</small></button></div><footer>NO STORE. NO CURRENCY. EVERYTHING EARNED BY PLAY.</footer></section>
- <section class="settings-sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="Settings" hidden><header><h2>Preferences</h2><button id="closeSettings" class="close-sheet">DONE</button></header><label class="setting-line">Sound effects <input id="soundToggle" type="checkbox" checked></label><label class="setting-line">Motion and impact effects <input id="motionToggle" type="checkbox" checked></label><label class="setting-line">Shoot when releasing power <input id="releaseToggle" type="checkbox"></label><p class="footnote">Off by default. Keep it off to set power without committing the shot.</p><div class="setting"><label>DEFAULT VIEW</label><div id="settingsViews" class="choice-row"><button data-view="flat">TOP DOWN / 2D</button><button data-view="perspective">ELEVATED / 2.5D</button><button data-view="webgl">TRUE 3D</button></div></div><p class="footnote">Keyboard: arrow keys or A/D to aim, Space to shoot, R to re-rack, Escape to leave.</p></section>
- <section class="game-screen" id="gameScreen" aria-label="Pool table" hidden><div class="game-top"><button id="leaveGame" class="circle-control" aria-label="Return to Clubhouse">←</button><div class="scoreboard"><small id="roundLabel">THE PARLOR · CASUAL 8-BALL</small><strong id="turnLabel">YOUR BREAK</strong></div><button id="gameView" class="view-control">2D VIEW</button></div>
-  <div class="score-row"><span id="playerOne">YOU <small>OPEN TABLE</small></span><span class="separator">◆</span><span id="playerTwo">ROOKIE <small>OPEN TABLE</small></span></div>
-  <div class="table-play-area" id="tableArea"><canvas id="webglCanvas" class="webgl-table-canvas" aria-hidden="true" hidden></canvas><canvas id="gameCanvas" aria-label="Interactive pool playing surface; drag to aim or place cue ball on fouls"></canvas><div class="guide-badge" id="guideBadge">DRAG ANYWHERE TO AIM</div></div>
-  <div class="status" id="status" role="status" aria-live="polite">Take your time. Line up your break.</div>
-  <div class="game-controls"><div class="control-top"><span class="control-title">SHOT CONTROL</span><div class="control-actions"><button id="inGameSettings" aria-label="Open gameplay settings">⚙ OPTIONS</button><button id="rerack" aria-label="Rack a new table">↻ RE-RACK</button></div></div>
-   <div class="control-main"><div class="spin-control"><span class="control-eyebrow">ENGLISH</span><label class="english-wrap" aria-label="Left or right cue-ball spin"><input id="spin" type="range" min="-100" max="100" value="0" step="5"><span id="spinLabel">CENTER</span></label></div>
-     <div class="aim-control"><label class="control-eyebrow" for="aimRange">FINE AIM</label><div class="aim-buttons"><button id="aimLeft" aria-label="Rotate aim left">↶</button><input id="aimRange" aria-label="Aim direction in degrees" type="range" min="-180" max="180" step=".25" value="0"><button id="aimRight" aria-label="Rotate aim right">↷</button></div><button class="shoot" id="shootBtn">TAKE SHOT <span>→</span></button></div>
-     <div class="power-control"><label for="powerRange">POWER</label><input type="range" id="powerRange" aria-label="Shot power" min="8" max="100" value="50"><output id="powerValue">50%</output></div></div>
+ <section class="settings-sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="Settings" hidden><header><h2>Preferences</h2><button id="closeSettings" class="close-sheet">DONE</button></header><label class="setting-line">Sound effects <input id="soundToggle" type="checkbox" checked></label><label class="setting-line">Motion and impact effects <input id="motionToggle" type="checkbox" checked></label><label class="setting-line">Shoot when releasing power <input id="releaseToggle" type="checkbox"></label><p class="footnote">On by default. Turn it off to prepare power and use the separate Shoot button.</p><div class="setting"><label>DEFAULT VIEW</label><div id="settingsViews" class="choice-row"><button data-view="flat">TOP DOWN / 2D</button><button data-view="perspective">ELEVATED / 2.5D</button><button data-view="webgl">TRUE 3D</button></div></div><p class="footnote">Keyboard: arrow keys or A/D to aim, Space to shoot, R to re-rack, Escape to leave.</p></section>
+ <section class="game-screen" id="gameScreen" aria-label="Landscape pool game" hidden>
+   <header class="match-hud">
+      <button id="leaveGame" class="hud-menu" aria-label="Leave match">☰</button>
+      <div class="opponent-card" id="oneCard"><div class="player-token">1</div><div class="player-info"><strong id="playerOne">PLAYER ONE <small>OPEN TABLE</small></strong><div class="ball-slots" id="ballsOne" aria-label="Player one balls"></div></div></div>
+      <div class="match-center"><small id="roundLabel">THE PARLOR · 8-BALL</small><strong id="turnLabel">YOUR BREAK</strong></div>
+      <div class="opponent-card right" id="twoCard"><div class="player-info"><strong id="playerTwo">ROOKIE <small>OPEN TABLE</small></strong><div class="ball-slots" id="ballsTwo" aria-label="Player two balls"></div></div><div class="player-token">2</div></div>
+      <button id="inGameSettings" class="hud-settings" aria-label="Match settings">⚙</button>
+   </header>
+   <div class="match-arena">
+      <aside class="shot-rail" aria-label="Pull down to shoot">
+        <span class="rail-label">POWER</span>
+        <div class="power-track" id="powerTrack" role="slider" tabindex="0" aria-label="Pull downward and release to shoot; arrows adjust power, Enter shoots" aria-valuemin="8" aria-valuemax="100" aria-valuenow="8" aria-orientation="vertical">
+          <div class="track-groove"><div id="powerFill" class="power-fill"></div></div><div class="pull-handle" id="pullHandle"><div class="cue-tip"></div></div>
+        </div>
+        <output id="powerValue" class="power-readout">PULL ↓</output>
+      </aside>
+      <div class="table-play-area" id="tableArea"><canvas id="webglCanvas" class="webgl-table-canvas" aria-hidden="true" hidden></canvas><canvas id="gameCanvas" aria-label="Pool table. Drag to aim; drag the cue ball to reposition after a foul."></canvas><div class="guide-badge" id="guideBadge">DRAG TO AIM</div></div>
+      <aside class="tools-rail" aria-label="Shot tools">
+         <button class="cueball-button" id="spinButton" aria-label="Adjust cue ball spin"><span class="cueball-face"><i id="spinPreview"></i></span><small>SPIN</small></button>
+         <button class="tool-view" id="gameView" aria-label="Change table view">2.5D</button>
+         <div class="aim-wheel-control"><span>FINE AIM</span><button id="aimLeft" aria-label="Fine aim counterclockwise">−</button><div id="aimWheel" class="aim-wheel" role="slider" tabindex="0" aria-label="Fine aiming wheel: drag or use arrow keys" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" aria-orientation="vertical"><div class="wheel-grip"></div></div><button id="aimRight" aria-label="Fine aim clockwise">+</button><input id="aimRange" type="range" min="-180" max="180" step=".25" value="0" tabindex="-1" aria-hidden="true"></div>
+         <button id="shootBtn" class="secondary-shot" aria-label="Shoot using selected power">SHOOT</button>
+      </aside>
    </div>
+   <footer class="match-footer"><p class="status" id="status" role="status" aria-live="polite">Drag to aim, then pull to shoot.</p><button id="rerack" aria-label="Rack a new table">↻ <span>RE-RACK</span></button></footer>
+   <div class="rotate-gate" id="rotateGate" aria-label="Landscape recommended"><div class="rotate-phone" aria-hidden="true">▭ ↻</div><h2>Rotate your device</h2><p>Ghost Ball plays best in landscape.</p><button id="portraitContinue">Continue anyway</button></div>
+   <div class="spin-shade" id="spinShade" hidden></div>
+   <section class="spin-sheet" id="spinSheet" role="dialog" aria-modal="true" aria-label="Cue ball spin" hidden><div class="spin-head"><h2>Cue-ball spin</h2><button id="spinDone" aria-label="Done adjusting spin">DONE</button></div><p>Drag the red contact point to adjust spin.</p><div class="spin-ball" id="spinBall" role="img" aria-label="Drag to choose side spin, follow or draw"><i id="spinDot"></i></div><div id="spinLabel" class="spin-description">CENTER</div><button id="spinReset">RESET TO CENTER</button></section>
  </section>
 </main><script type="module" src="src/main.js"></script></body></html>
