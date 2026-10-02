@@ -346,21 +346,34 @@ $('spinBall').addEventListener('pointermove',e=>{if(e.pointerId===spinPointer)sp
 $('spinBall').addEventListener('pointerup',e=>{if(e.pointerId!==spinPointer)return;spinPosition(e);spinPointer=null;});
 $('spinBall').addEventListener('pointercancel',()=>{spinPointer=null;});
 let pointerId=null;
+$('placeCueConfirm').onclick=()=>commitPlacement();
+$('placeCueReset').onclick=()=>resetPlacement();
 $('gameCanvas').addEventListener('pointerdown',e=>{
  if(!canAct()&&!(active==='game'&&current?.ballInHand&&!current?.isAI()))return;
- if(pointerId!==null)return;
+ if(pointerId!==null||e.pointerType==='mouse'&&e.button!==0||e.isPrimary===false)return;
  const cue=current.sim.cue(),pt=cuePoint(e.clientX,e.clientY);
  const place=current.ballInHand?'place':current.break&&current.shots===0&&cue&&Math.hypot(cue.x-pt.x,cue.y-pt.y)<35?'break-place':null;
- if(place){pointerMode=place;previewPlacement(e.clientX,e.clientY);}
- else if(cue&&!cue.pocketed&&startCueDrag(e,pt,cue)){pointerMode='cue-aim';}
- else return; // Touches in front of the stick never move the cue.
+ if(place){
+   pointerMode=place;
+   placeGesture={x:e.clientX,y:e.clientY,touch:e.pointerType==='touch',travel:0,offset:0,previous:placement};
+   previewPlacement(e.clientX,e.clientY);
+ }else if(cue&&!cue.pocketed&&startCueDrag(e,pt,cue)){pointerMode='cue-aim';}
+ else return; // Aiming still starts on the rear cue shaft, never the guide.
  pointerId=e.pointerId;$('gameCanvas').setPointerCapture?.(pointerId);
  audio.unlock();e.preventDefault();
 });
 $('gameCanvas').addEventListener('pointermove',e=>{
  if(e.pointerId!==pointerId)return;
  if(pointerMode==='cue-aim')moveCueDrag(e.clientX,e.clientY);
- else if(pointerMode==='place'||pointerMode==='break-place')previewPlacement(e.clientX,e.clientY);
+ else if(pointerMode==='place'||pointerMode==='break-place'){
+   if(placeGesture){
+     placeGesture.travel=Math.hypot(e.clientX-placeGesture.x,e.clientY-placeGesture.y);
+     // Small progressive offset during a touch drag keeps the ghost above
+     // the finger without causing a jump on the initial grab.
+     placeGesture.offset=placeGesture.touch?Math.min(24,Math.max(0,(placeGesture.travel-10)*.8)):0;
+   }
+   previewPlacement(e.clientX,e.clientY,placeGesture?.offset||0);
+ }
  e.preventDefault();
 });
 $('gameCanvas').addEventListener('pointerup',e=>{
@@ -368,17 +381,29 @@ $('gameCanvas').addEventListener('pointerup',e=>{
  pointerId=null;
  if(pointerMode==='cue-aim')moveCueDrag(e.clientX,e.clientY);
  if(pointerMode==='place'||pointerMode==='break-place'){
-  previewPlacement(e.clientX,e.clientY);
-  const drop=insideGameCanvas(e.clientX,e.clientY)?(placement?.legal?placement:placement?.suggestion):null;
-  if(drop&&(pointerMode==='break-place'?current.placeBreakCue(drop.x,drop.y):current.placeCue(drop.x,drop.y))){
-   placement=null;turnUI();
-  }
+   if(insideGameCanvas(e.clientX,e.clientY)){
+     if(placeGesture)placeGesture.travel=Math.hypot(e.clientX-placeGesture.x,e.clientY-placeGesture.y);
+     previewPlacement(e.clientX,e.clientY,placeGesture?.offset||0);
+     if(pointerMode==='break-place'){
+       const drop=placement?.candidate;
+       if(drop&&current.placeBreakCue(drop.x,drop.y)){placement=null;turnUI();}
+     }else if((placeGesture?.travel||0)>12)commitPlacement();
+     // Taps create a stable preview: PLACE commits it, RESET repositions.
+   }else if(pointerMode==='place')placement=placeGesture?.previous||initialCuePlacement(current.sim);
+   else placement=null;
  }
- rearGesture=null;pointerMode=null;
+ placeGesture=null;rearGesture=null;pointerMode=null;updatePlacementTools();
+ e.preventDefault();
 });
-$('gameCanvas').addEventListener('pointercancel',e=>{
- if(e.pointerId===pointerId){pointerId=null;rearGesture=null;pointerMode=null;placement=null;}
-});
+function cancelTablePointer(e){
+ if(e.pointerId!==pointerId)return;
+ pointerId=null;rearGesture=null;
+ if(pointerMode==='place')placement=placeGesture?.previous||initialCuePlacement(current.sim);
+ else if(pointerMode==='break-place')placement=null;
+ placeGesture=null;pointerMode=null;updatePlacementTools();
+}
+$('gameCanvas').addEventListener('pointercancel',cancelTablePointer);
+$('gameCanvas').addEventListener('lostpointercapture',cancelTablePointer);
 window.addEventListener('keydown',e=>{
   if(e.key==='Escape'){if(!$('spinSheet').hidden){closeSpin();return;}if(!$('settingsSheet').hidden)closeSettings();else if(!$('setupSheet').hidden)closeSetup();else if(!$('clubMenu').hidden)hide('clubMenu');else if(active==='paused')resumeMatch();else if(active==='game')pauseMatch();return;}
   if(!$('settingsSheet').hidden||!$('setupSheet').hidden||!$('clubMenu').hidden||!$('spinSheet').hidden)return;
