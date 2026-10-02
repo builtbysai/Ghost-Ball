@@ -21,7 +21,7 @@
 .spin-shade{position:absolute;inset:0;z-index:17;background:#000b;backdrop-filter:blur(3px)}.spin-sheet{z-index:18;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(340px,84vw);max-height:90dvh;overflow:auto;display:flex;flex-direction:column;gap:9px;align-items:center;padding:16px;background:#ecedea;color:#132035;border-radius:15px;box-shadow:0 20px 80px #000a}.spin-head{display:flex;justify-content:space-between;align-items:center;align-self:stretch}.spin-head h2{margin:0;font:24px Georgia,serif}.spin-head button,.spin-sheet #spinReset{border:0;padding:8px 12px;background:#213b52;color:white;border-radius:7px;font-size:11px;font-weight:800}.spin-sheet p{font-size:12px;color:#455669;margin:0;text-align:center}.spin-ball{width:min(33dvh,150px);height:min(33dvh,150px);max-width:42vw;max-height:42vw;position:relative;border-radius:50%;background:radial-gradient(circle at 28% 20%,#fff,#efeee9 35%,#c1c6ca 71%,#677787);box-shadow:inset -9px -12px 16px #4a55665e,0 10px 24px #0003;touch-action:none;cursor:crosshair}.spin-ball i{width:16%;height:16%;pointer-events:none}.spin-description{font-size:11px;font-weight:900;letter-spacing:.1em}
 #spinShade[hidden],#spinSheet[hidden]{display:none!important}
 @media (max-height:440px){.game-screen{grid-template-rows:46px minmax(0,1fr) 22px}.match-hud{grid-template-columns:30px minmax(0,1fr) 84px minmax(0,1fr) 30px;gap:4px}.hud-menu,.hud-settings{height:29px;width:29px;font-size:17px}.player-token{height:28px;width:28px}.ball-slots{margin-top:2px}.ball-slot{width:10px}.match-center strong{font-size:12px}.match-center small{font-size:7px}.match-footer #rerack span{display:none}.guide-badge{top:0;font-size:7px;padding:2px 5px}.power-track{border-radius:8px}.pull-handle{height:28px}.aim-wheel-control>button{min-height:18px}.cueball-button{min-height:38px}.cueball-face{width:25px}.secondary-shot{min-height:23px}}
-@media (orientation:portrait) and (max-width:760px){.game-screen:not(.allow-portrait) }
+
 @media (prefers-reduced-motion:reduce){.game-screen *{transition:none!important}}
 /* Reset legacy compact-screen positioning inherited from the old bottom HUD. */
 .game-screen .table-play-area{top:0;left:0;right:auto;bottom:auto}
@@ -29,3 +29,42 @@
 .game-screen .guide-badge{display:none}
 .shot-rail .power-track.is-disabled,.aim-wheel[aria-disabled="true"]{opacity:.48;cursor:not-allowed}
 .opponent-card.playing .player-token{outline:2px solid #8ae5b4;outline-offset:2px}
+
+/* Pull tension is legible at a glance and tracks the finger every frame.
+   The thumb stays attached to the handle, not a springy animated target. */
+.power-track{
+ --charge:0;
+ border-color:#d0d4d3b3;
+ transition:border-color .16s,box-shadow .16s;
+}
+.power-track::before{
+ content:'';pointer-events:none;position:absolute;z-index:1;
+ inset:9px 1px;
+ background:repeating-linear-gradient(to bottom,transparent 0,transparent calc(12.5% - 1px),#fbdfaa46 calc(12.5% - 1px),#fbdfaa46 12.5%);
+ opacity:.56;
+}
+.power-fill{
+ background:linear-gradient(180deg,#ffe9ae35,#ffc87068 55%,#ffe7a9d4);
+ box-shadow:0 0 calc(2px + var(--charge)*19px) #ffc77598,inset 0 0 9px #f9e4b871;
+}
+.pull-handle{
+ z-index:2;transition:box-shadow .14s,border-color .14s,background .14s;
+}
+.power-track.is-pulling{
+ border-color:#f3dca1;
+ box-shadow:inset 0 0 0 3px #141b28,0 0 0 1px #ffd99181,0 0 19px #eab56c8c,0 5px 13px #0009;
+}
+.power-track.is-pulling .pull-handle{
+ background:linear-gradient(#fff5d6,#dea75e 39%,#684b2c 60%,#edb371);
+ border-color:#fff1c5;
+ box-shadow:0 0 9px #ffe0a888,0 4px 13px #000b;
+}
+.power-track.is-ready{
+ border-color:#e5bf72;
+ box-shadow:inset 0 0 0 3px #111b25,0 0 16px #e9b45d71,0 5px 12px #0009;
+}
+.shot-rail:has(.is-pulling) .rail-label,
+.shot-rail:has(.is-pulling) .power-readout,
+.shot-rail:has(.is-ready) .power-readout{
+ color:#ffeab5;text-shadow:0 0 9px #f0bc778e;
+}
