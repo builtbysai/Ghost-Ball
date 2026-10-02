@@ -65,8 +65,10 @@ function begin(kind){
  $('ambient').style.visibility='hidden';
  const finish=()=>{
   if(active!=='transition')return;
+  // Paint the real rack before removing the flying canvas: no empty-frame flash.
+  resize();table.draw(current.sim,{interactive:!current.isAI()&&!current.over,aim:{angle,power},placement:null,fx:[]});
   active='game';$('gameScreen').classList.remove('entering');$('app').classList.remove('entering-match');
-  turnUI();resize();
+  turnUI();
  };
  try{flyTable({app:$('app'),source:$('attractCanvas'),target:$('tableArea'),
    from:attract.sim,to:current.sim,hall:room,gameRenderer:table,done:finish});}

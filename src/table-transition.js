@@ -14,7 +14,8 @@ export function movingRack(before,after,progress){
    // Pocketed exhibition balls enter from their last known pocket position.
    const from=origin||ball;
    const drift=Math.sin(Math.PI*t)*Math.min(24,Math.hypot(ball.x-from.x,ball.y-from.y)*.042);
-   return {...ball,pocketed:Boolean(origin?.pocketed)&&t<.06,
+   const entering=!origin||origin.pocketed;
+   return {...ball,pocketed:false,opacity:entering?smooth((t-.02)/.25):1,
      x:mix(from.x,ball.x,t)+drift*Math.sin(ball.id*2.4),
      y:mix(from.y,ball.y,t)+drift*Math.cos(ball.id*2.4),
      rotation:mix(from.rotation||0,ball.rotation||0,t)};

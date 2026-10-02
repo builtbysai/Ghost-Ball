@@ -1,7 +1,11 @@
 name: Ghost Ball checks
 on:
   push:
+    branches: [main]
   pull_request:
+concurrency:
+  group: ghostball-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

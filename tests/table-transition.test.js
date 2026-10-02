@@ -10,6 +10,8 @@ test('live exhibition balls gather into exactly the playable opening rack',()=>{
  assert.deepEqual(end.map(b=>[b.x,b.y]),rack.map(b=>[b.x,b.y]));
  assert.ok(end.every(b=>b.pocketed===false));
  assert.ok(middle.every(b=>Number.isFinite(b.x)&&Number.isFinite(b.y)));
+ assert.equal(start[2].opacity,0);
+ assert.equal(end[2].opacity,1);
 });
 test('table flight camera easing is clamped, monotonic and reaches both end positions',()=>{
  assert.equal(smooth(-1),0);assert.equal(smooth(0),0);
