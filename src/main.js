@@ -6,12 +6,12 @@ import {Audio} from './audio.js';
 import {bindPower,bindAimWheel,spinFromPoint,cueShaftHit,rearAimAngle,wrapAngle} from './touch-controls.js';
 import {flyTable} from './table-transition.js';
 import {cueGeometry,tensionStage} from './cue-feel.js';
-import {nearbyLegalCuePlacement} from './placement-guide.js';
+import {cuePlacementDraft,initialCuePlacement} from './placement-guide.js';
 const $=id=>document.getElementById(id);
 const all=(query)=>[...document.querySelectorAll(query)];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 let room=1,mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
-let current=null,active='lobby',motion=true,placement=null,pointerMode=null;
+let current=null,active='lobby',motion=true,placement=null,pointerMode=null,placeGesture=null;
 let settingsOrigin='lobby',updateWaiting=false,powerSide='left';
 let matchElapsed=0,lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
@@ -108,14 +108,15 @@ function turnUI(){if(!current)return;
  for(const id of ['spinButton','aimLeft','aimRight'])$(id).disabled=toolsDisabled;
  $('powerTrack').classList.toggle('is-disabled',toolsDisabled);
  $('powerTrack').setAttribute('aria-disabled',String(!canAct()));$('aimWheel').setAttribute('aria-disabled',String(!canAct()));
- const help=current.ballInHand&&!current.over&&!current.isAI()?'PLACE CUE BALL':'';
+ updatePlacementTools();
+ const help=current.ballInHand&&!current.over&&!current.isAI()?'TAP TO PREVIEW · DRAG TO PLACE':'';
  setText('guideBadge',help);
  $('guideBadge').classList.toggle('is-visible',Boolean(help));
  $('guideBadge').style.opacity=busy?'0':'.95';
 }
 function begin(kind){
  if(active!=='lobby')return;
- lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();$('collectedBalls').replaceChildren();hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
+ lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();placeGesture=null;$('collectedBalls').replaceChildren();hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  current=new Game({kind,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',notify,onPocket:animatePocket,onTurn:matchTurn});
  if(kind==='attract'){current.turn=0;notify('An exhibition between our house rivals.');}
@@ -138,7 +139,7 @@ function begin(kind){
  catch(err){console.warn('Table entrance skipped',err);finish();}
 }
 function finishLobby(){
- active='lobby';current=null;placement=null;pointerMode=null;shotMotion=null;pullProgress=0;tensionLevel=0;clearTableToast();
+ active='lobby';current=null;placement=null;placeGesture=null;pointerMode=null;shotMotion=null;pullProgress=0;tensionLevel=0;clearTableToast();
  hide('spinShade');hide('spinSheet');hide('pauseMenu');hide('gameScreen');hide('controlsHint');
  $('gameScreen').classList.remove('entering','leaving');$('app').classList.remove('entering-match','leaving-match');
  $('ambient').style.visibility='';$('lobby').removeAttribute('aria-hidden');resize();$('menuBtn').focus();
@@ -161,7 +162,7 @@ function pauseMatch(){
 function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('pauseButton').focus();turnUI();}
 function resetMatch(){
  if(!current)return;current.reset();lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();
- $('collectedBalls').replaceChildren();placement=null;angle=0;spin={x:0,y:0};syncAim();syncSpin();
+ $('collectedBalls').replaceChildren();placement=null;placeGesture=null;angle=0;spin={x:0,y:0};syncAim();syncSpin();
  setPower(50);powerControl.reset();$('powerTrack').classList.remove('impact');turnUI();
 }
 const pocketColors=['#f4f3e9','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d','#191918','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d'];
@@ -218,14 +219,50 @@ function moveCueDrag(clientX,clientY){
  if(bearing===null)return;
  angle=wrapAngle(rearGesture.angle+wrapAngle(bearing-rearGesture.bearing));syncAim();
 }
-function previewPlacement(clientX,clientY){
-  if(!current||(!current.ballInHand&&pointerMode!=='break-place')||current.sim.moving)return;
-  if(!insideGameCanvas(clientX,clientY)){placement=null;return;}
-  const pt=cuePoint(clientX,clientY);
-  const isBreak=pointerMode==='break-place';
-   const direct=current.sim.canPlaceCue(pt.x,pt.y)&&(!isBreak||pt.x<=265);
-   const nearby=direct?null:nearbyLegalCuePlacement(current.sim,pt.x,pt.y,{breakOnly:isBreak,maxDistance:48});
-   placement={...pt,legal:direct,suggestion:nearby?.snapped?nearby:null};
+function placementActive(){
+ return current?.ballInHand&&!current?.over&&!current?.isAI()&&active!=='lobby';
+}
+function updatePlacementTools(){
+ const enabled=Boolean(placementActive());
+ if(enabled&&!placement)placement=initialCuePlacement(current.sim);
+ $('gameScreen').dataset.placing=String(enabled);
+ $('placementTools').hidden=!enabled;
+ $('spinButton').hidden=enabled;
+ $('aimWheel').closest('.aim-wheel-control').hidden=enabled;
+ $('placeCueConfirm').disabled=!enabled||!placement?.candidate;
+ if(enabled)setText('placementStatus',!placement?.candidate?'FIND OPEN SPACE':placement.legal?'READY':'SNAPS TO OPEN');
+}
+function previewPlacement(clientX,clientY,canvasOffset=0){
+ if(!current||(!current.ballInHand&&pointerMode!=='break-place')||current.sim.moving)return;
+ if(!insideGameCanvas(clientX,clientY)){placement=null;updatePlacementTools();return;}
+ const px=localCanvasPoint(clientX,clientY);
+ const pt=table.unproject(px.x,px.y-canvasOffset);
+ placement=cuePlacementDraft(current.sim,pt.x,pt.y,{breakOnly:pointerMode==='break-place'});
+ updatePlacementTools();
+}
+function commitPlacement(){
+ if(!placementActive()||!placement?.candidate)return false;
+ const {x,y}=placement.candidate;
+ if(!current.placeCue(x,y)){
+   setText('placementStatus','PICK AN OPEN SPOT');
+   return false;
+ }
+ placement=null;placeGesture=null;
+ if(motion)navigator.vibrate?.(8);
+ tableToast('CUE BALL SET');turnUI();
+ return true;
+}
+function resetPlacement(){
+ if(!placementActive())return;
+ placement=initialCuePlacement(current.sim);updatePlacementTools();
+}
+function nudgePlacement(dx,dy){
+ if(!placementActive())return;
+ const position=placement?.candidate||initialCuePlacement(current.sim)?.candidate;
+ if(!position)return;
+ placement=cuePlacementDraft(current.sim,Math.max(30,Math.min(970,position.x+dx)),
+   Math.max(30,Math.min(470,position.y+dy)));
+ updatePlacementTools();
 }
 function syncAim(){angle=Math.atan2(Math.sin(angle),Math.cos(angle));$('aimRange').value=String(angle*180/Math.PI);$('aimWheel').setAttribute('aria-valuenow',String(Math.round(angle*180/Math.PI)));}
 function fire(){
