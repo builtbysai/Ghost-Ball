@@ -20,7 +20,7 @@ function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
 function notify(message){if(message)setText('matchAnnouncements',message);}
 function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);
   document.documentElement.style.setProperty('--hall',h.felt);document.documentElement.style.setProperty('--room-aura',h.aura);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
-  setText('roomPlaque',String(h.year));setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
+  setText('roomPlaque',String(h.year));$('roomEyebrow').dataset.short=`ROOM 0${room+1} · ${h.year}`;setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
   setText('playText',mode==='practice'?`Practice at ${h.name}`:`Break at ${h.name}`);
   if(current)setText('roundLabel',h.name.toUpperCase());
 }
@@ -293,11 +293,12 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
   while(acc>=TABLE.step&&iterations++<14){g.step({audio,haptics:motion});acc-=TABLE.step;}
   if(iterations>=14)acc=0;
   g.update(elapsed,{audio,haptics:motion});
-  if(active==='lobby'){ambient.draw(g.sim,{fx:motion?g.fx:[]});}
+  if(active==='lobby'){const pose=g.presentedCue;ambient.draw(g.sim,{interactive:!!pose&&!g.sim.moving,aim:pose,fx:motion?g.fx:[]});}
   else{updateClocks(elapsed);const strokeTime=shotMotion?(now-shotMotion.start)/115:1;
    const strike=shotMotion&&strokeTime<1?{...shotMotion,progress:Math.max(0,strokeTime)}:null;
    if(shotMotion&&strokeTime>=1){shotMotion=null;$('powerTrack').classList.remove('impact');}
-   const frame={interactive:!g.isAI()&&!g.over,aim:{angle,power,drawback:pullProgress,strike},placement,fx:motion?g.fx:[]};
+   const cpuPose=g.isAI()?g.presentedCue:null;
+   const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over,aim:cpuPose||{angle,power,drawback:pullProgress,strike},placement,fx:motion?g.fx:[]};
    table.draw(g.sim,frame);uiTimer+=elapsed;if(uiTimer>.2){turnUI();uiTimer=0;}}
 }
 requestAnimationFrame(frame);
