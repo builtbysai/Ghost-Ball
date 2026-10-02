@@ -122,7 +122,7 @@ with sync_playwright() as p:
                 page.screenshot(path=str(root/'screenshots'/'manual-armed-844x390.png'))
                 page.locator('#shootBtn').click()
                 assert page.locator('#gameScreen').get_attribute('data-shots')=='1','manual shoot did not fire'
-                assert not page.locator('#powerTrack').evaluate("(e)=>e.classList.contains('held')"),'manual cue remained stuck
+                assert not page.locator('#powerTrack').evaluate("(e)=>e.classList.contains('held')"),'manual cue remained stuck'
         else:
             assert not before['gate'] and not before['view'],'obsolete view/orientation controls remain'
         screenshot=root/'screenshots'/f'landscape-{w}x{h}.png';screenshot.parent.mkdir(exist_ok=True);page.screenshot(path=str(screenshot))
