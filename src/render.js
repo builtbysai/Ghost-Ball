@@ -133,9 +133,9 @@ export class TableRenderer{
     const tile=document.createElement('canvas');tile.width=64;tile.height=64;
     const t=tile.getContext('2d');
     if(t){
-      for(let i=0;i<460;i++){
+      for(let i=0;i<245;i++){
         const x=(i*29.735+i*i*.013)%64,y=(i*53.17+i*i*.023)%64;
-        t.fillStyle=i%3?'#0310102b':'#fff9ec33';t.fillRect(x,y,.75,.7);
+        t.fillStyle=i%3?'#03101010':'#fff9ec12';t.fillRect(x,y,.75,.7);
       }
       this.feltPattern=tile;
     }
