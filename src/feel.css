@@ -1,0 +1,68 @@
+/* Physicality lives in the objects, never in a shaking full-screen HUD. */
+.game-screen,
+.game-screen.entering::before{
+ background:radial-gradient(ellipse 78% 73% at 48% 51%,var(--room-aura,#25456b) 0%,#142239 61%,#0c1628 100%);
+}
+.table-play-area:before{
+ content:'';position:absolute;inset:7% 0;pointer-events:none;
+ background:radial-gradient(ellipse at center,rgba(230,224,184,.055),transparent 67%);
+ filter:blur(12px);
+}
+.shot-rail .rail-label{color:#f4e1ae;text-shadow:0 1px 7px #000c;letter-spacing:.19em}
+.shot-rail .power-track{
+ --tension:0;--pull:0%;
+ border-color:#a5b9c6;
+ background:linear-gradient(90deg,#101b2a 0%,#28415a 52%,#0b1628 100%);
+ box-shadow:inset 0 0 0 3px #101a27,inset 0 1px 4px #dce8ed40,0 7px 15px #0009;
+ transition:border-color .08s,box-shadow .1s;
+}
+.shot-rail .power-track:after{
+ content:'';position:absolute;inset:6px 2px;z-index:0;pointer-events:none;
+ border-radius:8px;
+ background:repeating-linear-gradient(to bottom,transparent 0 9px,rgba(219,225,226,.27) 10px,transparent 11px 22px);
+ opacity:.42;
+}
+.shot-rail .track-groove{
+ z-index:1;inset:12px 7px;border-radius:6px;
+ background:linear-gradient(90deg,#191715,#976746 28%,#d7b17f 48%,#6f482f 78%,#1c1714);
+ box-shadow:inset 0 1px 9px #000c,0 0 1px #ecd6ad9c;
+}
+.shot-rail .power-fill{
+ background:linear-gradient(to bottom,rgba(248,224,173,.68),rgba(228,164,83,.66) 66%,rgba(255,234,172,.9));
+ border-bottom:2px solid #fff3c8;
+ box-shadow:0 0 var(--glow,3px) rgba(255,209,124,.63);
+}
+.shot-rail .pull-handle{
+ z-index:2;border:2px solid #efd8b2;border-radius:10px;
+ background:linear-gradient(#ffebc4,#d8a467 34%,#8a5731 57%,#e0ac70 87%,#67482e);
+ box-shadow:inset 0 1px 3px #fff9,0 4px 9px #000c;
+ transform:scaleY(var(--handle-scale,1));
+ transform-origin:50% 40%;
+}
+.shot-rail .power-track.charging{
+ border-color:#f3ce8d;
+ box-shadow:inset 0 0 0 3px #121c29,0 0 var(--glow,3px) rgba(246,193,105,.36),0 7px 19px #000a;
+}
+.shot-rail .power-track.armed{border-color:#ffe5ac}
+.shot-rail .power-track.releasing .pull-handle{
+ transition:top .18s cubic-bezier(.14,1.26,.28,1),transform .17s cubic-bezier(.14,1.26,.28,1);
+}
+.shot-rail .power-track.releasing .power-fill{transition:height .16s ease-out}
+.shot-rail .power-track.impact{animation:power-impact .2s ease-out both}
+@keyframes power-impact{
+ 0%{filter:brightness(1.5)}
+ 43%{filter:brightness(.85)}
+ 100%{filter:brightness(1)}
+}
+.shot-rail .power-readout{
+ display:block;font-variant-numeric:tabular-nums;
+ color:#ffe5ab;font-size:clamp(10px,1.3vw,13px);font-weight:900;
+ min-height:17px;text-shadow:0 0 12px #ffb95154;
+ letter-spacing:.02em;
+}
+.shot-rail .power-track.charging ~ .power-readout{color:#fff6df}
+@media(prefers-reduced-motion:reduce){
+ .shot-rail .power-track,.shot-rail .pull-handle,.shot-rail .power-fill{
+  transition:none!important;animation:none!important;
+ }
+}
