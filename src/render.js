@@ -4,7 +4,7 @@ const TAU=Math.PI*2;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const halls=[
  {name:'The Parlor',felt:'#315f4e',feltLight:'#467a65',rail:'#633f26',wood:'#ab7544',wall:'#102017',year:'1893',detail:'Walnut rails · sage baize · classic pockets'},
- {name:'The Observatory',felt:'#203e56',feltLight:'#39657e',rail:'#60472b',wood:'#ad8554',wall:'#111924',year:'1911',detail:'Oak rails · midnight cloth · tight pockets'},
+ {name:'The Observatory',felt:'#1e7499',feltLight:'#3daccb',rail:'#60472b',wood:'#ad8554',wall:'#111924',year:'1911',detail:'Oak rails · midnight cloth · tight pockets'},
  {name:'The Foundry',felt:'#38654b',feltLight:'#54816a',rail:'#40302b',wood:'#805a42',wall:'#1d1b17',year:'1927',detail:'Ash rails · tournament green · fast cloth'},
 ];
 export {halls};
@@ -107,10 +107,16 @@ export class TableRenderer{
   const candidates=[];if(dx>1e-7)candidates.push((988-cue.x)/dx);if(dx<-1e-7)candidates.push((r-cue.x)/dx);if(dy>1e-7)candidates.push((488-cue.y)/dy);if(dy<-1e-7)candidates.push((r-cue.y)/dy);const rail=Math.min(...candidates);
   limit=clamp(Math.min(limit,rail),0,1300);
   const [sx,sy]=this.project(cue.x,cue.y),[ex,ey]=this.project(cue.x+dx*limit,cue.y+dy*limit);
-  g.save();g.beginPath();g.moveTo(sx,sy);g.lineTo(ex,ey);g.lineWidth=1.4;g.setLineDash([5,4]);g.strokeStyle='rgba(255,249,221,.85)';g.stroke();g.setLineDash([]);
+  g.save();g.beginPath();g.moveTo(sx,sy);g.lineTo(ex,ey);g.lineWidth=1.8;g.strokeStyle='rgba(253,254,252,.97)';g.stroke();
   g.beginPath();g.arc(ex,ey,Math.max(5,r*this.bw/1000),0,TAU);g.strokeStyle='rgba(242,217,160,.65)';g.stroke();
-  if(target&&limit<rail){const [tx,ty]=this.project(target.x,target.y);g.beginPath();g.moveTo(tx,ty);g.lineTo(tx+(tx-ex)*2.4,ty+(ty-ey)*2.4);g.setLineDash([3,5]);g.strokeStyle='rgba(230,207,152,.45)';g.stroke();}
-  const [bx,by]=this.project(cue.x-dx*(55+power*42),cue.y-dy*(55+power*42));
-  const [cx,cy]=this.project(cue.x-dx*(r*1.6),cue.y-dy*(r*1.6));
-  g.beginPath();g.moveTo(cx,cy);g.lineTo(bx,by);g.strokeStyle='#d6b27c';g.lineWidth=4;g.lineCap='round';g.stroke();g.restore();}
+  if(target&&limit<rail){const [tx,ty]=this.project(target.x,target.y);g.beginPath();g.moveTo(tx,ty);g.lineTo(tx+(tx-ex)*2.4,ty+(ty-ey)*2.4);g.setLineDash([3,5]);g.strokeStyle='rgba(230,207,152,.45)';g.stroke();g.setLineDash([]);}
+  // Full-length cue. The shaft follows the same vector as the physical shot,
+  // with a short gap to the cue ball and a darker tapered butt at the rear.
+  const gap=r*1.45+power*28,reach=gap+355;
+  const [tipX,tipY]=this.project(cue.x-dx*gap,cue.y-dy*gap);
+  const [buttX,buttY]=this.project(cue.x-dx*reach,cue.y-dy*reach);
+  const [gripX,gripY]=this.project(cue.x-dx*(reach-110),cue.y-dy*(reach-110));
+  g.lineCap='round';g.beginPath();g.moveTo(buttX,buttY);g.lineTo(gripX,gripY);g.strokeStyle='#472816';g.lineWidth=7;g.stroke();
+  g.beginPath();g.moveTo(gripX,gripY);g.lineTo(tipX,tipY);g.strokeStyle='#e1b885';g.lineWidth=3.2;g.stroke();
+  g.beginPath();g.arc(tipX,tipY,2.3,0,TAU);g.fillStyle='#e6eff4';g.fill();g.restore();}
 }
