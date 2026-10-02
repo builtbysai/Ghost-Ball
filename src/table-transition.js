@@ -60,16 +60,20 @@ export function movingRack(before,after,progress){
 export function flyTable({app,source,target,from,to,hall,gameRenderer,done,reverse=false,isActive=()=>true}){
  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){done();return;}
  const startBox=source.getBoundingClientRect(),appBox=app.getBoundingClientRect();
+ const mobileRotate=window.matchMedia('(orientation:portrait) and (max-width:820px)').matches;
+ const sourceTurn=reverse&&mobileRotate&&source.closest('.game-screen')?90:0;
+ const targetTurn=!reverse&&mobileRotate&&target.closest('.game-screen')?90:gameRenderer.portrait?-90:0;
+ const canvasW=Math.max(1,source.offsetWidth||startBox.width),canvasH=Math.max(1,source.offsetHeight||startBox.height);
  if(startBox.width<2||startBox.height<2){done();return;}
  const halo=document.createElement('div');halo.className='flight-stage';halo.setAttribute('aria-hidden','true');app.append(halo);
  const canvas=document.createElement('canvas');
  canvas.className='table-flight';canvas.setAttribute('aria-hidden','true');
- canvas.style.width=startBox.width+'px';canvas.style.height=startBox.height+'px';app.append(canvas);
- const flight=new TableRenderer(canvas,{view:'perspective',hall,cacheStatic:false});flight.resize();
+ canvas.style.width=canvasW+'px';canvas.style.height=canvasH+'px';app.append(canvas);
+ const flight=new TableRenderer(canvas,{view:reverse?'flat':'perspective',hall,cacheStatic:false});flight.resize();
  flight.setBlend(reverse?1:0);
  // Render the floating board at a higher pixel density when it is growing
  // toward the match layout; CSS-only scaling blurred the previous entrance.
- const targetPixels=gameRenderer.canvas.width/Math.max(1,startBox.width);
+ const targetPixels=gameRenderer.canvas.width/canvasW;
  const resolution=Math.min(3.2,Math.max(flight.dpr,targetPixels*.95));
  if(resolution>flight.dpr){
   flight.dpr=resolution;canvas.width=Math.round(flight.w*resolution);
@@ -80,7 +84,7 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done,rever
  const originals=from.balls.map(ball=>({...ball})),rack=to.balls.map(ball=>({...ball}));
  // Pre-paint the exhibition frame synchronously so hiding the lobby never
  // creates a blank flash while waiting for the first animation callback.
- canvas.style.transform='translate3d('+(start.x-startBox.width/2)+'px,'+(start.y-startBox.height/2)+'px,0)';
+ canvas.style.transform='translate3d('+(start.x-canvasW/2)+'px,'+(start.y-canvasH/2)+'px,0) rotate('+sourceTurn+'deg)';
  flight.draw({balls:originals,moving:false});
  let started=null;
  const duration=1510;
@@ -96,10 +100,7 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done,rever
   const scaleY=gameRenderer.bh/Math.max(1,flight.bh);
   const pulse=1+.023*camera.lift;
   let sx=mix(1,scaleX,camera.travel)*pulse,sy=mix(1,scaleY,camera.travel)*pulse;
-  const rotation=reverse
-   ? (flight.portrait&&!gameRenderer.portrait?90:!flight.portrait&&gameRenderer.portrait?-90:0)*camera.travel
-   : (gameRenderer.portrait?-90:0)*camera.flatten;
-  const rad=rotation*Math.PI/180;
+  const rotation=mix(sourceTurn,targetTurn,camera.travel),rad=rotation*Math.PI/180;
   // Bounding the *drawn board*, not the transparent canvas, avoids cropped
   // pockets as the table lifts or turns across a narrow phone screen.
   const halfX=()=>Math.abs(Math.cos(rad))*flight.bw*sx/2+Math.abs(Math.sin(rad))*flight.bh*sy/2;
@@ -111,7 +112,7 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done,rever
   const rawY=mix(start.y,finish.y,camera.travel)-camera.lift*25;
   const x=clamp(rawX,halfX()+12,root.width-halfX()-12);
   const y=clamp(rawY,halfY()+10,root.height-halfY()-10);
-  canvas.style.transform='translate3d('+(x-startBox.width/2)+'px,'+(y-startBox.height/2)+'px,0) rotate('+rotation+'deg) scale('+sx+','+sy+')';
+  canvas.style.transform='translate3d('+(x-canvasW/2)+'px,'+(y-canvasH/2)+'px,0) rotate('+rotation+'deg) scale('+sx+','+sy+')';
   halo.style.setProperty('--flight-x',x+'px');halo.style.setProperty('--flight-y',y+'px');
   halo.style.opacity=String(Math.min(1,t*7,Math.max(0,(1-t)*10)));
   flight.draw({balls:movingRack(originals,rack,t),moving:false});
