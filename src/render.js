@@ -1,3 +1,4 @@
+import {orientationOf,rotateVector} from './ball-orientation.js';
 import {TABLE} from './physics.js';
 import {paintFrame,paintCloth,paintRailDetails,paintPockets,FINISHES} from './table-finishes.js';
 import {cueGeometry,strokeCharge} from './cue-feel.js';
@@ -13,7 +14,7 @@ export {halls};
 function polygon(g,vertices){g.beginPath();g.moveTo(...vertices[0]);for(let i=1;i<vertices.length;i++)g.lineTo(...vertices[i]);g.closePath();}
 function hexToRgb(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
 export class TableRenderer{
- constructor(canvas,{view='perspective',hall=0,cacheStatic=true}={}){this.cacheStatic=cacheStatic;this.surface=null;this.surfaceKey='';this.canvas=canvas;this.g=canvas.getContext('2d');this.view=view;this.projectionBlend=view==='flat'?1:0;this.hall=hall;this.drawCount=0;this.resize();}
+ constructor(canvas,{view='perspective',hall=0,cacheStatic=true}={}){this.cacheStatic=cacheStatic;this.surface=null;this.surfaceKey='';this.canvas=canvas;this.g=canvas.getContext('2d');this.view=view;this.projectionBlend=view==='flat'?1:0;this.hall=hall;this.drawCount=0;this.ballTextures=new WeakMap();this.resize();}
  resize(){const box=this.canvas.getBoundingClientRect();this.w=Math.max(1,this.canvas.offsetWidth||box.width);this.h=Math.max(1,this.canvas.offsetHeight||box.height);this.dpr=Math.min(2,window.devicePixelRatio||1);this.canvas.width=Math.round(this.w*this.dpr);this.canvas.height=Math.round(this.h*this.dpr);this.g.setTransform(this.dpr,0,0,this.dpr,0,0);this.geometry();}
  geometry(){
    // An upright table gives portrait phones a much larger aiming surface.
@@ -83,23 +84,63 @@ export class TableRenderer{
   paintRailDetails(g,{P,finish,bw:this.bw,margin});
   paintPockets(g,{P,finish,bw:this.bw,blend:this.blend});
  }
- drawBall(ball){const g=this.g,[sx,sy,k]=this.project(ball.x,ball.y),r=Math.max(3,TABLE.radius*this.bw/1000*k),side=1+.02*(1-this.blend);
+ stripeTexture(ball){
+  const previous=this.ballTextures.get(ball);
+  if(previous&&Math.abs(previous.rotation-(ball.rotation||0))<.035)return previous.canvas;
+  const size=56,canvas=previous?.canvas||document.createElement('canvas');
+  if(!previous){canvas.width=size;canvas.height=size;}
+  const context=canvas.getContext('2d'),image=context.createImageData(size,size);
+  const normal=rotateVector(orientationOf(ball),[0,1,0]),hex=ball.color.replace('#',''),rgb=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16));
+  for(let py=0;py<size;py++)for(let px=0;px<size;px++){
+   const u=(px+.5-size/2)/(size/2),v=(py+.5-size/2)/(size/2),d=u*u+v*v;
+   if(d>1)continue;
+   const z=Math.sqrt(1-d),stripe=Math.abs(normal[0]*u+normal[1]*v+normal[2]*z)<.41;
+   const color=stripe?rgb:[244,241,232],i=(py*size+px)*4;
+   image.data[i]=color[0];image.data[i+1]=color[1];image.data[i+2]=color[2];image.data[i+3]=255;
+  }
+  context.putImageData(image,0,0);
+  this.ballTextures.set(ball,{canvas,rotation:ball.rotation||0});
+  return canvas;
+ }
+ drawBall(ball){
+  const g=this.g,[sx,sy,k]=this.project(ball.x,ball.y),r=Math.max(3,TABLE.radius*this.bw/1000*k);
   if(ball.trail&&ball.trail.opacity>.005){
    const [px,py]=this.project(ball.trail.x,ball.trail.y);
-   g.save();g.lineCap='round';
-   const sheen=g.createLinearGradient(px,py,sx,sy);
+   g.save();g.lineCap='round';const sheen=g.createLinearGradient(px,py,sx,sy);
    sheen.addColorStop(0,'rgba(255,242,208,0)');sheen.addColorStop(1,ball.color);
    g.globalAlpha=ball.trail.opacity*(ball.opacity??1);
    g.beginPath();g.moveTo(px,py);g.lineTo(sx,sy);
    g.strokeStyle=sheen;g.lineWidth=Math.max(1.2,r*.85);g.stroke();g.restore();
   }
-  g.save();g.globalAlpha=ball.opacity??1;g.translate(sx,sy);g.scale(1,side);
-  g.beginPath();g.ellipse(1.5,3,r*1.06,r*.72,0,0,TAU);g.fillStyle='rgba(0,0,0,.32)';g.fill();
-  g.beginPath();g.arc(0,0,r,0,TAU);g.clip();const shade=g.createRadialGradient(-r*.38,-r*.52,r*.1,0,0,r*1.5);
-  shade.addColorStop(0,'#fff9e9');shade.addColorStop(.24,ball.color);shade.addColorStop(.75,ball.color);shade.addColorStop(1,'#161713');g.fillStyle=shade;g.fillRect(-r,-r,r*2,r*2);
-  if(ball.id>=9){g.save();g.rotate(ball.rotation*.17);g.fillStyle='#f7f4e9';g.fillRect(-r,-r*.4,2*r,r*.8);g.restore();}
-  if(ball.id){g.beginPath();g.arc(-r*.12,-r*.12,r*.39,0,TAU);g.fillStyle='#f6f3e8';g.fill();g.fillStyle='#181512';g.font=`bold ${Math.max(5,r*.65)}px system-ui`;g.textAlign='center';g.textBaseline='middle';g.fillText(String(ball.id),-r*.12,-r*.09);}
-  g.restore();}
+  g.save();g.globalAlpha=ball.opacity??1;g.translate(sx,sy);
+  g.beginPath();g.ellipse(r*.10,r*.21,r*1.03,r*.85,0,0,TAU);g.fillStyle='rgba(0,0,0,.28)';g.fill();
+  g.beginPath();g.arc(0,0,r,0,TAU);g.clip();
+  if(ball.id>=9)g.drawImage(this.stripeTexture(ball),-r,-r,2*r,2*r);
+  else{g.fillStyle=ball.color;g.fillRect(-r,-r,2*r,2*r);}
+  const light=g.createRadialGradient(-r*.45,-r*.56,r*.04,r*.06,r*.1,r*1.5);
+  light.addColorStop(0,'rgba(255,255,255,.66)');light.addColorStop(.29,'rgba(255,255,255,.12)');
+  light.addColorStop(.64,'rgba(0,0,0,0)');light.addColorStop(1,'rgba(0,0,0,.7)');
+  g.fillStyle=light;g.fillRect(-r,-r,r*2,r*2);
+  const q=orientationOf(ball);
+  for(const local of [[0,0,1],[0,0,-1]]){
+   const n=rotateVector(q,local);
+   if(n[2]<.19)continue;
+   const theta=Math.atan2(n[1],n[0]);
+   g.save();g.translate(n[0]*r*.73,n[1]*r*.73);g.rotate(theta);g.scale(Math.max(.2,n[2]),1);
+   if(ball.id===0){
+    g.beginPath();g.arc(0,0,r*.105,0,TAU);g.fillStyle='#c84d3e';g.fill();
+   }else{
+    g.beginPath();g.arc(0,0,r*.37,0,TAU);g.fillStyle='#f7f4ec';g.fill();
+    g.strokeStyle='rgba(33,29,28,.22)';g.lineWidth=Math.max(.25,r*.024);g.stroke();
+    g.fillStyle='#1b1b1b';g.textAlign='center';g.textBaseline='middle';
+    g.font=`800 ${r*(ball.id>=10?.47:.59)}px system-ui`;
+    g.fillText(String(ball.id),0,0);
+   }
+   g.restore();
+  }
+  g.restore();
+ }
+
  drawAim(sim,aim){const {angle,power}=aim,g=this.g,cue=sim.cue();if(!cue)return;
    if(aim.showGuide===false){this.drawCue(cue,angle,aim.drawback||0);return;}
   const dx=Math.cos(angle),dy=Math.sin(angle),r=TABLE.radius;let limit=1300,target=null;
