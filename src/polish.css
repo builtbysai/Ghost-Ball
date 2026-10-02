@@ -110,3 +110,31 @@
  #app.leaving-match .masthead,#app.leaving-match .room-details,#app.leaving-match .lobby-panel{animation:none}
  #gameScreen.leaving .match-hud,#gameScreen.leaving .shot-rail,#gameScreen.leaving .tools-rail{transition:none}
 }
+/* Readable clubhouse composition without overlapping the featured table. */
+@media(min-width:900px) and (min-height:650px){
+ #app:not(.entering-match):not(.leaving-match) .ambient{left:54%;width:57%;top:15%;height:43%;max-width:900px}
+ #app:not(.entering-match):not(.leaving-match) .room-details{top:28%;left:clamp(24px,3.5vw,58px);width:min(19vw,230px)}
+ #app .room-details h1{font-size:clamp(30px,3.2vw,43px);line-height:1.04;overflow-wrap:break-word}
+ #app .room-switch{left:auto;position:relative;top:auto;margin-top:9px;flex-direction:row}
+ #app .room-switch span{writing-mode:horizontal-tb}
+}
+@media(max-height:480px) and (orientation:landscape){
+ #app:not(.entering-match):not(.leaving-match) .room-details{left:2.8%;top:26%;width:clamp(110px,22vw,195px)}
+ #app .room-details h1{white-space:normal;overflow-wrap:normal;max-width:100%;font-size:clamp(16px,2.75vw,25px);line-height:1.05;margin:4px 0}
+ #roomEyebrow{font-size:0;letter-spacing:0;line-height:1}
+ #roomEyebrow:before{content:attr(data-short);font-size:8px;letter-spacing:.10em}
+ #app .room-switch{position:relative;top:auto;left:auto;right:auto;margin-top:6px;flex-direction:row;gap:6px;justify-content:flex-start}
+ #app .room-switch button{width:28px;height:28px}
+ #app .room-switch span{writing-mode:horizontal-tb}
+}
+@media(max-height:350px) and (orientation:landscape){
+ #gameScreen .match-hud{gap:6px;grid-template-columns:29px minmax(0,1fr) 88px minmax(0,1fr)}
+ #gameScreen .player-info strong{font-size:9px;letter-spacing:0}
+ #gameScreen .player-token{width:27px;height:27px;font-size:15px}
+ #gameScreen .ball-slot{width:8px}
+ #gameScreen .ball-slots{gap:2px;margin-top:2px}
+ #gameScreen .match-time{font-size:9px}
+}
+#app .room-switch{pointer-events:auto}
+#app .lobby-inner button:not(:disabled),#app .hud-menu{touch-action:manipulation}
+#app .power-track{min-width:40px}
