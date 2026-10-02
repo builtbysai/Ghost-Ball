@@ -189,3 +189,10 @@
 
 /* Prioritize an event briefly, then reveal the persistent placement guidance. */
 #gameScreen .table-play-area:has(.table-toast:not([hidden])) .guide-badge{display:none!important}
+
+/* Keep persistent guidance between the two left sights, not over a pocket.
+   Short foul events sit below the top cushion and never share the same slot. */
+#gameScreen .guide-badge.is-visible{
+ left:30%;top:5px;transform:translateX(-50%);padding:4px 9px;
+}
+#gameScreen .table-toast{top:clamp(55px,20%,76px)}
