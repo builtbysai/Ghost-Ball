@@ -2,6 +2,7 @@ import {orientationOf,rotateVector} from './ball-orientation.js';
 import {TABLE} from './physics.js';
 import {paintFrame,paintCloth,paintRailDetails,paintPockets,FINISHES} from './table-finishes.js';
 import {cueGeometry,strokeCharge} from './cue-feel.js';
+import {projectAim} from './aim-guide.js';
 
 const TAU=Math.PI*2;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -69,6 +70,7 @@ export class TableRenderer{
   if(interactive&&aim&&!sim.moving&&!sim.cue()?.pocketed)this.drawAim(sim,aim);
   else if(aim?.strike&&aim.strike.progress<1)this.drawStroke(aim.strike);
   for(const ball of [...sim.balls].filter(b=>!b.pocketed).sort((a,b)=>a.y-b.y))this.drawBall(ball);
+  if(interactive&&aim?.showGuide!==false&&!sim.moving&&!sim.cue()?.pocketed)this.drawCueStrike(sim.cue(),aim.spin);
   if(placement){
     const [sx,sy,k]=P(placement.x,placement.y),r=Math.max(5,TABLE.radius*this.bw/1000*k);
     g.save();g.beginPath();g.arc(sx,sy,r,0,TAU);g.fillStyle=placement.legal?'rgba(248,247,230,.8)':'rgba(201,93,74,.6)';g.fill();
@@ -141,21 +143,37 @@ export class TableRenderer{
   g.restore();
  }
 
- drawAim(sim,aim){const {angle,power}=aim,g=this.g,cue=sim.cue();if(!cue)return;
+ drawAim(sim,aim){
+   const {angle}=aim,g=this.g,cue=sim.cue();if(!cue)return;
    if(aim.showGuide===false){this.drawCue(cue,angle,aim.drawback||0);return;}
-  const dx=Math.cos(angle),dy=Math.sin(angle),r=TABLE.radius;let limit=1300,target=null;
-  for(const ball of sim.balls){if(ball.id===0||ball.pocketed)continue;
-    const rx=ball.x-cue.x,ry=ball.y-cue.y,t=rx*dx+ry*dy,perp2=rx*rx+ry*ry-t*t;
-    if(t<=0||perp2>(2*r)**2)continue;
-    const hit=t-Math.sqrt(Math.max(0,(2*r)**2-perp2));if(hit<limit){limit=hit;target=ball;}}
-  const candidates=[];if(dx>1e-7)candidates.push((988-cue.x)/dx);if(dx<-1e-7)candidates.push((r-cue.x)/dx);if(dy>1e-7)candidates.push((488-cue.y)/dy);if(dy<-1e-7)candidates.push((r-cue.y)/dy);const rail=Math.min(...candidates);
-  limit=clamp(Math.min(limit,rail),0,1300);
-  const [sx,sy]=this.project(cue.x,cue.y),[ex,ey]=this.project(cue.x+dx*limit,cue.y+dy*limit);
-  g.save();g.beginPath();g.moveTo(sx,sy);g.lineTo(ex,ey);g.lineWidth=1.8;g.strokeStyle='rgba(253,254,252,.97)';g.stroke();
-  g.beginPath();g.arc(ex,ey,Math.max(5,r*this.bw/1000),0,TAU);g.strokeStyle='rgba(242,217,160,.65)';g.stroke();
-  if(target&&limit<rail){const [tx,ty]=this.project(target.x,target.y);g.beginPath();g.moveTo(tx,ty);g.lineTo(tx+(tx-ex)*2.4,ty+(ty-ey)*2.4);g.setLineDash([3,5]);g.strokeStyle='rgba(230,207,152,.45)';g.stroke();g.setLineDash([]);}
-  g.restore();
-  this.drawCue(cue,angle,aim.drawback||0);
+   const guide=projectAim(sim.balls,cue,angle);if(!guide)return;
+   const [sx,sy]=this.project(cue.x,cue.y),[ex,ey]=this.project(guide.cueEnd.x,guide.cueEnd.y);
+   const scale=this.bw/1000;
+   g.save();g.lineCap='round';
+   g.beginPath();g.moveTo(sx,sy);g.lineTo(ex,ey);
+   g.lineWidth=Math.max(1.2,1.8*scale);g.strokeStyle='rgba(253,254,252,.95)';g.stroke();
+   g.beginPath();g.arc(ex,ey,Math.max(5,TABLE.radius*scale),0,TAU);
+   g.lineWidth=1.1;g.strokeStyle='rgba(242,217,160,.65)';g.stroke();
+   if(guide.target&&guide.objectEnd){
+     const [tx,ty]=this.project(guide.target.x,guide.target.y);
+     const [ox,oy]=this.project(guide.objectEnd.x,guide.objectEnd.y);
+     g.beginPath();g.moveTo(tx,ty);g.lineTo(ox,oy);
+     g.setLineDash([Math.max(3,4*scale),Math.max(4,6*scale)]);
+     g.strokeStyle='rgba(245,219,156,.85)';g.lineWidth=Math.max(1.15,1.9*scale);g.stroke();g.setLineDash([]);
+   }
+   g.restore();
+   this.drawCue(cue,angle,aim.drawback||0);
+ }
+ // The dot is an aim-only contact-point indicator, not simulated 3D impact.
+ drawCueStrike(cue,spin){
+   if(!spin||Math.hypot(spin.x||0,spin.y||0)<.035)return;
+   const [cx,cy,k]=this.project(cue.x,cue.y),r=Math.max(3,TABLE.radius*this.bw/1000*k);
+   const x=cx+Math.max(-1,Math.min(1,spin.x||0))*r*.59;
+   const y=cy-Math.max(-1,Math.min(1,spin.y||0))*r*.59;
+   const g=this.g;g.save();
+   g.beginPath();g.arc(x,y,Math.max(1.8,r*.21),0,TAU);
+   g.fillStyle='#ae3e30';g.shadowColor='#30201a';g.shadowBlur=Math.max(1,r*.2);g.fill();
+   g.lineWidth=Math.max(.5,r*.07);g.strokeStyle='#fff3db';g.stroke();g.restore();
  }
  drawStroke({cue,angle,power,progress}){
   // Replay one visible stroke from the pre-shot cue-ball position, even after
