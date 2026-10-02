@@ -48,8 +48,10 @@ with sync_playwright() as p:
         assert page.locator('#lobby').is_visible(), 'lobby missing'
         assert inside_viewport(page.locator('#playBtn').bounding_box(), width, height), 'play button clipped'
         assert page.locator('#roomPlaque').inner_text() == '1911'
+        assert page.locator('#roomArt').inner_text() == 'THE OBSERVATORY'
         page.locator('#nextRoom').click()
         assert page.locator('#roomPlaque').inner_text() == '1927', 'room history did not update'
+        assert page.locator('#roomArt').inner_text() == 'THE FOUNDRY', 'framed art did not update'
         page.locator('#prevRoom').click()
         page.screenshot(path=str((root / 'screenshots' / f'menu-{width}x{height}.png').resolve()))
         # Verify actual pointer hit targets, not force-click bypasses.
