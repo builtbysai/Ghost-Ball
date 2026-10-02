@@ -39,7 +39,7 @@ export function movingRack(before,after,progress){
     {...earlier,opacity:Math.min(.32,(move-old)*2.6)*(1-move*.55)}:null};
  });
 }
-export function flyTable({app,source,target,from,to,hall,gameRenderer,done}){
+export function flyTable({app,source,target,from,to,hall,gameRenderer,done,isActive=()=>true}){
  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){done();return;}
  const startBox=source.getBoundingClientRect(),appBox=app.getBoundingClientRect();
  if(startBox.width<2||startBox.height<2){done();return;}
@@ -59,10 +59,14 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done}){
  }
  const start={x:startBox.left-appBox.left+startBox.width/2,y:startBox.top-appBox.top+startBox.height/2};
  const originals=from.balls.map(ball=>({...ball})),rack=to.balls.map(ball=>({...ball}));
+ // Pre-paint the exhibition frame synchronously so hiding the lobby never
+ // creates a blank flash while waiting for the first animation callback.
+ canvas.style.transform='translate3d('+(start.x-startBox.width/2)+'px,'+(start.y-startBox.height/2)+'px,0)';
+ flight.draw({balls:originals,moving:false});
  let started=null;
  const duration=1510;
  function tick(now){
-  if(!canvas.isConnected){halo.remove();done();return;}
+  if(!canvas.isConnected||!isActive()){canvas.remove();halo.remove();done();return;}
   started??=now;
   const t=Math.min(1,(now-started)/duration),camera=cameraFlight(t);
   flight.setBlend(camera.flatten);
@@ -72,12 +76,20 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done}){
   const scaleX=gameRenderer.bw/Math.max(1,flight.bw);
   const scaleY=gameRenderer.bh/Math.max(1,flight.bh);
   const pulse=1+.023*camera.lift;
-  const sx=mix(1,scaleX,camera.travel)*pulse,sy=mix(1,scaleY,camera.travel)*pulse;
-  const rotation=gameRenderer.portrait?-90:0;
-  const x=mix(start.x,finish.x,camera.travel)+camera.lift*10;
-  const y=mix(start.y,finish.y,camera.travel)-camera.lift*25;
-  canvas.style.transform='translate3d('+(x-startBox.width/2)+'px,'+(y-startBox.height/2)+'px,0) rotate('+(rotation*camera.flatten)+'deg) scale('+sx+','+sy+')';
-  canvas.style.setProperty('--flight-shadow',String(13+24*camera.lift));
+  let sx=mix(1,scaleX,camera.travel)*pulse,sy=mix(1,scaleY,camera.travel)*pulse;
+  const rotation=(gameRenderer.portrait?-90:0)*camera.flatten,rad=rotation*Math.PI/180;
+  // Bounding the *drawn board*, not the transparent canvas, avoids cropped
+  // pockets as the table lifts or turns across a narrow phone screen.
+  const halfX=()=>Math.abs(Math.cos(rad))*flight.bw*sx/2+Math.abs(Math.sin(rad))*flight.bh*sy/2;
+  const halfY=()=>Math.abs(Math.sin(rad))*flight.bw*sx/2+Math.abs(Math.cos(rad))*flight.bh*sy/2;
+  const fit=Math.min(1,(root.width-24)/Math.max(1,halfX()*2),(root.height-22)/Math.max(1,halfY()*2));
+  if(fit<1){sx*=fit;sy*=fit;}
+  const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+  const rawX=mix(start.x,finish.x,camera.travel)+camera.lift*10;
+  const rawY=mix(start.y,finish.y,camera.travel)-camera.lift*25;
+  const x=clamp(rawX,halfX()+12,root.width-halfX()-12);
+  const y=clamp(rawY,halfY()+10,root.height-halfY()-10);
+  canvas.style.transform='translate3d('+(x-startBox.width/2)+'px,'+(y-startBox.height/2)+'px,0) rotate('+rotation+'deg) scale('+sx+','+sy+')';
   halo.style.setProperty('--flight-x',x+'px');halo.style.setProperty('--flight-y',y+'px');
   halo.style.opacity=String(Math.min(1,t*7,Math.max(0,(1-t)*10)));
   flight.draw({balls:movingRack(originals,rack,t),moving:false});
