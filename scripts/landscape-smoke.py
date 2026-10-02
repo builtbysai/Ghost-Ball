@@ -20,10 +20,10 @@ def module_data(name, cache=None):
 def html_source():
     doc = (root / 'index.html').read_text()
     for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css']:
-        doc = re.sub(fr'<link rel="stylesheet" href="src/{re.escape(name)}(?:\\?[^"]*)?">',
+        doc = re.sub(fr'<link rel="stylesheet" href="src/{re.escape(name)}(?:\?[^"]*)?">',
                      f'<style>{(root / "src" / name).read_text()}</style>', doc)
     doc = doc.replace('<link rel="manifest" href="manifest.webmanifest">', '')
-    return re.sub(r'<script type="module" src="src/main\\.js(?:\\?[^"]*)?"></script>',
+    return re.sub(r'<script type="module" src="src/main\.js(?:\?[^"]*)?"></script>',
                   f'<script type="module">import "{module_data("main.js")}";</script>',doc)
 
 def inside_viewport(rect, width, height, tolerance=2):
