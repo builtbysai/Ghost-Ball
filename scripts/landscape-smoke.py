@@ -20,11 +20,11 @@ def module_data(name, cache=None):
 def html_source():
     doc = (root / 'index.html').read_text()
     for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css']:
-        doc = doc.replace(f'<link rel="stylesheet" href="src/{name}">',
-                          f'<style>{(root / "src" / name).read_text()}</style>')
+        doc = re.sub(fr'<link rel="stylesheet" href="src/{re.escape(name)}(?:\?[^"]*)?">',
+                     f'<style>{(root / "src" / name).read_text()}</style>', doc)
     doc = doc.replace('<link rel="manifest" href="manifest.webmanifest">', '')
-    return doc.replace('<script type="module" src="src/main.js"></script>',
-                       f'<script type="module">import "{module_data("main.js")}";</script>')
+    return re.sub(r'<script type="module" src="src/main\.js(?:\?[^"]*)?"></script>',
+                  f'<script type="module">import "{module_data("main.js")}";</script>',doc)
 
 def inside_viewport(rect, width, height, tolerance=2):
     return rect['x'] >= -tolerance and rect['y'] >= -tolerance and (
@@ -42,14 +42,31 @@ with sync_playwright() as p:
         page.on('pageerror', lambda err: errors.append(str(err)))
         page.set_content(html_source(), wait_until='load')
         page.wait_for_timeout(180)
+        resting=page.evaluate('attractCanvas.toDataURL()')
+        page.wait_for_timeout(380)
+        assert page.evaluate('attractCanvas.toDataURL()') != resting, 'pregame cue never animated'
         assert page.locator('#lobby').is_visible(), 'lobby missing'
         assert inside_viewport(page.locator('#playBtn').bounding_box(), width, height), 'play button clipped'
         assert page.locator('#roomPlaque').inner_text() == '1911'
-        page.locator('#nextRoom').click(force=True)
+        assert page.locator('#roomArt').inner_text() == 'THE OBSERVATORY'
+        page.locator('#nextRoom').click()
         assert page.locator('#roomPlaque').inner_text() == '1927', 'room history did not update'
-        page.locator('#prevRoom').click(force=True)
+        assert page.locator('#roomArt').inner_text() == 'THE FOUNDRY', 'framed art did not update'
+        page.locator('#prevRoom').click()
         page.screenshot(path=str((root / 'screenshots' / f'menu-{width}x{height}.png').resolve()))
-        page.locator('#playBtn').click(force=True)
+        # Verify actual pointer hit targets, not force-click bypasses.
+        if width<900:
+            hit=page.locator('#menuBtn').bounding_box()
+            page.touchscreen.tap(hit['x']+hit['width']/2,hit['y']+hit['height']/2)
+            assert page.locator('#clubMenu').is_visible(), 'actual touch could not open menu'
+            page.locator('#closeMenu').click()
+        page.locator('#menuBtn').click()
+        assert page.locator('#clubMenu').is_visible()
+        page.locator('#closeMenu').click()
+        page.locator('#openSetup').click()
+        assert page.locator('#setupSheet').is_visible()
+        page.locator('#closeSetup').click()
+        page.locator('#playBtn').click()
         page.wait_for_timeout(520)
         assert page.locator('.table-flight').count() == 1, 'flight not started'
         page.wait_for_timeout(1240)
@@ -63,13 +80,13 @@ with sync_playwright() as p:
         assert inside_viewport(game_canvas, width, height), f'table clipped: {game_canvas}'
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight')
         page.screenshot(path=str((root / 'screenshots' / f'match-{width}x{height}.png').resolve()))
-        page.locator('#pauseButton').click(force=True)
+        page.locator('#pauseButton').click()
         assert page.locator('#pauseMenu').is_visible(), 'pause panel missing'
-        page.locator('#pauseSettings').click(force=True)
+        page.locator('#pauseSettings').click()
         assert page.locator('#settingsSheet').is_visible(), 'pause preferences missing'
-        page.locator('#closeSettings').click(force=True)
+        page.locator('#closeSettings').click()
         assert page.locator('#pauseMenu').is_visible(), 'pause did not survive preferences'
-        page.locator('#resumeMatch').click(force=True)
+        page.locator('#resumeMatch').click()
         assert page.locator('#pauseMenu').is_hidden(), 'could not resume'
         track = page.locator('#powerTrack').bounding_box()
         sideways = width < height and width <= 820
@@ -88,12 +105,23 @@ with sync_playwright() as p:
         page.mouse.up()
         page.wait_for_timeout(80)
         assert page.locator('#gameScreen').get_attribute('data-shots') == '1', 'pull failed'
-        page.locator('#pauseButton').click(force=True)
-        page.locator('#rerack').click(force=True)
+        page.locator('#pauseButton').click()
+        page.locator('#rerack').click()
         assert page.locator('#gameScreen').get_attribute('data-shots') == '0', 'restart failed'
         assert page.locator('#pauseMenu').is_hidden(), 'restart remained paused'
-        page.locator('#pauseButton').click(force=True)
-        page.locator('#quitMatch').click(force=True)
+        if width<900:
+            # Genuine touch events catch mobile pointer capture regressions.
+            cdp=context.new_cdp_session(page)
+            cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':start[0],'y':start[1]}]})
+            for i in range(1,12):
+                x=start[0]+(end[0]-start[0])*i/11
+                y=start[1]+(end[1]-start[1])*i/11
+                cdp.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':x,'y':y}]})
+            cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
+            page.wait_for_timeout(90)
+            assert page.locator('#gameScreen').get_attribute('data-shots')=='1', 'touch release failed to shoot'
+        page.locator('#pauseButton').click()
+        page.locator('#quitMatch').click()
         page.wait_for_timeout(500)
         assert page.locator('.table-flight').count() == 1, 'reverse flight not started'
         page.wait_for_timeout(1220)

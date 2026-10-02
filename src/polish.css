@@ -110,3 +110,61 @@
  #app.leaving-match .masthead,#app.leaving-match .room-details,#app.leaving-match .lobby-panel{animation:none}
  #gameScreen.leaving .match-hud,#gameScreen.leaving .shot-rail,#gameScreen.leaving .tools-rail{transition:none}
 }
+/* Readable clubhouse composition without overlapping the featured table. */
+@media(min-width:900px) and (min-height:650px){
+ #app:not(.entering-match):not(.leaving-match) .ambient{left:54%;width:57%;top:15%;height:43%;max-width:900px}
+ #app:not(.entering-match):not(.leaving-match) .room-details{top:28%;left:clamp(24px,3.5vw,58px);width:min(19vw,230px)}
+ #app .room-details h1{font-size:clamp(30px,3.2vw,43px);line-height:1.04;overflow-wrap:break-word}
+ #app .room-switch{left:auto;position:relative;top:auto;margin-top:9px;flex-direction:row}
+ #app .room-switch span{writing-mode:horizontal-tb}
+}
+@media(max-height:480px) and (orientation:landscape){
+ #app:not(.entering-match):not(.leaving-match) .room-details{left:2.8%;top:26%;width:clamp(110px,22vw,195px)}
+ #app .room-details h1{white-space:normal;overflow-wrap:normal;max-width:100%;font-size:clamp(16px,2.75vw,25px);line-height:1.05;margin:4px 0}
+ #roomEyebrow{font-size:0;letter-spacing:0;line-height:1}
+ #roomEyebrow:before{content:attr(data-short);font-size:8px;letter-spacing:.10em}
+ #app .room-switch{position:relative;top:auto;left:auto;right:auto;margin-top:6px;flex-direction:row;gap:6px;justify-content:flex-start}
+ #app .room-switch button{width:28px;height:28px}
+ #app .room-switch span{writing-mode:horizontal-tb}
+}
+@media(max-height:350px) and (orientation:landscape){
+ #gameScreen .match-hud{gap:6px;grid-template-columns:29px minmax(0,1fr) 88px minmax(0,1fr)}
+ #gameScreen .player-info strong{font-size:9px;letter-spacing:0}
+ #gameScreen .player-token{width:27px;height:27px;font-size:15px}
+ #gameScreen .ball-slot{width:8px}
+ #gameScreen .ball-slots{gap:2px;margin-top:2px}
+ #gameScreen .match-time{font-size:9px}
+}
+#app .room-switch{pointer-events:auto}
+#app .lobby-inner button:not(:disabled),#app .hud-menu{touch-action:manipulation}
+#app .power-track{min-width:40px}
+
+/* Larger usable mobile hit targets without creating a scrolling HUD. */
+@media(max-height:480px) and (orientation:landscape){
+ #app .modes{padding:3px 0}
+ #app .modes button{min-height:34px;display:flex;align-items:center;padding:2px 0 7px}
+ #app .actions button{height:44px}
+}
+@media(max-width:820px) and (orientation:portrait){
+ #app:not(.entering-match):not(.leaving-match) .room-details{right:22px}
+ #app .room-switch{left:auto;right:6px;top:-16px;gap:7px}
+ #app .room-switch button{width:44px;height:44px}
+ #app .header-right .round{width:44px;height:44px}
+}
+/* Release notices appear only if an updated worker becomes available midmatch. */
+.update-notice[hidden]{display:none!important}
+.update-notice{position:absolute;top:max(8px,env(safe-area-inset-top));left:50%;z-index:60;transform:translateX(-50%);
+ display:flex;align-items:center;gap:12px;padding:9px 12px;background:#111e2fe8;border:1px solid #d7c09075;
+ border-radius:10px;box-shadow:0 6px 20px #0008;color:#f2e7d5;font-size:11px}
+.update-notice button{border:1px solid #d6bd88;background:#ddc18d;color:#13283b;border-radius:5px;padding:6px 9px;font-size:10px;font-weight:800}
+
+/* Keep room-specific framed art away from the foreground heading. */
+@media(min-width:900px) and (min-height:650px){#app .frames{top:15%}}
+@media(max-height:480px) and (orientation:landscape){#app .frames{display:none}}
+
+/* Recoverability: contextual instructions only when controls cannot fire. */
+#gameScreen .guide-badge.is-visible{display:block;position:absolute;top:6px;left:50%;z-index:5;
+ padding:7px 12px;border:1px solid #ffe4a481;border-radius:99px;
+ background:#10253ae8;color:#fff2d5;text-align:center;
+ font:800 clamp(8px,.8vw,10px)/1.2 system-ui;letter-spacing:.06em;
+ max-width:90%;white-space:normal;pointer-events:none}

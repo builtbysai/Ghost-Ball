@@ -28,8 +28,11 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
  draw(0);
  function down(e){if(pointer!==null||!canShoot())return;
    const rect=track.getBoundingClientRect(),h=handle.getBoundingClientRect();
-   // Start in the thumb's generous touch target, not anywhere on the track.
-   if(rotated()?(e.clientX>h.right+16||e.clientX<h.left-16):(e.clientY>h.bottom+16||e.clientY<h.top-16))return;
+   // Start on the handle or in the upper third. A deliberate downward
+   // gesture is still required before release is allowed to shoot.
+   const start=axis(e),top=rotated()?-rect.right:rect.top;
+   const available=rotated()?rect.width:rect.height;
+   if(start<top-20||start>top+Math.max(48,available*.38))return;
    pointer=e.pointerId;startY=axis(e);travel=Math.max(42,(rotated()?rect.width-h.width:rect.height-h.height)-9);track.classList.remove('held');draw(0);track.setPointerCapture?.(pointer);e.preventDefault();}
  function move(e){if(e.pointerId!==pointer)return;draw(pullPower(startY,axis(e),travel));e.preventDefault();}
  function finish(e,cancel=false){if(e.pointerId!==pointer)return;const moved=axis(e)-startY;

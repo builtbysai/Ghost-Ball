@@ -10,6 +10,7 @@ const all=(query)=>[...document.querySelectorAll(query)];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 let room=1,mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
 let current=null,active='lobby',motion=true,placement=null,pointerMode=null;
+let settingsOrigin='lobby',updateWaiting=false;
 let matchElapsed=0,shotRemaining=45,clockKey='',lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
@@ -20,15 +21,15 @@ function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
 function notify(message){if(message)setText('matchAnnouncements',message);}
 function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);
   document.documentElement.style.setProperty('--hall',h.felt);document.documentElement.style.setProperty('--room-aura',h.aura);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
-  setText('roomPlaque',String(h.year));setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
+  setText('roomPlaque',String(h.year));setText('roomArt',h.name.toUpperCase());$('roomEyebrow').dataset.short=`ROOM 0${room+1} · ${h.year}`;setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
   setText('playText',mode==='practice'?`Practice at ${h.name}`:`Break at ${h.name}`);
   if(current)setText('roundLabel',h.name.toUpperCase());
 }
 function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
 function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';show('backdrop');show('setupSheet');$('closeSetup').focus();}
 function closeSetup(){const wasOpen=!$('setupSheet').hidden;hide('setupSheet');if($('settingsSheet').hidden)hide('backdrop');if(wasOpen)$('openSetup').focus();}
-function openSettings(){hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('motionToggle').checked=motion;$('closeSettings').focus();}
-function closeSettings(){if($('settingsSheet').hidden)return;hide('settingsSheet');hide('backdrop');if(active==='paused')$('pauseSettings').focus();else if(active==='lobby')$('menuBtn').focus();}
+function openSettings(){settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('motionToggle').checked=motion;$('closeSettings').focus();}
+function closeSettings(){if($('settingsSheet').hidden)return;hide('settingsSheet');hide('backdrop');if(settingsOrigin==='menu'&&active==='lobby'){show('clubMenu');$('menuSettings').focus();}else if(active==='paused')$('pauseSettings').focus();else if(active==='lobby')$('menuBtn').focus();}
 function openMenu(){show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){setText('matchSummary',mode==='practice'?'Open practice table':rival==='local'?'8-Ball · Two players':`8-Ball vs ${rival==='rookie'?'Rookie':'Club Pro'}`);
   setText('playSubtitle',mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':'CASUAL 8-BALL · NO ENTRY FEE');
@@ -56,10 +57,14 @@ function turnUI(){if(!current)return;
   $(clock).textContent=String(seconds);$(clock).hidden=current.kind!=='match'||current.turn!==i;
  }
  $('oneCard').classList.toggle('playing',current.turn===0);$('twoCard').classList.toggle('playing',current.turn===1);
- $('powerTrack').classList.toggle('is-disabled',!canAct());
+ const toolsDisabled=!canAct();
+ for(const id of ['spinButton','aimLeft','aimRight'])$(id).disabled=toolsDisabled;
+ $('powerTrack').classList.toggle('is-disabled',toolsDisabled);
  $('powerTrack').setAttribute('aria-disabled',String(!canAct()));$('aimWheel').setAttribute('aria-disabled',String(!canAct()));
- setText('guideBadge',current.ballInHand?'DRAG CUE BALL TO PLACE':ai?'WATCH THE SHOT':canAct()?'DRAG THE CUE STICK TO AIM':'BALLS IN MOTION');
- $('guideBadge').style.opacity=busy?'0':'.9';
+ const help=current.ballInHand?'DRAG THE WHITE BALL TO A CLEAR SPOT':current.over?'MATCH COMPLETE · PAUSE TO RESTART':'';
+ setText('guideBadge',help);
+ $('guideBadge').classList.toggle('is-visible',Boolean(help));
+ $('guideBadge').style.opacity=busy?'0':'.95';
 }
 function begin(kind){
  if(active!=='lobby')return;
@@ -88,6 +93,7 @@ function finishLobby(){
  hide('spinShade');hide('spinSheet');hide('pauseMenu');hide('gameScreen');
  $('gameScreen').classList.remove('entering','leaving');$('app').classList.remove('entering-match','leaving-match');
  $('ambient').style.visibility='';$('lobby').removeAttribute('aria-hidden');resize();$('menuBtn').focus();
+ if(updateWaiting)window.location.reload();
 }
 function quitToLobby(){
  if(active!=='paused'&&active!=='game')return;
@@ -293,15 +299,26 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
   while(acc>=TABLE.step&&iterations++<14){g.step({audio,haptics:motion});acc-=TABLE.step;}
   if(iterations>=14)acc=0;
   g.update(elapsed,{audio,haptics:motion});
-  if(active==='lobby'){ambient.draw(g.sim,{fx:motion?g.fx:[]});}
+  if(active==='lobby'){const pose=g.presentedCue;ambient.draw(g.sim,{interactive:!!pose&&!g.sim.moving,aim:pose,fx:motion?g.fx:[]});}
   else{updateClocks(elapsed);const strokeTime=shotMotion?(now-shotMotion.start)/115:1;
    const strike=shotMotion&&strokeTime<1?{...shotMotion,progress:Math.max(0,strokeTime)}:null;
    if(shotMotion&&strokeTime>=1){shotMotion=null;$('powerTrack').classList.remove('impact');}
-   const frame={interactive:!g.isAI()&&!g.over,aim:{angle,power,drawback:pullProgress,strike},placement,fx:motion?g.fx:[]};
+   const cpuPose=g.isAI()?g.presentedCue:null;
+   const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over,aim:cpuPose||{angle,power,drawback:pullProgress,strike},placement,fx:motion?g.fx:[]};
    table.draw(g.sim,frame);uiTimer+=elapsed;if(uiTimer>.2){turnUI();uiTimer=0;}}
 }
 requestAnimationFrame(frame);
 new ResizeObserver(resize).observe($('attractCanvas').parentElement);
 new ResizeObserver(resize).observe($('tableArea'));
 // Prior deployments were cache-first; ship a no-cache worker to clear stale copies.
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(()=>{});
+if ('serviceWorker' in navigator){
+ let hadController=Boolean(navigator.serviceWorker.controller);
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{
+  if(!hadController){hadController=true;return;}
+  updateWaiting=true;
+  if(active==='lobby')window.location.reload();
+  else show('updateNotice');
+ });
+ navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(()=>{});
+}
+$('applyUpdate').onclick=()=>window.location.reload();
