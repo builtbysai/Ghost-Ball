@@ -39,13 +39,14 @@ The supplied audit contains a claimed 101-shot browser match. That observation a
 **Exit:** Entire match can begin, pause, time out, foul, finish, rematch and quit, all through touch and mouse, without dead controls or clipping.
 
 ### P1: Input/feel benchmark + shot readability
-_Incremental browser-facing control pass in `dev/p1-control-feel-placement-feedback`: code landed on a branch; acceptance depends on PR checks and visual review._
+_Initial control-feel pass shipped to `main` in [PR #13](https://github.com/builtbysai/Ghost-Ball/pull/13). Syntax, unit, responsive browser, foul-to-placement and real HTTP checks passed; landscape and rotated viewport screenshots were reviewed. Real Android validation remains outstanding._
 - [x] Cancel pointer-captured power gestures released outside the rail; retain inward recovery and keyboard shooting.
 - [x] Add a forgiving, bounded **visible** nearby legal snap while retaining exact legal tap placement and the break head-zone restriction. Do not teleport illegal drops.
 - [x] Suppress cue aiming while ball-in-hand, block human placement during AI's turn, and give the AI deterministic fallback spots.
 - [x] Double-tap the fine aim wheel (or press Home/Backspace with the wheel focused) to recall the current player's previous shot direction.
 - [x] Add structured foul/turn feedback with restrained audio and a short in-pocket visual gulp. Respect mute and reduced-motion preferences.
-- [ ] Verify real pointer safety, placement previews, UI responsiveness and timing using new CI browser fixtures and exported screenshots.
+- [x] Cancel captured cue placement on off-table release, and keep temporary fouls and persistent hints clear of each other and pocket openings.
+- [x] Verify real pointer safety, placement previews, UI responsiveness and timing using new CI browser fixtures and exported screenshots.
 - [ ] Benchmark touch on real Android hardware, especially short landscape height, physically portrait rotation and haptic intensity.
 
 - Instrument shot pull, aim wheel, rear-shaft pointer capture, pointercancel, handedness, haptics, and touch occlusion on short and wide phones. Test low frame-rate.
