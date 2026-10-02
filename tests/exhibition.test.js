@@ -16,6 +16,11 @@ test('each exhibition shot displays its actual cue aim, draw and strike',()=>{
  assert.equal(game.presentedCue?.strike?.progress,0,'the stroke starts when the shot fires');
  game.update(.055);
  assert.ok(game.presentedCue?.strike?.progress>.2,'the stroke visibly advances');
+ let steps=0;while(game.turnShot&&steps++<5000)game.step();
+ assert.ok(steps<5000,'the first shot eventually settles');
+ assert.equal(game.turn,1,'the next exhibition player takes over');
+ game.update(.25);
+ assert.ok(game.previewShot&&game.presentedCue,'the second player visibly aims');
 });
 
 test('exhibition aim remains stable while the cue animates',()=>{
