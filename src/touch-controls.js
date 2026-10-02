@@ -8,9 +8,19 @@ export function wheelAngle(startAngle,deltaY,sensitivity=.004){return Math.atan2
  * A pointer gesture is separate from keyboard operation; this eliminates
  * accidental shots caused by changing a native slider.
  */
-export function bindPower({track,handle,canShoot,onPower,onShoot,onCancel=()=>{},minimumTravel=22}){
+export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},onCancel=()=>{},minimumTravel=22}){
  let pointer=null,startY=0,current=0,travel=1;
- const draw=p=>{current=p;if(p>0)onPower(Math.max(.08,p));track.style.setProperty('--pull',`${Math.round(p*100)}%`);track.style.setProperty('--pull-y',`${Math.max(0,(track.clientHeight-44)*p)}px`);track.setAttribute('aria-valuenow',String(Math.round(Math.max(.08,p)*100)));};
+ const draw=p=>{
+   current=clamp(p,0,1);
+   if(current>0)onPower(Math.max(.08,current));
+   track.style.setProperty('--pull',Math.round(current*100)+'%');
+   track.style.setProperty('--tension',current.toFixed(3));
+   track.style.setProperty('--pull-y',Math.max(0,(track.clientHeight-44)*current)+'px');
+   track.classList.toggle('charging',current>.025);
+   track.setAttribute('aria-valuenow',String(Math.round(Math.max(.08,current)*100)));
+   track.setAttribute('aria-valuetext',current>0?Math.round(Math.max(.08,current)*100)+' percent power':'Ready to pull');
+   onPull(current);
+  };
  draw(0);
  function down(e){if(pointer!==null||!canShoot())return;
    const rect=track.getBoundingClientRect(),h=handle.getBoundingClientRect();
@@ -21,7 +31,7 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onCancel=()=>{}
  function finish(e,cancel=false){if(e.pointerId!==pointer)return;const moved=e.clientY-startY;
    if(!cancel)move(e);const valid=!cancel&&moved>=minimumTravel&&current>=.08&&canShoot();
    pointer=null;try{track.releasePointerCapture?.(e.pointerId);}catch{}
-   if(valid)onShoot();else onCancel();draw(0);e.preventDefault();}
+   if(valid){track.classList.add('releasing');onShoot();}else onCancel();draw(0);if(valid)setTimeout(()=>track.classList.remove('releasing'),220);e.preventDefault();}
  track.addEventListener('pointerdown',down);
  track.addEventListener('pointermove',move);
  track.addEventListener('pointerup',e=>finish(e));
@@ -33,7 +43,7 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onCancel=()=>{}
    else if(['ArrowUp','ArrowLeft'].includes(e.key))draw(clamp(old-.05,.08,1));
    else if(e.key==='Home')draw(.08);
    else if(e.key==='End')draw(1);
-   else if(e.key==='Enter'||e.key===' '){onPower(Math.max(.08,current));onShoot();draw(0);}
+   else if(e.key==='Enter'||e.key===' '){onPower(Math.max(.08,current));track.classList.add('releasing');onShoot();draw(0);setTimeout(()=>track.classList.remove('releasing'),220);}
    else return;e.preventDefault();});
  return {reset:()=>draw(0),isDragging:()=>pointer!==null};
 }
