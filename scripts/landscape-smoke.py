@@ -163,6 +163,19 @@ with sync_playwright() as p:
             cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
             page.wait_for_timeout(90)
             assert page.locator('#gameScreen').get_attribute('data-shots')=='1', 'touch release failed to shoot'
+        # Physical-screen safety: a deliberate 100% pull fires BEFORE the
+        # finger reaches the screen boundary, even without a pointerup.
+        page.locator('#pauseButton').click()
+        page.locator('#rerack').click()
+        track=page.locator('#powerTrack').bounding_box()
+        max_start=(track['x']+track['width']-20,track['y']+track['height']/2) if sideways else (track['x']+track['width']/2,track['y']+20)
+        max_end=(track['x']+4,track['y']+track['height']/2) if sideways else (track['x']+track['width']/2,track['y']+track['height']-4)
+        page.mouse.move(*max_start)
+        page.mouse.down()
+        page.mouse.move(*max_end,steps=18)
+        assert page.locator('#gameScreen').get_attribute('data-shots')=='1', 'full pull failed to auto-fire at rail end'
+        page.mouse.up()
+        assert page.locator('#gameScreen').get_attribute('data-shots')=='1', 'captured release fired twice'
         page.locator('#pauseButton').click()
         page.locator('#quitMatch').click()
         page.wait_for_timeout(500)
