@@ -5,12 +5,11 @@ const TAU=Math.PI*2;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const halls=[
  {name:'The Parlor',felt:'#355f51',feltLight:'#4c826d',feltDark:'#1d4239',metal:'#caa36c',rail:'#4d291c',wood:'#96613b',wall:'#102017',year:'1893',detail:'Walnut rails · sage baize · classic pockets'},
- {name:'The Observatory',felt:'#20677f',feltLight:'#318da4',feltDark:'#113e55',metal:'#c6b2a0',rail:'#302c31',wood:'#665b58',wall:'#111924',year:'1911',detail:'Oak rails · midnight cloth · tight pockets'},
- {name:'The Foundry',felt:'#46624a',feltLight:'#66836a',feltDark:'#293d32',metal:'#bb9662',rail:'#292422',wood:'#5a4536',wall:'#1d1b17',year:'1927',detail:'Ash rails · tournament green · fast cloth'},
+ {name:'The Observatory',felt:'#20677f',feltLight:'#318da4',feltDark:'#113e55',metal:'#c6b2a0',rail:'#302c31',wood:'#665b58',wall:'#111924',year:'1911',detail:'Smoked oak · midnight teal cloth · pewter trim'},
+ {name:'The Foundry',felt:'#46624a',feltLight:'#66836a',feltDark:'#293d32',metal:'#bb9662',rail:'#292422',wood:'#5a4536',wall:'#1d1b17',year:'1927',detail:'Weathered ash · olive felt · aged brass'},
 ];
 export {halls};
 function polygon(g,vertices){g.beginPath();g.moveTo(...vertices[0]);for(let i=1;i<vertices.length;i++)g.lineTo(...vertices[i]);g.closePath();}
-function hexToRgb(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
 export class TableRenderer{
  constructor(canvas,{view='perspective',hall=0}={}){this.canvas=canvas;this.g=canvas.getContext('2d');this.view=view;this.projectionBlend=view==='flat'?1:0;this.hall=hall;this.drawCount=0;this.boardCache=null;this.morphing=false;this.resize();}
  resize(){const box=this.canvas.getBoundingClientRect();this.w=Math.max(1,box.width);this.h=Math.max(1,box.height);this.dpr=Math.min(2,window.devicePixelRatio||1);this.canvas.width=Math.round(this.w*this.dpr);this.canvas.height=Math.round(this.h*this.dpr);this.g.setTransform(this.dpr,0,0,this.dpr,0,0);this.boardCache=null;this.geometry();}
@@ -169,20 +168,6 @@ export class TableRenderer{
     g.fillStyle=well;g.fill();g.restore();
   }
   g.restore();
- }
- drawOverlay(sim,{aim=null,interactive=false,placement=null,fx=[]}={},projector){
-  // The overlay is 2D by design: labels and aim remain sharp while the balls
-  // and table beneath them are actual geometry drawn by WebGL.
-  this.clear();const ownProject=this.project;
-  this.project=(x,y)=>projector.project(x,y);
-  try{
-   if(interactive&&aim&&!sim.moving&&!sim.cue()?.pocketed)this.drawAim(sim,aim);
-   const g=this.g;
-   if(placement){const [sx,sy]=this.project(placement.x,placement.y),[rx,ry]=this.project(Math.min(1000,placement.x+TABLE.radius),placement.y),r=Math.max(5,Math.hypot(rx-sx,ry-sy));
-    g.beginPath();g.arc(sx,sy,r,0,TAU);g.fillStyle=placement.legal?'#eee8debb':'#c9654ab0';g.fill();
-    g.beginPath();g.arc(sx,sy,r*1.4,0,TAU);g.strokeStyle=placement.legal?'#edc982':'#e97b64';g.lineWidth=2;g.stroke();}
-   for(const effect of fx){const [sx,sy]=this.project(effect.x,effect.y);g.beginPath();g.arc(sx,sy,(1-effect.life)*28,0,TAU);g.strokeStyle=`rgba(239,207,139,${effect.life*.65})`;g.lineWidth=2;g.stroke();}
-  }finally{this.project=ownProject;}
  }
  drawBall(ball){
   const g=this.g,[sx,sy,k]=this.project(ball.x,ball.y),r=Math.max(3,TABLE.radius*this.bw/1000*k),side=1+.02*(1-this.blend);
