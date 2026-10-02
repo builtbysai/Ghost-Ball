@@ -408,6 +408,18 @@ window.addEventListener('keydown',e=>{
   if(e.key==='Escape'){if(!$('spinSheet').hidden){closeSpin();return;}if(!$('settingsSheet').hidden)closeSettings();else if(!$('setupSheet').hidden)closeSetup();else if(!$('clubMenu').hidden)hide('clubMenu');else if(active==='paused')resumeMatch();else if(active==='game')pauseMatch();return;}
   if(!$('settingsSheet').hidden||!$('setupSheet').hidden||!$('clubMenu').hidden||!$('spinSheet').hidden)return;
   if(active!=='game'||['INPUT','BUTTON','TEXTAREA'].includes(document.activeElement?.tagName)&&document.activeElement?.type==='range')return;
+  if(placementActive()){
+    if(document.activeElement?.tagName==='BUTTON')return;
+    const step=e.shiftKey?3:12;
+    if(e.key==='ArrowLeft')nudgePlacement(-step,0);
+    else if(e.key==='ArrowRight')nudgePlacement(step,0);
+    else if(e.key==='ArrowUp')nudgePlacement(0,-step);
+    else if(e.key==='ArrowDown')nudgePlacement(0,step);
+    else if(e.key==='Enter'||e.code==='Space')commitPlacement();
+    else if(e.key==='Backspace')resetPlacement();
+    else return;
+    e.preventDefault();return;
+  }
   if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a'){angle-=Math.PI/720;syncAim();e.preventDefault();}
   if(e.key==='ArrowRight'||e.key.toLowerCase()==='d'){angle+=Math.PI/720;syncAim();e.preventDefault();}
   if(e.code==='Space'){e.preventDefault();fire();}
