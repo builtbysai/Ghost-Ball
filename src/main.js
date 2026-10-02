@@ -7,20 +7,43 @@ const all=(query)=>[...document.querySelectorAll(query)];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 let room=0,mode='match',rival='rookie',view='perspective',english=0,angle=0,power=.50;
 let current=null,active='lobby',motion=true,releaseToShoot=false,placement=null;
+let webgl=null,viewRequest=0;
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view});
 const setText=(id,value)=>{$(id).textContent=value;};
 function notify(message){if(message)setText('status',message);}
-function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);
+function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);webgl?.setHall(room);
   document.documentElement.style.setProperty('--hall',h.felt);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
   setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
   setText('playText',mode==='practice'?`Practice at ${h.name}`:`Break at ${h.name}`);
   if(current)setText('roundLabel',`${h.name.toUpperCase()} · ${current.kind==='practice'?'PRACTICE':'CASUAL 8-BALL'}`);
 }
-function chooseView(next){view=next;table.setView(view);ambient.setView(view);
-  all('[data-view]').forEach(b=>{b.classList.toggle('selected',b.dataset.view===view);b.setAttribute('aria-pressed',b.dataset.view===view?'true':'false');});
-  setText('gameView',view==='flat'?'2.5D VIEW':'2D VIEW');
-  resize();}
+function chooseView(next){
+ const request=++viewRequest;
+ if(!['flat','perspective','webgl'].includes(next))next='perspective';
+ view=next;table.setView(view==='flat'?'flat':'perspective');ambient.setView(view==='flat'?'flat':'perspective');
+ all('[data-view]').forEach(b=>{b.classList.toggle('selected',b.dataset.view===view);b.setAttribute('aria-pressed',String(b.dataset.view===view));});
+ const order=['flat','perspective','webgl'],labels=['2D','2.5D','3D'];
+ const following=(order.indexOf(view)+1)%3;
+ setText('gameView',`${labels[following]} VIEW`);
+ $('gameView').setAttribute('aria-label',`Switch to ${labels[following]} table view`);
+ if(next!=='webgl'){
+  $('webglCanvas').hidden=true;table.canvas.style.visibility='visible';resize();return;
+ }
+ // Only allocate a GPU context on demand; no GPU tax in the animated lobby.
+ if(!webgl){
+  import('./render3d.js').then(({WebGLTableRenderer})=>{
+   if(request!==viewRequest)return;
+   try{webgl=new WebGLTableRenderer($('webglCanvas'),{hall:room,onContextLost:()=>{
+    if(view==='webgl'){chooseView('perspective');notify('3D graphics paused. Switched to 2.5D.');}
+   }});chooseView('webgl');}
+   catch(err){console.warn('3D view unavailable, using 2.5D',err);chooseView('perspective');notify('3D is not available on this device.');}
+  }).catch(err=>{if(request!==viewRequest)return;console.warn('3D module failed',err);chooseView('perspective');notify('3D did not load. Using 2.5D.');});
+  // Until loaded, 2.5D remains visible and interactive.
+  $('webglCanvas').hidden=true;
+ }else{$('webglCanvas').hidden=false;webgl.resize();}
+ resize();
+}
 function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
 function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';show('backdrop');show('setupSheet');$('closeSetup').focus();}
 function closeSetup(){hide('setupSheet');if($('settingsSheet').hidden)hide('backdrop');$('openSetup').focus();}
@@ -30,7 +53,7 @@ function openMenu(){show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){setText('matchSummary',mode==='practice'?'Open practice table':rival==='local'?'8-Ball · Two players':`8-Ball vs ${rival==='rookie'?'Rookie':'Club Pro'}`);
   setText('playSubtitle',mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':'CASUAL 8-BALL · NO ENTRY FEE');
   all('.mode[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));}
-function resize(){ambient.resize();table.resize();}
+function resize(){ambient.resize();table.resize();if(webgl&&!webgl.lost&&view==='webgl')webgl.resize();}
 function turnUI(){if(!current)return;const ai=current.isAI(),busy=current.sim.moving;
   setText('turnLabel',current.over?'RACK COMPLETE':current.kind==='practice'?'PRACTICE TABLE':current.kind==='attract'?'AI EXHIBITION':current.break?'THE BREAK':current.turn===0?'YOUR SHOT':current.players==='local'?'PLAYER TWO':'ROOKIE AT THE TABLE');
   const p1=current.groups[0]?.toUpperCase()||'OPEN TABLE',p2=current.groups[1]?.toUpperCase()||'OPEN TABLE';
@@ -51,14 +74,14 @@ function begin(kind){hide('clubMenu');hide('setupSheet');hide('settingsSheet');h
   chooseView(view);applyRoom();turnUI();resize();}
 function exit(){active='lobby';current=null;placement=null;hide('gameScreen');$('lobby').removeAttribute('aria-hidden');resize();}
 function aimAt(clientX,clientY){if(!current||current.isAI()||current.over||current.sim.moving)return;
-  const rect=$('gameCanvas').getBoundingClientRect(),pt=table.unproject(clientX-rect.left,clientY-rect.top);
+  const rect=$('gameCanvas').getBoundingClientRect(),pt=(view==='webgl'&&webgl&&!webgl.lost?webgl:table).unproject(clientX-rect.left,clientY-rect.top);
   if(current.ballInHand)return;
   const cue=current.sim.cue();if(!cue||cue.pocketed)return;
   const dx=pt.x-cue.x,dy=pt.y-cue.y;if(dx*dx+dy*dy<250)return;
   angle=Math.atan2(dy,dx);syncAim();}
 function previewPlacement(clientX,clientY){
   if(!current?.ballInHand||current.sim.moving)return;
-  const rect=$('gameCanvas').getBoundingClientRect(),pt=table.unproject(clientX-rect.left,clientY-rect.top);
+  const rect=$('gameCanvas').getBoundingClientRect(),pt=(view==='webgl'&&webgl&&!webgl.lost?webgl:table).unproject(clientX-rect.left,clientY-rect.top);
   placement={...pt,legal:current.sim.canPlaceCue(pt.x,pt.y)};
 }
 function syncAim(){angle=Math.atan2(Math.sin(angle),Math.cos(angle));$('aimRange').value=String(angle*180/Math.PI);}
@@ -81,11 +104,11 @@ all('#rivals [data-rival]').forEach(b=>b.onclick=()=>{rival=b.dataset.rival;all(
 all('[data-view]').forEach(b=>b.onclick=()=>{chooseView(b.dataset.view);localStorage.setItem('ghostball-view',view);});
 $('playBtn').onclick=()=>begin(mode);$('watchBtn').onclick=()=>begin('attract');
 $('leaveGame').onclick=exit;$('rerack').onclick=()=>{current?.reset();placement=null;angle=0;english=0;syncAim();setPower(50);$('spin').value='0';setText('spinLabel','CENTER');turnUI();};
-$('gameView').onclick=()=>chooseView(view==='flat'?'perspective':'flat');
+$('gameView').onclick=()=>{const order=['flat','perspective','webgl'];chooseView(order[(order.indexOf(view)+1)%3]);};
 $('aimLeft').onclick=()=>{angle-=Math.PI/720;syncAim();};
 $('aimRight').onclick=()=>{angle+=Math.PI/720;syncAim();};
 $('aimRange').oninput=e=>{angle=Number(e.target.value)*Math.PI/180;};
-$('spin').oninput=e=>{english=Number(e.target.value)/100;setText('spinLabel',english===0?'CENTER':english<0?`${Math.abs(Math.round(english*100))}% LEFT`:`${Math.round(english*100)}% RIGHT`);spinTouched=true;};
+$('spin').oninput=e=>{english=Number(e.target.value)/100;setText('spinLabel',english===0?'CENTER':english<0?`${Math.abs(Math.round(english*100))}% LEFT`:`${Math.round(english*100)}% RIGHT`);};
 $('powerRange').oninput=e=>setPower(e.target.value);
 // Optional pull-and-release is intentionally off initially: adjusting power
 // should never silently commit a shot for users who expect an explicit button.
@@ -112,7 +135,7 @@ window.addEventListener('keydown',e=>{
   if(e.code==='Space'){e.preventDefault();fire();}
   if(e.key.toLowerCase()==='r'){current?.reset();turnUI();}
 });
-try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';view=localStorage.getItem('ghostball-view')==='flat'?'flat':'perspective';releaseToShoot=localStorage.getItem('ghostball-release')==='on';}catch{}
+try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';view=['flat','perspective','webgl'].includes(localStorage.getItem('ghostball-view'))?localStorage.getItem('ghostball-view'):'perspective';releaseToShoot=localStorage.getItem('ghostball-release')==='on';}catch{}
 if(releaseToShoot)$('powerRange').setAttribute('aria-label','Shot power, release after dragging to shoot');
 chooseView(view);applyRoom();refreshMenu();hide('gameScreen');
 let previous=performance.now(),acc=0,uiTimer=0;
@@ -125,7 +148,9 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
   if(iterations>=14)acc=0;
   g.update(elapsed,{audio,haptics:motion});
   if(active==='lobby'){ambient.draw(g.sim,{fx:motion?g.fx:[]});}
-  else{table.draw(g.sim,{interactive:!g.isAI()&&!g.over,aim:{angle,power},placement,fx:motion?g.fx:[]});uiTimer+=elapsed;if(uiTimer>.2){turnUI();uiTimer=0;}}
+  else{const frame={interactive:!g.isAI()&&!g.over,aim:{angle,power},placement,fx:motion?g.fx:[]};
+   if(view==='webgl'&&webgl&&!webgl.lost){webgl.draw(g.sim);table.drawOverlay(g.sim,frame,webgl);}
+   else table.draw(g.sim,frame);uiTimer+=elapsed;if(uiTimer>.2){turnUI();uiTimer=0;}}
 }
 requestAnimationFrame(frame);
 new ResizeObserver(resize).observe($('attractCanvas').parentElement);

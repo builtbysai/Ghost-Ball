@@ -76,6 +76,20 @@ export class TableRenderer{
   for(const effect of fx){const [sx,sy]=P(effect.x,effect.y);g.beginPath();g.arc(sx,sy,(1-effect.life)*28,0,TAU);g.strokeStyle=`rgba(239,207,139,${effect.life*.65})`;g.lineWidth=2;g.stroke();}
   g.restore();this.drawCount++;
  }
+ drawOverlay(sim,{aim=null,interactive=false,placement=null,fx=[]}={},projector){
+  // The overlay is 2D by design: labels and aim remain sharp while the balls
+  // and table beneath them are actual geometry drawn by WebGL.
+  this.clear();const ownProject=this.project;
+  this.project=(x,y)=>projector.project(x,y);
+  try{
+   if(interactive&&aim&&!sim.moving&&!sim.cue()?.pocketed)this.drawAim(sim,aim);
+   const g=this.g;
+   if(placement){const [sx,sy]=this.project(placement.x,placement.y),[rx,ry]=this.project(Math.min(1000,placement.x+TABLE.radius),placement.y),r=Math.max(5,Math.hypot(rx-sx,ry-sy));
+    g.beginPath();g.arc(sx,sy,r,0,TAU);g.fillStyle=placement.legal?'#eee8debb':'#c9654ab0';g.fill();
+    g.beginPath();g.arc(sx,sy,r*1.4,0,TAU);g.strokeStyle=placement.legal?'#edc982':'#e97b64';g.lineWidth=2;g.stroke();}
+   for(const effect of fx){const [sx,sy]=this.project(effect.x,effect.y);g.beginPath();g.arc(sx,sy,(1-effect.life)*28,0,TAU);g.strokeStyle=`rgba(239,207,139,${effect.life*.65})`;g.lineWidth=2;g.stroke();}
+  }finally{this.project=ownProject;}
+ }
  drawBall(ball){const g=this.g,[sx,sy,k]=this.project(ball.x,ball.y),r=Math.max(3,TABLE.radius*this.bw/1000*k),side=this.view==='flat'?1:1.02;
   g.save();g.translate(sx,sy);g.scale(1,side);
   g.beginPath();g.ellipse(1.5,3,r*1.06,r*.72,0,0,TAU);g.fillStyle='rgba(0,0,0,.32)';g.fill();
