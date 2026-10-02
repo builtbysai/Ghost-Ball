@@ -8,7 +8,7 @@ test('live exhibition balls gather into exactly the playable opening rack',()=>{
  const start=movingRack(old,rack,0),middle=movingRack(old,rack,.6),end=movingRack(old,rack,1);
  assert.deepEqual(start.map(b=>[b.x,b.y]),old.map(b=>[b.x,b.y]));
  assert.deepEqual(end.map(b=>[b.x,b.y]),rack.map(b=>[b.x,b.y]));
- assert.deepEqual(end.map(b=>b.pocketed),[undefined,undefined,false]);
+ assert.ok(end.every(b=>b.pocketed===false));
  assert.ok(middle.every(b=>Number.isFinite(b.x)&&Number.isFinite(b.y)));
 });
 test('table flight camera easing is clamped, monotonic and reaches both end positions',()=>{
