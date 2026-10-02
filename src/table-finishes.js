@@ -81,7 +81,7 @@ export function paintCloth(g,{P,h,finish,bw,blend}){
  const source=P(260,75),far=P(780,465);
  g.save();path(g,corners);g.clip();
  const base=g.createLinearGradient(source[0],source[1],far[0],far[1]);
- base.addColorStop(0,h.feltLight);base.addColorStop(.49,h.felt);base.addColorStop(1,finish.vignette);
+ base.addColorStop(0,h.feltLight);base.addColorStop(.54,h.felt);base.addColorStop(1,h.felt);
  g.fillStyle=base;g.fillRect(0,0,g.canvas.width,g.canvas.height);
  const light=P(330,158);
  const bloom=g.createRadialGradient(light[0],light[1],1,light[0],light[1],bw*.77);
