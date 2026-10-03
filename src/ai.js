@@ -182,7 +182,8 @@ export function* createShotPlanner(sim,group='open',difficulty='rookie',random=c
    return {angle:selected.angle+(random()-.5)*.004,power:selected.power,
      target:selected.target,pocket:selected.pocket,
      predictedLegal:best.verdict.legalFirst,
-     predictedPot:best.verdict.made,plan:'preview'};
+     predictedPot:best.verdict.made,predictedComplete:best.verdict.complete,
+     predictedEarlyEight:best.verdict.earlyEight,plan:'preview'};
   }
   const range=Math.min(2,candidates.length);
   const selected=candidates[Math.floor(random()*range)];
@@ -196,9 +197,40 @@ export function* createShotPlanner(sim,group='open',difficulty='rookie',random=c
  const direct=targets.find(({ball})=>clearPath(cue,ball,sim.balls,[0,ball.id]));
  const target=(direct||targets[0])?.ball;
  if(!target)return {angle:0,power:.5,plan:'none'};
+ if(difficulty==='club'){
+  // When no pocket route exists, the old single straight contact could
+  // cannon the 8 into a pocket. Assess several REAL, low-force safety
+  // strokes instead of guessing (same fixed-step physics as the match).
+  // Preserve the cooperative per-frame generator and one seeded nudge.
+  const visible=targets.filter(item=>clearPath(cue,item.ball,sim.balls,[0,item.ball.id]));
+  const options=(visible.length?visible:targets).slice(0,2);
+  const eight=sim.balls.find(ball=>ball.id===8&&!ball.pocketed);
+  const nudge=(random()-.5)*.004;
+  let safest=null,safestScore=-Infinity;
+  for(const {ball,range} of options){
+   const bearing=Math.atan2(ball.y-cue.y,ball.x-cue.x);
+   const eightBearing=eight?Math.atan2(eight.y-cue.y,eight.x-cue.x):bearing;
+   const relative=Math.atan2(Math.sin(eightBearing-bearing),Math.cos(eightBearing-bearing));
+   const away=relative>=0?-.044:.044;
+   for(const [offset,power] of [[0,.28],[0,.43],[away,.35]]){
+    const plan={angle:bearing+offset+nudge,power,target:ball.id,pocket:-1,
+      cost:range*.1};
+    const verdict=yield* simulateAssessment(sim,plan,group,{maxSteps:1440});
+    const rank=verdict.score-(verdict.complete?0:320);
+    if(rank>safestScore){safest={plan,verdict};safestScore=rank;}
+   }
+  }
+  if(safest){
+   const {plan,verdict}=safest;
+   return {angle:plan.angle,power:plan.power,target:plan.target,
+     predictedLegal:verdict.legalFirst,predictedPot:false,
+     predictedComplete:verdict.complete,predictedEarlyEight:verdict.earlyEight,
+     plan:'safety-preview'};
+  }
+ }
  return {angle:Math.atan2(target.y-cue.y,target.x-cue.x)
-     +(random()-.5)*(difficulty==='club'?.01:.06),
-   power:difficulty==='club'?.45:.52,target:target.id,plan:'contact'};
+     +(random()-.5)*.06,
+   power:.52,target:target.id,plan:'contact'};
 }
 /** Synchronous convenience for tests and batch matches, sharing every
  * decision with the frame-sliced live match generator. */

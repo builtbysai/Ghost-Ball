@@ -38,7 +38,10 @@ export function runRack(seed,{maxShots=120,tiers=['rookie','club']}={}){
      chooseShot(game.sim,group,tier,game.random);
   const decisionMs=performance.now()-now;
   decisionTotal+=decisionMs;
-  decisions.push({shot:n+1,tier,elapsedMs:decisionMs,plan:plan.plan||'break'});
+  decisions.push({shot:n+1,tier,elapsedMs:decisionMs,plan:plan.plan||'break',
+    target:plan.target??null,pocket:plan.pocket??null,
+    predictedLegal:plan.predictedLegal??null,predictedPot:plan.predictedPot??null,
+    predictedComplete:plan.predictedComplete??null});
   if(plan.plan==='contact'||plan.plan==='none'){
    counts.decisionFallbacks++;metrics.decisionFallbacks++;
   }
@@ -108,7 +111,11 @@ export function summary(run){
  return {seed,tiers,shots,finished,winner,terminalReason,legalEightFinish,
    winnerGroupRemaining,remaining,counts,byTier,stagnant,
    steps,planning:{meanMs:+planning.meanMs.toFixed(2),
-    p95Ms:+planning.p95Ms.toFixed(2),maxMs:+planning.maxMs.toFixed(2)}};
+    p95Ms:+planning.p95Ms.toFixed(2),maxMs:+planning.maxMs.toFixed(2)},
+   terminal:{decision:run.decisions.at(-1),ruling:run.rulings.at(-1)},
+   earlyEightShots:run.rulings.filter(item=>item.reason==='early-eight')
+     .map(item=>({ruling:item,decision:run.decisions[item.shot-1]})),
+   incompletePredictions:run.decisions.filter(item=>item.predictedComplete===false).length};
 }
 
 if(process.argv[1]?.endsWith('/full-rack-lab.mjs')){
