@@ -60,6 +60,9 @@ with sync_playwright() as p:
         assert page.locator('#lobby').is_visible(), 'lobby missing'
         assert inside_viewport(page.locator('#playBtn').bounding_box(), width, height), 'play button clipped'
         assert page.locator('#roomPlaque').inner_text() == '1911'
+        assert page.locator('#roomMastery').is_visible()
+        assert page.locator('#roomMasteryCount').inner_text()=='0 / 3'
+        assert inside_viewport(page.locator('#roomMastery').bounding_box(),width,height),'mastery badge clipped'
         assert page.locator('#roomArt').inner_text() == 'THE OBSERVATORY'
         page.locator('#nextRoom').click()
         assert page.locator('#roomPlaque').inner_text() == '1927', 'room history did not update'
@@ -67,6 +70,7 @@ with sync_playwright() as p:
         page.locator('#nextRoom').click()
         assert page.locator('#roomArt').inner_text() == 'THE WINTERGARDEN'
         assert page.locator('#roomPlaque').inner_text() == '1938'
+        assert page.locator('#roomMastery').is_hidden(),'unauthored hall must not claim mastery'
         if width in (1280,568):
             page.screenshot(path=str((root / 'screenshots' / f'wintergarden-{width}x{height}.png').resolve()))
         page.locator('#nextRoom').click()
