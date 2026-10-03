@@ -20,8 +20,24 @@ jobs:
       - name: JavaScript syntax
         run: |
           find src -name '*.js' -exec node --check {} \;
+          node --check scripts/full-rack-lab.mjs
       - name: Simulation and rules unit tests
         run: npm test
+      - name: Headless full-rack AI and rules baseline
+        if: github.event_name == 'pull_request'
+        env:
+          GHOST_SEEDS: "17,41"
+          GHOST_MAX_SHOTS: "96"
+        run: |
+          node scripts/full-rack-lab.mjs > full-rack-report.json
+          cat full-rack-report.json
+      - name: Archive full-rack baseline
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghost-ball-full-rack-baseline
+          path: full-rack-report.json
+          if-no-files-found: ignore
       - name: Browser smoke dependencies
         if: github.event_name == 'pull_request'
         run: python3 -m pip install playwright
