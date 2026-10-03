@@ -35,6 +35,11 @@ jobs:
         env:
           CHROMIUM_BIN: /usr/bin/google-chrome
         run: python3 scripts/p1-interaction-smoke.py
+      - name: Referee and local two-player responsive match browser smoke
+        if: github.event_name == 'pull_request'
+        env:
+          CHROMIUM_BIN: /usr/bin/google-chrome
+        run: python3 scripts/p2-rules-smoke.py
       - name: Real HTTP module and cache-busting smoke
         if: github.event_name == 'pull_request'
         env:
