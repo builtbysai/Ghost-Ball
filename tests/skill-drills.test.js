@@ -42,6 +42,9 @@ test('each authored drill is finishable with actual settled fixed-step shots',()
    if(attempt.g.drillOutcome==='completed'){success={...attempt,power};break;}
   }
   assert.ok(success,drill.id+' cannot be completed by any authored baseline pull');
+  const keyboardBaseline=takeShot(drill.id,drill.referenceAngle,.53);
+  assert.equal(keyboardBaseline.g.drillOutcome,'completed',
+    drill.id+' should be solvable by an accessible half-power keyboard pull');
   const event=success.announcements.find(e=>e.type==='drill-end');
   assert.equal(event.completed,true,drill.id);
   assert.equal(event.evidence.potRecords.some(x=>x.id===drill.targetId&&
