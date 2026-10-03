@@ -17,8 +17,10 @@ const ensure=(assertion,message)=>{if(!assertion)throw Error(message);};
 
 export function runRack(seed,{maxShots=120,tiers=['rookie','club']}={}){
  const game=new Game({kind:'match',players:'local',seed});
- const decisions=[],rulings=[],stagnant=[],counts={legal:0,missed:0,fouls:0,scratches:0,
-   pots:0,plannedPots:0,decisionFallbacks:0,placements:0,earlyEight:0};
+ const fresh=()=>({legal:0,missed:0,fouls:0,scratches:0,
+   pots:0,plannedPots:0,decisionFallbacks:0,placements:0,earlyEight:0,shots:0});
+ const decisions=[],rulings=[],stagnant=[],counts=fresh(),byTier={};
+ const tierStats=tier=>byTier[tier]??=fresh();
  let repeated=0,previousSignature=null,steps=0,decisionTotal=0;
  for(let n=0;n<maxShots&&!game.over;n++){
   if(game.ballInHand){
@@ -27,15 +29,19 @@ export function runRack(seed,{maxShots=120,tiers=['rookie','club']}={}){
    ensure(game.placeCue(placement.candidate.x,placement.candidate.y),
      `seed ${seed}, shot ${n+1}: legal placement rejected`);
    counts.placements++;
+   tierStats(tiers[game.turn]||'rookie').placements++;
   }
   const tier=tiers[game.turn]||'rookie',before=sig(game),group=game.group;
+  const metrics=tierStats(tier);counts.shots++;metrics.shots++;
   const now=performance.now();
   const plan=game.break?{angle:0,power:.82,plan:'break'}:
      chooseShot(game.sim,group,tier,game.random);
   const decisionMs=performance.now()-now;
   decisionTotal+=decisionMs;
   decisions.push({shot:n+1,tier,elapsedMs:decisionMs,plan:plan.plan||'break'});
-  if(plan.plan==='contact'||plan.plan==='none')counts.decisionFallbacks++;
+  if(plan.plan==='contact'||plan.plan==='none'){
+   counts.decisionFallbacks++;metrics.decisionFallbacks++;
+  }
   ensure(Number.isFinite(plan.angle)&&Number.isFinite(plan.power),
     `seed ${seed}, shot ${n+1}: invalid plan`);
   ensure(game.beginShot(plan.angle,plan.power),`seed ${seed}, shot ${n+1}: strike rejected`);
@@ -51,13 +57,16 @@ export function runRack(seed,{maxShots=120,tiers=['rookie','club']}={}){
     pots:[...shot.pots],reason:ruling.reason||null,
     result:ruling.result,turn:ruling.turn,remaining:game.sim.balls.filter(b=>b.id>0&&!b.pocketed).length};
   rulings.push(info);
-  if(ruling.result==='foul')counts.fouls++;
-  if(shot.pots.includes(0))counts.scratches++;
-  if(ruling.reason==='early-eight')counts.earlyEight++;
-  counts.pots+=shot.pots.filter(id=>id>0&&id!==8).length;
-  if(shot.first===null)counts.missed++;
-  else if(group==='open'?shot.first>0&&shot.first!==8:groupContains(shot.first,group))counts.legal++;
-  if(plan.target!==undefined&&shot.pots.includes(plan.target))counts.plannedPots++;
+  for(const bucket of [counts,metrics]){
+   if(ruling.result==='foul')bucket.fouls++;
+   if(shot.pots.includes(0))bucket.scratches++;
+   if(ruling.reason==='early-eight')bucket.earlyEight++;
+   bucket.pots+=shot.pots.filter(id=>id>0&&id!==8).length;
+   if(shot.first===null)bucket.missed++;
+   else if(group==='open'?shot.first>0&&shot.first!==8:groupContains(shot.first,group))
+    bucket.legal++;
+   if(plan.target!==undefined&&shot.pots.includes(plan.target))bucket.plannedPots++;
+  }
   for(const b of game.sim.balls){
    ensure([b.x,b.y,b.vx,b.vy].every(Number.isFinite),
      `seed ${seed}, shot ${n+1}: nonfinite ball ${b.id}`);
@@ -79,7 +88,7 @@ export function runRack(seed,{maxShots=120,tiers=['rookie','club']}={}){
   seed,tiers,maxShots,shots:game.shots,finished:game.over,winner,
   reason:rulings.at(-1)?.reason||null,
   remaining:game.sim.balls.filter(b=>b.id>0&&!b.pocketed).length,
-  counts,stagnant,steps,simulationSeconds:steps*TABLE.step,
+  counts,byTier,stagnant,steps,simulationSeconds:steps*TABLE.step,
   planning:{totalMs:decisionTotal,meanMs:decisionTotal/decisions.length,
     p95Ms:pct(decisions.map(x=>x.elapsedMs),.95),maxMs:Math.max(...decisions.map(x=>x.elapsedMs))},
   decisions,rulings,history:game.history,finalSnapshot:game.sim.snapshot()
@@ -87,8 +96,8 @@ export function runRack(seed,{maxShots=120,tiers=['rookie','club']}={}){
 }
 
 export function summary(run){
- const {seed,tiers,shots,finished,winner,remaining,counts,stagnant,steps,planning}=run;
- return {seed,tiers,shots,finished,winner,remaining,counts,stagnant,
+ const {seed,tiers,shots,finished,winner,remaining,counts,byTier,stagnant,steps,planning}=run;
+ return {seed,tiers,shots,finished,winner,remaining,counts,byTier,stagnant,
    steps,planning:{meanMs:+planning.meanMs.toFixed(2),
     p95Ms:+planning.p95Ms.toFixed(2),maxMs:+planning.maxMs.toFixed(2)}};
 }
