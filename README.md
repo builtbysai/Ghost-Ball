@@ -39,7 +39,7 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/cue-feel.js`: pure cue travel, contact stroke timing and tactile stage math.
 - `src/audio.js`: gesture-unlocked physical impact and restrained result sounds.
 - `src/player-progress.js`: versioned offline match, room choice, equipment and favorites ledger.
-- `src/skill-drills.js` and `src/skill-drills.css`: two fixed-layout original physics-scored pocketing challenges and compact keyboard/touch picker.
+- `src/skill-drills.js` and `src/skill-drills.css`: three fixed-layout original physics-scored pocketing challenges and compact keyboard/touch picker.
 - `src/record-summary.js` and `src/local-record.css`: compact private stats and recent results, JSON export and guarded local-only reset via Preferences.
 - `src/cue-catalog.js`: six original purely cosmetic cues, exact milestone unlocks and shared preview appearance.
 - `src/cue-locker.css`: viewport-fitted 3×2 equipment browsing in landscape and portrait.
@@ -66,7 +66,7 @@ The October 2 research pass moved **original cue choices/unlocks** and **two gen
 
 ## Playable skill challenges
 
-Open **Menu → Skill Drills** for *Center Drop* and *Corner Line*. Both use the same real shot physics and rear-cue controls as a casual match. Sink the designated numbered ball into its named pocket within **two shots without scratching**; otherwise rerack and try again. Valid completion earns a permanent personal mark and local best-shot record. Select either challenge again to improve your best. Existing halls remain freely selectable; bank/positional drills and room mastery locks are still future work.
+Open **Menu → Skill Drills** for *Center Drop*, *Corner Line* and *Rail Return*. All three use the same real shot physics and rear-cue controls as a casual match. Sink the named target into its designated pocket within **two shots without scratching**. Rail Return additionally requires a genuine non-jaw target-ball cushion rebound before the top-middle pot; the score comes from settled physics events, not the ball's final position or a button click. Real completions earn permanent local marks and personal bests. Existing halls remain selectable; positional drills and room mastery locks await real-device review.
 
 ## Your local record
 

@@ -37,7 +37,7 @@ test('each authored drill is finishable with actual settled fixed-step shots',()
   // Multiple human-plausible pull strengths: accept only actual pocket events
   // scored by Game, never a decorative/mock completed state.
   let success=null;
-  for(const power of [.28,.38,.50,.65]){
+  for(const power of [.28,.38,.40,.50,.53,.65]){
    const attempt=takeShot(drill.id,drill.referenceAngle,power);
    if(attempt.g.drillOutcome==='completed'){success={...attempt,power};break;}
   }
