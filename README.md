@@ -52,6 +52,10 @@ No dependencies or build step. Code is grouped by responsibility:
 
 See the [active roadmap](docs/ROADMAP.md), [measured full-rack reliability results](docs/P2-1-RELIABILITY-LAB.md), [pool-game engagement research](docs/ENGAGEMENT-RESEARCH.md), [P2 rules architecture](docs/P2-RULES-ARCHITECTURE.md) and [physics/visual research](docs/RESEARCH.md). Focused Node regression tests cover input geometry, cue loading and collision physics; Playwright browser smoke checks the live entrance, all five hall palettes, and responsive mouse/touch input. Do not bolt future game modes into `main.js`: extract state machines and provide explicit tests.
 
+## P3: Physical impact and match finish polish
+
+Real ball contacts and solid cushion rebounds now create brief, capped visual impact glints without changing physics. Completed casual matches display the actual referee-recorded decisive shot, never an invented eight-ball pot. A legally pocketed eight receives a subtle warm light at its real destination; Rematch receives keyboard focus, and Change Table returns to the Clubhouse. Reduced-motion preferences remain respected. A complete replay recorder is still on the roadmap.
+
 ## P2.1 progress and device limits
 
 Full-rack tests now include 12 repeatable CPU matches, reversed seats,

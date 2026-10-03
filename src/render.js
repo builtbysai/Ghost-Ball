@@ -115,7 +115,18 @@ export class TableRenderer{
   }
   for(const effect of fx){
     const [sx,sy]=P(effect.x,effect.y);
-    if(effect.type==='pocket'){
+    if(effect.type==='impact'||effect.type==='cushion'){
+      // A short material glint tied to collision strength, not camera shake.
+      const t=1-effect.life,hard=effect.strength||0;
+      g.save();g.beginPath();g.arc(sx,sy,2+(8+12*hard)*t,0,TAU);
+      g.strokeStyle=`rgba(248,231,184,${effect.life*(.13+.34*hard)})`;
+      g.lineWidth=effect.type==='impact'?1.25:1;g.stroke();
+      if(effect.type==='impact'){
+       g.beginPath();g.arc(sx,sy,1.1+1.7*hard,0,TAU);
+       g.fillStyle=`rgba(255,247,221,${effect.life*(.17+.48*hard)})`;g.fill();
+      }
+      g.restore();
+    }else if(effect.type==='pocket'){
       const t=1-effect.life;
       const [px,py]=P(effect.sourceX,effect.sourceY);
       const x=px+(sx-px)*t,y=py+(sy-py)*t,r=Math.max(0,TABLE.radius*this.bw/1000*(1-.93*t));

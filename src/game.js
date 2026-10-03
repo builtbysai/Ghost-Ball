@@ -3,6 +3,7 @@ import {createRandom} from './random.js';
 import {resolveCasualEight,groupContains} from './casual-rules.js';
 import {chooseShot,chooseAiCuePlacement,createShotPlanner,candidateShots} from './ai.js';
 import {skillDrillById,skillDrillBalls,gradeSkillDrill} from './skill-drills.js';
+import {impactEffectFor} from './impact-effects.js';
 export {chooseShot} from './ai.js';
 export const SHOT_CLOCK_SECONDS=45;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
@@ -146,11 +147,15 @@ export class Game {
        if(this.shotRemaining===0)this.expireShotClock();
      }
    }
-   this.fx=this.fx.filter(effect=>(effect.life-=dt*(effect.type==='pocket'?5:1.8))>0);
+   this.fx=this.fx.filter(effect=>(effect.life-=dt*(effect.type==='pocket'?5:effect.type==='impact'?4.2:3.2))>0);
  }
  step({audio=null,haptics=false}={}){
    const events=this.sim.step();if(this.sim.moving)this.timer=0;
    for(const event of events){
+     // Impulse glints are a presentation-only layer; cap simultaneous effects.
+     if(this.kind!=='attract'&&this.fx.length<10){
+       const mark=impactEffectFor(event,this.sim);if(mark)this.fx.push(mark);
+     }
      if(event.type==='contact'&&this.turnShot&&!this.turnShot.first&&(event.a===0||event.b===0))this.turnShot.first=event.a===0?event.b:event.a;
      if(event.type==='rail'&&this.turnShot){
        if(this.turnShot.first!==null)this.turnShot.rail=true;

@@ -254,3 +254,34 @@
 }
 
 #gameScreen #gameCanvas:focus-visible{outline:2px solid #f0d69e;outline-offset:-3px}
+
+/* P3: authentic physical-event receipt and legal-eight warm light, no scrolling. */
+#gameScreen .match-result .result-last-shot[hidden]{display:none!important}
+#gameScreen .match-result .result-last-shot{display:flex;align-items:center;justify-content:center;gap:8px;
+ max-width:100%;padding:clamp(4px,1dvh,8px) 9px;border:1px solid #e8c78952;
+ border-radius:99px;background:#ffe5aa0e;color:#f9dfad;
+ font:800 clamp(8px,1dvh,11px)/1.2 system-ui;letter-spacing:.07em}
+#gameScreen .result-eight{flex:none;display:grid;place-items:center;width:clamp(16px,3.1dvh,22px);
+ aspect-ratio:1;border:1px solid #fbf3e3;border-radius:50%;background:radial-gradient(circle at 30% 20%,#53545a,#121419 75%);
+ color:#fffef7;font:800 clamp(10px,1.8dvh,13px)/1 system-ui;box-shadow:0 2px 5px #0008}
+#gameScreen .match-result[data-finish="clean"]{border-color:#efce86b3;
+ box-shadow:0 17px 58px #000d,inset 0 1px #fff7cd36}
+#gameScreen .match-result[data-finish="foul"]{border-color:#d0ad927c}
+#gameScreen #tableArea[data-finish-spot="yes"]:has(.match-result:not([hidden]))::after{
+ content:"";position:absolute;z-index:3;pointer-events:none;left:var(--finish-x,50%);top:var(--finish-y,50%);
+ width:clamp(25px,7vw,65px);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);
+ background:radial-gradient(circle,#fff1c260 0%,#f4d48d22 36%,transparent 70%);
+ animation:finish-glow .72s ease-out both}
+@keyframes finish-glow{from{opacity:0;scale:.6}45%{opacity:1}to{opacity:.52;scale:1}}
+@keyframes finish-card-arrive{from{opacity:0;transform:translate(-50%,-47%) scale(.975)}
+ to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+#gameScreen .match-result:not([hidden]){animation:finish-card-arrive .3s ease-out both}
+@media(max-height:370px){
+ #gameScreen .match-result .result-last-shot{padding:2px 7px;font-size:8px}
+ #gameScreen .result-eight{width:15px;font-size:9px}
+ #gameScreen .match-result{gap:2px}
+ #gameScreen .match-result-actions button{padding:5px clamp(7px,1vw,12px)}
+}
+@media(prefers-reduced-motion:reduce){
+ #gameScreen .match-result:not([hidden]),#gameScreen #tableArea[data-finish-spot="yes"]::after{animation:none}
+}
