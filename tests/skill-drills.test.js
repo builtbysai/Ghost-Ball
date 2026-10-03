@@ -21,7 +21,7 @@ function takeShot(id,angle,power){
 }
 test('three original drill layouts have valid distinct cues, pockets and rules',()=>{
  assert.equal(SKILL_DRILLS.length,3);
- assert.equal(new Set(SKILL_DRILLS.map(d=>d.id)).size,2);
+ assert.equal(new Set(SKILL_DRILLS.map(d=>d.id)).size,3);
  for(const drill of SKILL_DRILLS){
   assert.equal(skillDrillById(drill.id),drill);
   assert.equal(skillDrillBalls(drill.id).length,2);
