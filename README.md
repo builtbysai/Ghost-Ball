@@ -72,6 +72,10 @@ The October 2 research pass moved **original cue choices/unlocks** and **two gen
 
 Open **Menu → Skill Drills** for *Center Drop*, *Corner Line* and *Rail Return*. All three use the same real shot physics and rear-cue controls as a casual match. Sink the named target into its designated pocket within **two shots without scratching**. Rail Return additionally requires a genuine non-jaw target-ball cushion rebound before the top-middle pot; the score comes from settled physics events, not the ball's final position or a button click. Real completions earn permanent local marks and personal bests. Existing halls remain selectable; positional drills and room mastery locks await real-device review.
 
+## Earned founder-room mastery
+
+The Parlor, Observatory and Foundry now offer three **real** permanent local mastery steps each: complete that room's authored physics-scored drill, finish a genuine CPU match in the room, and win a legal eight-ball game against either rival there. The room selector shows current status and the next missing step. Existing local v1 match and drill records count immediately; new durable receipts persist even after old recent-match entries age out. Wintergarden and Afterhours are still playable but have no falsely advertised mastery until their distinct challenges are built. No hall or cue is locked by mastery yet.
+
 ## Your local record
 
 Open **Menu → Settings → Local Record** to see your completed-match totals and recent verified results. **Export your record** saves a private JSON file to your device. **Reset local record** requires confirmation and removes match/cue unlock progress, favorites and chosen room from this browser, but keeps audio and control preferences. Data never leaves the browser unless you explicitly export it; no account synchronization is offered. If saved progress is unreadable or from a newer version, Ghost Ball will not overwrite or delete it automatically.
