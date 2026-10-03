@@ -7,6 +7,7 @@ import {bindPower,bindAimWheel,spinFromPoint,cueShaftHit,rearAimAngle,wrapAngle}
 import {flyTable} from './table-transition.js';
 import {cueGeometry,tensionStage} from './cue-feel.js';
 import {cuePlacementDraft,initialCuePlacement} from './placement-guide.js';
+import {CUES,cueUnlocked,cueById,equippedCue,equipCue,toggleFavorite,paintCuePreview} from './cue-catalog.js';
 import {readLocalProgress,writeLocalProgress,recordLiveMatch,bestLegalRun,chooseRoom}
  from './player-progress.js';
 const $=id=>document.getElementById(id);
@@ -16,7 +17,7 @@ const progressAccess=readLocalProgress();
 let progress=progressAccess.progress;
 const newMatchId=()=>globalThis.crypto?.randomUUID?.()||
   `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-let matchEventId=null;
+let matchEventId=null,lockerSelected='house',newlyEarnedCueCount=0;
 let room=clamp(progress.selectedRoom,0,halls.length-1),mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
 let current=null,active='lobby',motion=true,placement=null,pointerMode=null,placeGesture=null;
 let settingsOrigin='lobby',updateWaiting=false,powerSide='left';
@@ -25,6 +26,9 @@ let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let previousShotAngles=[0,0],toastTimeout=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
+function syncEquippedCue(){const cue=equippedCue(progress);ambient.setCue(cue.id);table.setCue(cue.id);}
+function saveProgress(next){if(next===progress)return;progress=next;syncEquippedCue();
+ if(progressAccess.writable&&!writeLocalProgress(progress))progressAccess.writable=false;}
 const setText=(id,value)=>{$(id).textContent=value;};
 function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
 
@@ -43,8 +47,8 @@ function matchTurn(event){
  if(event.type==='win'){
   clearTableToast();
   if(current.kind==='match'&&current.over&&matchEventId){
-   const before=progress;
-   progress=recordLiveMatch(progress,{
+   const previouslyOwned=CUES.filter(cue=>cueUnlocked(progress,cue)).map(cue=>cue.id);
+   const updated=recordLiveMatch(progress,{
     kind:'match',source:'live',id:matchEventId,
     at:new Date().toISOString(),shots:current.shots,winner:current.winner,
     players:current.players,difficulty:current.difficulty,room,
@@ -56,8 +60,8 @@ function matchTurn(event){
    // Matches discarded via quit, restart, replay or exhibition can never
    // mint achievements; a finished match is recorded at most once.
    matchEventId=null;
-   if(progress!==before&&progressAccess.writable&&
-      !writeLocalProgress(progress))progressAccess.writable=false;
+   newlyEarnedCueCount=CUES.filter(cue=>cueUnlocked(updated,cue)&&!previouslyOwned.includes(cue.id)).length;
+   saveProgress(updated);
   }
   audio.play({type:event.practice||current.players==='local'||event.winner===0?'win':'loss'});
   return;
@@ -144,7 +148,8 @@ function turnUI(){if(!current)return;
   const resultKind=practice?'practice':finalReason==='eight-cleared'?'clean':'foul';
   $('matchResult').dataset.finish=resultKind;
   setText('matchResultDetail',practice?`${current.shots} SHOTS THIS SESSION`:
-    `${current.shots} SHOTS · ${resultKind==='clean'?'CLEAN 8-BALL':'FOUL ON THE 8'}`);
+     `${current.shots} SHOTS · ${resultKind==='clean'?'CLEAN 8-BALL':'FOUL ON THE 8'}`+
+     (newlyEarnedCueCount?` · ${newlyEarnedCueCount} ${newlyEarnedCueCount===1?'CUE':'CUES'} EARNED`:''));
  }
  const seconds=Math.ceil(current.shotRemaining);const pct=current.kind==='match'?`${Math.max(0,current.shotRemaining/45)*100}%`:'100%';
  for(const [i,id,clock] of [[0,'oneCard','clockOne'],[1,'twoCard','clockTwo']]){
@@ -165,7 +170,7 @@ function turnUI(){if(!current)return;
 }
 function begin(kind){
  if(active!=='lobby')return;
- lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();placeGesture=null;$('collectedBalls').replaceChildren();hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
+ lastScoreSignature='';newlyEarnedCueCount=0;matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();placeGesture=null;$('collectedBalls').replaceChildren();hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  current=new Game({kind,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',notify,onPocket:animatePocket,onTurn:matchTurn});
  matchEventId=kind==='match'?newMatchId():null;
@@ -212,7 +217,7 @@ function pauseMatch(){
 function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('pauseButton').focus();turnUI();}
 function resetMatch(){
  if(!current)return;current.reset();matchEventId=current.kind==='match'?newMatchId():null;lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();
- $('collectedBalls').replaceChildren();placement=null;placeGesture=null;angle=0;spin={x:0,y:0};syncAim();syncSpin();
+ newlyEarnedCueCount=0;$('collectedBalls').replaceChildren();placement=null;placeGesture=null;angle=0;spin={x:0,y:0};syncAim();syncSpin();
  setPower(50);powerControl.reset();$('powerTrack').classList.remove('impact');turnUI();
 }
 const pocketColors=['#f4f3e9','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d','#191918','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d'];
@@ -352,6 +357,11 @@ function onPull(amount){
 function setPower(n){power=clamp(Number(n)/100,.08,1);setText('powerValue',`${Math.round(power*100)}%`);}
 $('menuBtn').onclick=openMenu;$('closeMenu').onclick=()=>hide('clubMenu');
 $('menuPractice').onclick=()=>begin('practice');$('menuSettings').onclick=openSettings;
+$('menuLocker').onclick=openLocker;$('closeLocker').onclick=closeLocker;
+$('lockerEquip').onclick=()=>{saveProgress(equipCue(progress,lockerSelected));renderLocker();};
+$('lockerFavorite').onclick=()=>{saveProgress(toggleFavorite(progress,lockerSelected));renderLocker();};
+$('lockerGrid').onclick=event=>{const card=event.target.closest('[data-cue]');
+ if(!card)return;lockerSelected=card.dataset.cue;renderLocker();card.focus();};
 $('pauseButton').onclick=pauseMatch;$('resumeMatch').onclick=resumeMatch;
 $('pauseSettings').onclick=openSettings;$('rerack').onclick=()=>{resetMatch();resumeMatch();};$('quitMatch').onclick=quitToLobby;
 $('playAgain').onclick=()=>{if(active==='game'&&current?.over)resetMatch();};
@@ -458,6 +468,22 @@ function cancelTablePointer(e){
 $('gameCanvas').addEventListener('pointercancel',cancelTablePointer);
 $('gameCanvas').addEventListener('lostpointercapture',cancelTablePointer);
 window.addEventListener('keydown',e=>{
+  if(!$('lockerSheet').hidden){
+    const options=[...$('lockerGrid').querySelectorAll('[data-cue]')];
+    if(e.key==='Escape'){e.preventDefault();closeLocker();return;}
+    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&document.activeElement?.dataset.cue){
+      e.preventDefault();const index=CUES.findIndex(cue=>cue.id===document.activeElement.dataset.cue);
+      const step=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:e.key==='ArrowUp'?-3:3;
+      const card=options[(index+step+CUES.length)%CUES.length];lockerSelected=card.dataset.cue;renderLocker();card.focus();return;
+    }
+    if(e.key==='Tab'){
+      const focusable=[...$('lockerSheet').querySelectorAll('button:not(:disabled)')];
+      const first=focusable[0],last=focusable.at(-1);
+      if(e.shiftKey&&document.activeElement===first){last.focus();e.preventDefault();}
+      else if(!e.shiftKey&&document.activeElement===last){first.focus();e.preventDefault();}
+    }
+    return;
+  }
   if(e.key==='Escape'){if(!$('spinSheet').hidden){closeSpin();return;}if(!$('settingsSheet').hidden)closeSettings();else if(!$('setupSheet').hidden)closeSetup();else if(!$('clubMenu').hidden)hide('clubMenu');else if(active==='paused')resumeMatch();else if(active==='game')pauseMatch();return;}
   if(!$('settingsSheet').hidden||!$('setupSheet').hidden||!$('clubMenu').hidden||!$('spinSheet').hidden)return;
   if(active!=='game'||['INPUT','BUTTON','TEXTAREA'].includes(document.activeElement?.tagName)&&document.activeElement?.type==='range')return;
@@ -482,7 +508,7 @@ window.addEventListener('pagehide',()=>audio.suspend());
  document.addEventListener('visibilitychange',()=>{if(document.hidden)audio.suspend();else audio.resume();});
  try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';}catch{}
  syncPowerSide();
-syncSpin();
+syncSpin();syncEquippedCue();
 applyRoom();refreshMenu();hide('gameScreen');
 let previous=performance.now(),acc=0,uiTimer=0;
 function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previous)/1000,.05);previous=now;
