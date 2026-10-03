@@ -64,7 +64,18 @@ with sync_playwright() as p:
         page.locator('#nextRoom').click()
         assert page.locator('#roomPlaque').inner_text() == '1927', 'room history did not update'
         assert page.locator('#roomArt').inner_text() == 'THE FOUNDRY', 'framed art did not update'
-        page.locator('#prevRoom').click()
+        page.locator('#nextRoom').click()
+        assert page.locator('#roomArt').inner_text() == 'THE WINTERGARDEN'
+        assert page.locator('#roomPlaque').inner_text() == '1938'
+        if width in (1280,568):
+            page.screenshot(path=str((root / 'screenshots' / f'wintergarden-{width}x{height}.png').resolve()))
+        page.locator('#nextRoom').click()
+        assert page.locator('#roomArt').inner_text() == 'THE AFTERHOURS'
+        assert page.locator('#roomPlaque').inner_text() == '1964'
+        if width in (1280,568):
+            page.screenshot(path=str((root / 'screenshots' / f'afterhours-{width}x{height}.png').resolve()))
+        for _ in range(3): page.locator('#prevRoom').click()
+        assert page.locator('#roomArt').inner_text() == 'THE OBSERVATORY'
         page.screenshot(path=str((root / 'screenshots' / f'menu-{width}x{height}.png').resolve()))
         # Verify actual pointer hit targets, not force-click bypasses.
         if width<900:
