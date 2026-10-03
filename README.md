@@ -6,13 +6,13 @@ An independent, lightweight browser pool game. The Clubhouse rebuild follows the
 
 ## Available now
 
-- Responsive Clubhouse inspired by the provided mockup: three tables, working room controls, live AI exhibition, Watch, playable Quick Match vs Rookie or Club Pro, local pass-and-play, and free Practice.
+- Responsive Clubhouse inspired by the provided mockup: five playable tables, working room controls, live AI exhibition, Watch, playable Quick Match vs Rookie or Club Pro, local pass-and-play, and free Practice.
 - One active gameplay camera: top-down 2D. The live perspective lobby exhibition becomes that same physical table in a seamless rotation/zoom/rack-assembly transition. The layout works in both device orientations without blocking play.
 - Fixed-step simulation (240 Hz) with independent ball positions, bounded equal-and-opposite collision impulses, a simplified sliding-to-rolling transition, pocket mouths and jaw guards, side spin, approximate follow/draw, event-based audio and impact rings.
 - Landscape-first match screen with two-player HUD, remaining-ball markers, full-length cue and collision guideline. Grab and rotate the **shaft behind the cue ball**, not the guide in front; use the separate fine-aim wheel, two-axis spin and safe pull-down power bar. Ball-in-hand offers a visible ghost cue ball, tap/confirm or drag placement and keyboard nudging.
 - Explicit seeds for reproducible rack / opponent test cases, deep-copied simulation snapshots, separated casual rulings and append-only shot / placement / ruling history. Full cinematic replay has not shipped.
 - **Casual** 8-ball rules (no called shots) with explainable fouls, snapshotted pre-shot group ownership and protected 8-ball outcomes. Rookie uses geometric selection; Club Pro evaluates a bounded set of full-physics predictions. Tournament rules and unfinished modes remain disabled.
-- Distinctive walnut/sage, smoked oak/blue and dark ash/olive tables with detailed six-pocket rendering, rail sights, cushion seams, subtly textured cloth and cached static surfaces.
+- Distinctive walnut/sage, smoked oak/blue, dark ash/olive, pale oak/jade and black lacquer/mulberry tables with detailed six-pocket rendering, rail sights, cushion seams, subtly textured cloth and cached static surfaces.
 - Camera-lift entrance with a crisp high-resolution board, curved live-ball gathering and moving spotlight; reduced-motion bypass remains available.
 - Highly visible cue recoil during power pull, tension stages and optional brief vibration ticks. The spring-loaded control and power-aware layered contact audio provide shot feedback without screen shake.
 - Reduced-motion-aware table entrance, sound and tactile preferences, viewport-fit mobile and landscape layouts. Elevated/surface cameras and orientation selection are visible but disabled as coming soon.
@@ -37,7 +37,8 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/render.js`: overhead/pitched 2D table, cached surfaces, aiming and cue animation.
 - `src/table-finishes.js`: shared table construction plus hall-specific materials (visual only; physics unchanged).
 - `src/cue-feel.js`: pure cue travel, contact stroke timing and tactile stage math.
-- `src/audio.js`: gesture-unlocked synthesized sounds.
+- `src/audio.js`: gesture-unlocked physical impact and restrained result sounds.
+- `src/player-progress.js`: versioned offline match and room-choice ledger (no network tracking).
 - `src/main.js`: app wiring, responsive controls, lifecycle.
 - `src/touch-controls.js`: tested rear-shaft hit testing, pointer pull, wheel aim and spin-contact math.
 - `src/table-transition.js`: live-to-play table motion and deterministic rack assembly.
@@ -45,19 +46,19 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/feel.css`: responsive, motion-aware power rail feedback.
 - `src/style.css`: viewport-contained presentation; design tokens.
 
-See the [active roadmap](docs/ROADMAP.md), [measured full-rack reliability results](docs/P2-1-RELIABILITY-LAB.md), [pool-game engagement research](docs/ENGAGEMENT-RESEARCH.md), [P2 rules architecture](docs/P2-RULES-ARCHITECTURE.md) and [physics/visual research](docs/RESEARCH.md). Focused Node regression tests cover input geometry, cue loading and collision physics; Playwright browser smoke checks the live entrance, all three hall palettes, and responsive mouse/touch input. Do not bolt future game modes into `main.js`: extract state machines and provide explicit tests.
+See the [active roadmap](docs/ROADMAP.md), [measured full-rack reliability results](docs/P2-1-RELIABILITY-LAB.md), [pool-game engagement research](docs/ENGAGEMENT-RESEARCH.md), [P2 rules architecture](docs/P2-RULES-ARCHITECTURE.md) and [physics/visual research](docs/RESEARCH.md). Focused Node regression tests cover input geometry, cue loading and collision physics; Playwright browser smoke checks the live entrance, all five hall palettes, and responsive mouse/touch input. Do not bolt future game modes into `main.js`: extract state machines and provide explicit tests.
 
 ## P2.1 progress and device limits
 
-Full-rack tests now include nine repeatable CPU matches, reversed seats,
+Full-rack tests now include 12 repeatable CPU matches, reversed seats,
 legal 8-ball completions and exact replay/history comparisons. Club Pro plans
 in bounded batches across animation frames and keeps its cue visible while
 aiming. Those are automated, non-rendered results; physical Android control
 comfort, screen-edge gestures and real phone frame timing are still open.
 
-## Upcoming: fair equipment and new rooms
+## Upcoming: fair equipment and room mastery
 
-The October 2 research pass moved **original cue choices/unlocks** and **two genuinely new room designs** earlier in the development order, following complete-match/real-device verification and shot feel. These features are **planned, not shipped**. Cues are proposed as skill-earned cosmetics with identical competitive physics; venue unlocks use actual authored challenges, not purchase pressure. See [research notes](docs/ENGAGEMENT-RESEARCH.md) and the [reordered roadmap](docs/ROADMAP.md).
+The October 2 research pass moved **original cue choices/unlocks** and **two genuinely new room designs** earlier in the development order, following complete-match/real-device verification and shot feel. Two new original venues are already playable alongside the original three. A local match ledger now tracks real finishes and remembers the chosen room. **Cue Locker/equippable art and challenge-locked mastery remain planned**, not shipped. Cues will have identical competitive physics; future venue unlocks require real authored challenges, not purchase pressure. See [research notes](docs/ENGAGEMENT-RESEARCH.md) and the [reordered roadmap](docs/ROADMAP.md).
 
 ## Recovery
 
