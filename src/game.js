@@ -180,7 +180,10 @@ export class Game {
        this.onTurn({type:'drill-end',kind:'drill',drillId:this.drillId,
          completed:complete,reason:grade.reason,shots:this.shots,
          evidence:{pots:[...shot.pots],potRecords:[...shot.potRecords]}});
-     }else this.notify('One more shot. Pick your angle.');
+     }else{
+       this.notify('One more shot. Pick your angle.');
+       this.onTurn({type:'drill-continue',kind:'drill',drillId:this.drillId,remaining:1});
+     }
      return;
    }
    if(this.kind==='practice'){
