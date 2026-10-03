@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Simulation,makeBall} from '../src/physics.js';
 import {createRandom} from '../src/random.js';
-import {candidateShots,chooseShot,previewShot,assessShot,chooseAiCuePlacement} from '../src/ai.js';
+import {candidateShots,chooseShot,previewShot,assessShot,chooseAiCuePlacement,createShotPlanner} from '../src/ai.js';
 import {Game} from '../src/game.js';
 
 function sparse(){
@@ -109,4 +109,36 @@ test('live CPU and benchmark share exactly the same real placement validation',(
    {x:expected.x,y:expected.y});
  assert.deepEqual(game.history.at(-1),
    {kind:'placement',x:expected.x,y:expected.y});
+});
+
+test('frame-sliced and synchronous Club Pro reach the identical seeded decision',()=>{
+ const sim=sparse(),before=sim.snapshot();
+ const synchronous=chooseShot(sim,'solids','club',createRandom(91));
+ const generator=createShotPlanner(sim,'solids','club',createRandom(91));
+ let state={done:false},frames=0;
+ while(!state.done&&frames++<45){
+   for(let step=0;step<240&&!state.done;step++)state=generator.next();
+ }
+ assert.equal(state.done,true,'planning exceeded its finite preview budget');
+ assert.deepEqual(state.value,synchronous);
+ assert.deepEqual(sim.snapshot(),before,'cooperative previews moved authoritative balls');
+});
+test('Club Pro live opponent yields frames while building the exact same shot',()=>{
+ const a=new Game({kind:'match',players:'cpu',difficulty:'club',seed:82});
+ const b=new Game({kind:'match',players:'cpu',difficulty:'club',seed:82});
+ for(const game of [a,b]){
+   game.turn=1;game.break=false;game.groups=['stripes','solids'];
+   game.sim=sparse();
+ }
+ const synchronous=chooseShot(b.sim,'solids','club',b.random);
+ a.update(.016);
+ assert.ok(a.planIterator,'live opponent should keep partial planning in progress');
+ assert.equal(a.previewShot,null,'do not advertise an unfinished predicted shot');
+ for(let i=0;i<60&&!a.previewShot;i++)a.update(.016);
+ assert.ok(a.previewShot,'real opponent did not finish bounded previews');
+ assert.deepEqual(a.previewShot,synchronous,
+   'split rendering frames must not change outcomes or consume different RNG');
+ assert.equal(a.shots,0,'the opponent must not fire before the pre-shot cue animation');
+ a.reset();
+ assert.equal(a.planIterator,null,'rerack must discard any old planning state');
 });
