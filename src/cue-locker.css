@@ -1,0 +1,78 @@
+/* The Cue Locker is a true single-screen feature, not a scrollable store. */
+#app .locker-sheet{position:absolute;z-index:38;inset:0;display:grid;place-items:center;
+ padding:max(9px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right))
+ max(9px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));
+ background:rgba(3,10,8,.94);backdrop-filter:blur(11px);overflow:hidden;color:#f3efe4}
+#app .locker-sheet[hidden]{display:none!important}
+#app .locker-panel{width:min(880px,100%);height:min(486px,100%);min-height:0;overflow:hidden;
+ border:1px solid #d9bb814f;border-radius:15px;background:linear-gradient(135deg,#233629,#0e1914 70%);
+ box-shadow:0 24px 90px #0009;padding:clamp(9px,2dvh,20px);display:grid;
+ grid-template-rows:auto minmax(0,1fr);gap:clamp(7px,1.5dvh,16px)}
+#app .locker-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;min-width:0}
+#app .locker-heading small,#app .locker-info small{color:#dbbf89;font:800 clamp(8px,1.5dvh,10px) system-ui;letter-spacing:.13em}
+#app .locker-heading h2{font:normal clamp(23px,4.5dvh,37px)/1.07 Georgia,serif;
+ margin:2px 0 0;letter-spacing:-.025em}
+#app #closeLocker{flex:none;border:1px solid #e1c78d6b;background:#273e32;color:#f8eed9;
+ padding:clamp(7px,1.5dvh,11px) clamp(11px,1.8vw,19px);font:850 10px system-ui;
+ letter-spacing:.13em;border-radius:999px}
+#app .locker-layout{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,.94fr);
+ gap:clamp(9px,1.6vw,22px);min-width:0;min-height:0}
+#app .locker-collection{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ grid-template-rows:repeat(2,minmax(0,1fr));gap:clamp(5px,1.1dvh,11px);min-height:0;min-width:0}
+#app .locker-card{min-width:0;min-height:0;overflow:hidden;border:1px solid #e8d4a833;border-radius:9px;
+ background:linear-gradient(148deg,#263a30,#16241f 86%);color:#e9e4d7;display:flex;
+ flex-direction:column;justify-content:center;align-items:stretch;text-align:left;
+ gap:clamp(2px,.6dvh,6px);padding:clamp(6px,1.5dvh,12px);transition:border-color .16s,background .16s}
+#app .locker-card[aria-pressed=true]{border-color:#e9c68c;background:#314739;box-shadow:inset 0 0 0 1px #f5d39162}
+#app .locker-card:hover{border-color:#e0c491}
+#app .locker-card-name{font:normal clamp(11px,1.75dvh,16px)/1.04 Georgia,serif;white-space:nowrap;
+ overflow:hidden;text-overflow:ellipsis}
+#app .locker-card-status{color:#b9b9a9;font:750 clamp(7px,1.1dvh,9px)/1.12 system-ui;letter-spacing:.04em}
+#app .locker-card.locked{color:#cdc6b8;opacity:.78}
+#app .locker-mini-cue{display:block;position:relative;height:clamp(9px,2.4dvh,18px);min-height:7px;width:96%;
+ transform:rotate(-14deg);transform-origin:center;background:linear-gradient(90deg,
+ var(--cue-butt) 0 11%,var(--cue-wrap) 12% 39%,var(--cue-metal) 40% 42%,
+ var(--cue-butt) 43% 45%,var(--cue-shaft) 47% 88%,#f5e9cc 89% 96%,var(--cue-tip) 97% 100%);
+ clip-path:polygon(0 15%,6% 0,43% 24%,90% 39%,100% 44%,100% 65%,90% 66%,43% 80%,6% 100%,0 82%);
+ filter:drop-shadow(0 2px 2px #0009)}
+#app .locker-inspect{display:flex;flex-direction:column;justify-content:center;min-width:0;min-height:0;
+ border:1px solid #e1c68c30;background:#0c1814ac;border-radius:11px;padding:clamp(8px,1.5dvh,15px)}
+#app .locker-preview-frame{height:clamp(46px,16dvh,130px);flex:0 1 auto;border-radius:7px;
+ border:1px solid #e2c79d22;background:radial-gradient(ellipse at 50% 35%,#34504077,#0b1613 73%);
+ display:grid;place-items:center;min-height:0}
+#app #lockerPreview{display:block;width:100%;height:100%;object-fit:contain}
+#app .locker-info{display:flex;justify-content:space-between;align-items:end;gap:7px;min-height:0;flex:1}
+#app .locker-info>div:first-child{min-width:0;flex:1}
+#app #lockerName{font:normal clamp(19px,3.8dvh,32px)/1.04 Georgia,serif;margin:clamp(2px,.5dvh,6px) 0}
+#app .locker-info p{font-size:clamp(9px,1.35dvh,12px);line-height:1.25;margin:clamp(2px,.65dvh,6px) 0;
+ color:#cfccbd}
+#app #lockerRequirement{color:#dec295;font-weight:720}
+#app .locker-actions{flex:0 0 auto;display:flex;gap:5px;align-items:center}
+#app .locker-actions button{border:1px solid #ddbc85a8;border-radius:6px;padding:9px 11px;
+ min-height:34px;background:#e0c08a;color:#1e2923;font:900 9px system-ui;letter-spacing:.06em}
+#app #lockerFavorite{background:transparent;color:#e6c58e;font-size:17px;padding:6px 10px}
+#app .locker-actions button:disabled{opacity:.4}
+#app .locker-fairness{margin:clamp(2px,.6dvh,7px) 0 0;font-size:clamp(8px,1.05dvh,10px);
+ color:#b7b7a6;letter-spacing:.035em}
+@media(max-height:370px){
+ #app .locker-panel{padding:7px 9px;gap:5px}
+ #app .locker-card{padding:5px 7px;gap:2px}
+ #app .locker-heading h2{font-size:21px}
+ #app .locker-inspect{padding:6px 9px}
+ #app .locker-preview-frame{height:52px}
+ #app .locker-info p{margin:2px 0;font-size:9px}
+ #app #lockerName{font-size:19px;margin:1px 0}
+ #app .locker-actions button{min-height:29px;padding:6px 8px}
+}
+@media(max-width:650px) and (orientation:portrait){
+ #app .locker-panel{height:min(660px,100%);padding:clamp(12px,3vw,20px)}
+ #app .locker-layout{grid-template-columns:1fr;grid-template-rows:minmax(210px,1fr) minmax(0,.82fr);
+  gap:clamp(9px,1.6dvh,15px)}
+ #app .locker-card{padding:clamp(8px,2.4vw,13px)}
+ #app .locker-inspect{padding:12px}
+ #app .locker-preview-frame{height:clamp(72px,11dvh,110px)}
+ #app #lockerName{font-size:clamp(25px,5vw,32px)}
+}
+@media(prefers-reduced-motion:reduce){
+ #app .locker-card{transition:none}
+}
