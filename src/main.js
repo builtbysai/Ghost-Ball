@@ -235,6 +235,41 @@ function confirmLocalReset(){
  setText('recordMessage','Local match history and equipment progress cleared.');
  $('resetRecord').focus();
 }
+function ensureChallengeCards(){
+ if($('challengeCards').children.length)return;
+ for(const drill of SKILL_DRILLS){
+  const button=document.createElement('button');button.type='button';button.className='challenge-card';
+  button.dataset.drill=drill.id;
+  const top=document.createElement('span');
+  const tag=document.createElement('span');tag.className='challenge-card-tag';
+  tag.textContent='ROOM 0'+(drill.room+1)+' · '+drill.subtitle.toUpperCase();
+  const title=document.createElement('span');title.className='challenge-card-name';title.textContent=drill.name;
+  top.append(tag,title);
+  const instruction=document.createElement('span');instruction.className='challenge-card-rule';
+  instruction.textContent=drill.instruction;
+  const status=document.createElement('span');status.className='challenge-card-status';
+  button.append(top,instruction,status);$('challengeCards').append(button);
+ }
+}
+function renderChallenges(){
+ ensureChallengeCards();
+ for(const button of $('challengeCards').children){
+  const drill=skillDrillById(button.dataset.drill),best=progress.drills?.[drill.id];
+  button.querySelector('.challenge-card-status').textContent=best?
+   'COMPLETED · BEST '+best+(best===1?' SHOT':' SHOTS')+' ↗':'PLAY CHALLENGE →';
+  button.setAttribute('aria-label',drill.name+', '+drill.instruction+', '+
+   (best?'completed, best '+best+' shots':'not yet completed'));
+ }
+}
+function openChallenges(){
+ if(active!=='lobby')return;
+ hide('clubMenu');renderChallenges();show('challengeSheet');
+ $('challengeCards').querySelector('button')?.focus();
+}
+function closeChallenges(){
+ if($('challengeSheet').hidden)return;
+ hide('challengeSheet');show('clubMenu');$('menuChallenges').focus();
+}
 function openMenu(){show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){setText('matchSummary',mode==='practice'?'Open practice table':rival==='local'?'8-Ball · Two players':`8-Ball vs ${rival==='rookie'?'Rookie':'Club Pro'}`);
   setText('playSubtitle',mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':'CASUAL 8-BALL · NO ENTRY FEE');
@@ -500,6 +535,11 @@ function onPull(amount){
 function setPower(n){power=clamp(Number(n)/100,.08,1);setText('powerValue',`${Math.round(power*100)}%`);}
 $('menuBtn').onclick=openMenu;$('closeMenu').onclick=()=>hide('clubMenu');
 $('menuPractice').onclick=()=>begin('practice');$('menuSettings').onclick=openSettings;
+$('menuChallenges').onclick=openChallenges;$('closeChallenges').onclick=closeChallenges;
+$('challengeCards').onclick=event=>{
+ const choice=event.target.closest('[data-drill]');
+ if(choice){hide('challengeSheet');begin('drill',choice.dataset.drill);}
+};
 $('menuLocker').onclick=openLocker;$('closeLocker').onclick=closeLocker;
 $('lockerEquip').onclick=()=>{saveProgress(equipCue(progress,lockerSelected));renderLocker();};
 $('lockerFavorite').onclick=()=>{saveProgress(toggleFavorite(progress,lockerSelected));renderLocker();};
@@ -621,6 +661,16 @@ function cancelTablePointer(e){
 $('gameCanvas').addEventListener('pointercancel',cancelTablePointer);
 $('gameCanvas').addEventListener('lostpointercapture',cancelTablePointer);
 window.addEventListener('keydown',e=>{
+  if(!$('challengeSheet').hidden){
+   if(e.key==='Escape'){e.preventDefault();closeChallenges();return;}
+   if(e.key==='Tab'){
+    const buttons=[...$('challengeSheet').querySelectorAll('button')];
+    const first=buttons[0],last=buttons.at(-1);
+    if(e.shiftKey&&document.activeElement===first){last.focus();e.preventDefault();}
+    else if(!e.shiftKey&&document.activeElement===last){first.focus();e.preventDefault();}
+   }
+   return;
+  }
   if(!$('recordSheet').hidden){
    if(e.key==='Escape'){e.preventDefault();closeRecord();return;}
    if(e.key==='Tab'){
