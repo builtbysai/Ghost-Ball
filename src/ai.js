@@ -182,7 +182,8 @@ export function* createShotPlanner(sim,group='open',difficulty='rookie',random=c
    return {angle:selected.angle+(random()-.5)*.004,power:selected.power,
      target:selected.target,pocket:selected.pocket,
      predictedLegal:best.verdict.legalFirst,
-     predictedPot:best.verdict.made,plan:'preview'};
+     predictedPot:best.verdict.made,predictedComplete:best.verdict.complete,
+     predictedEarlyEight:best.verdict.earlyEight,plan:'preview'};
   }
   const range=Math.min(2,candidates.length);
   const selected=candidates[Math.floor(random()*range)];
