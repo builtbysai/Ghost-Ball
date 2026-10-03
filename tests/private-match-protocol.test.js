@@ -60,5 +60,5 @@ test('wrong sender, epochs, power/spin, versions and stale states never move bal
 test('clock handoff changes the authoritative turn and invalidates old pending shots',()=>{
  const g=fresh(),old=intent(g);
  assert.equal(g.expireShotClock(),true);
- assert.equal(adjudicateShotCommand(g,old,{...context(),turnEpoch:1}).reason,'wrong-seat');
+ assert.equal(adjudicateShotCommand(g,old,{...context(),turnEpoch:1}).reason,'stale-turn');
 });
