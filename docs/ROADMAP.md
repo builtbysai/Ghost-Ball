@@ -7,7 +7,7 @@ Status: 2026-10-02 · v0.6 table materials, staged entrance and tactile power lo
 
 ## Active delivery roadmap
 
-See [validated findings and prioritized exit criteria](FINDINGS-VALIDATION.md). This document retains earlier build history, including superseded experimental milestones. **Active order: P0 gameplay reliability (shipped in #12) → P1.1 off-screen shots and ball-in-hand (shipped in #14; real Android edge-gesture validation pending) → P2 pure casual referee and seeded AI planning (in progress; tournament flow and device benchmarks next) → P3 polish/local progression → P4 online → P5 extra modes and cameras.** Do not treat unchecked historical items below as higher priority than the current phases.
+See [validated findings and prioritized exit criteria](FINDINGS-VALIDATION.md). This document retains earlier build history, including superseded experimental milestones. **Active order: P0 gameplay reliability (shipped in #12) → P1.1 off-screen shots and ball-in-hand (shipped in #14; real Android edge-gesture validation pending) → P2 casual referee and seeded CPU planning (shipped in #15; full-rack/device benchmarks and separate tournament mode next) → P3 polish/local progression → P4 online → P5 extra modes and cameras.** Do not treat unchecked historical items below as higher priority than the current phases.
 
 ## Product principles
 
