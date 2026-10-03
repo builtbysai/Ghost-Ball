@@ -3,6 +3,7 @@
  * record is never silently replaced by this version of the game.
  */
 import {groupContains} from './casual-rules.js';
+import {skillDrillById,gradeSkillDrill} from './skill-drills.js';
 
 export const PROGRESS_KEY='ghostball-progress-v1';
 export const PROGRESS_VERSION=1;
@@ -12,7 +13,7 @@ const FINISH_REASONS=new Set(['eight-cleared','early-eight','scratch-on-eight','
 export function freshProgress(){
  return {version:PROGRESS_VERSION,matchesPlayed:0,vsCpuWins:0,vsCpuLosses:0,
   localMatches:0,cleanWins:0,bestRun:0,selectedCue:'house',selectedRoom:1,favorites:[],
-  achievements:[],records:[]};
+  achievements:[],records:[],drills:{},drillEvents:[]};
 }
 function validProgress(p){
  const count=n=>Number.isSafeInteger(n)&&n>=0;
@@ -24,6 +25,11 @@ function validProgress(p){
   (p.favorites===undefined||Array.isArray(p.favorites)&&p.favorites.length<=6&&
    p.favorites.every(id=>typeof id==='string'&&id.length<=64))&&
   Array.isArray(p.achievements)&&p.achievements.every(id=>typeof id==='string')&&
+  (p.drills===undefined||(p.drills&&typeof p.drills==='object'&&!Array.isArray(p.drills)&&
+   Object.entries(p.drills).every(([id,shots])=>skillDrillById(id)&&count(shots)&&
+   shots>=1&&shots<=skillDrillById(id).attempts)))&&
+  (p.drillEvents===undefined||(Array.isArray(p.drillEvents)&&p.drillEvents.length<=48&&
+   p.drillEvents.every(id=>typeof id==='string'&&id.length>0&&id.length<=128)))&&
   Array.isArray(p.records)&&p.records.length<=RECORD_LIMIT&&
   p.records.every(e=>e&&typeof e.id==='string'&&e.id.length<=128);
 }
@@ -42,7 +48,8 @@ export function readLocalProgress(storage=()=>globalThis.localStorage){
    return {progress:freshProgress(),writable:false,reason:'invalid-data'};
   // Existing version-one ledgers predate favorites; safely default only that
   // optional cosmetic field without touching saved match records.
-  return {progress:{...parsed,favorites:parsed.favorites||[]},writable:true,reason:null};
+  return {progress:{...parsed,favorites:parsed.favorites||[],drills:parsed.drills||{},
+    drillEvents:parsed.drillEvents||[]},writable:true,reason:null};
  }catch{
   return {progress:freshProgress(),writable:false,reason:'unavailable'};
  }
@@ -113,6 +120,25 @@ export function recordLiveMatch(previous,event){
   bestRun:Math.max(previous.bestRun,event.bestRun),
   achievements:[...achievements],
   records:[compact,...previous.records].slice(0,RECORD_LIMIT)};
+}
+/** A proof of actual settled target-pocket physics, minted by Game.resolve,
+ * never by clicking a challenge card, watching the lobby or free Practice.
+ * Local achievements are personal convenience, not anti-cheat assertions.
+ */
+export function recordLiveDrill(previous,event){
+ const drill=skillDrillById(event?.drillId);
+ if(!validProgress(previous)||!drill||event?.kind!=='drill'||event.source!=='live'||
+  event.completed!==true||typeof event.id!=='string'||!event.id||event.id.length>128||
+  typeof event.at!=='string'||!/^(19|20)\d\d-\d\d-\d\dT/.test(event.at)||
+  !Number.isInteger(event.shots)||event.shots<1||event.shots>drill.attempts)
+  return previous;
+ const grade=gradeSkillDrill(event.drillId,{shots:event.shots,shot:event.evidence});
+ if(grade.status!=='completed'||(previous.drillEvents||[]).includes(event.id))return previous;
+ const best=previous.drills?.[drill.id];
+ const drills={...(previous.drills||{}),[drill.id]:best?Math.min(best,event.shots):event.shots};
+ const achievements=[...new Set([...previous.achievements,'drill-'+drill.id])];
+ return {...previous,drills,achievements,
+  drillEvents:[event.id,...(previous.drillEvents||[])].slice(0,48)};
 }
 export function chooseRoom(previous,room,maxRooms){
  if(!validProgress(previous)||!Number.isInteger(room)||room<0||
