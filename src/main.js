@@ -12,6 +12,7 @@ import {readLocalProgress,writeLocalProgress,recordLiveMatch,bestLegalRun,choose
  freshProgress,exportLocalProgress,resetLocalProgress,recordLiveDrill} from './player-progress.js';
 import {SKILL_DRILLS,skillDrillById} from './skill-drills.js';
 import {recordSummary} from './record-summary.js';
+import {decisiveShot} from './match-finish.js';
 const $=id=>document.getElementById(id);
 const all=(query)=>[...document.querySelectorAll(query)];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -81,6 +82,8 @@ function matchTurn(event){
    saveProgress(updated);
   }
   audio.play({type:event.practice||current.players==='local'||event.winner===0?'win':'loss'});
+  turnUI(); // Show result before keyboard focus is transferred.
+  $('playAgain').focus();
   return;
  }
  const local=current.players==='local',human=event.turn===0;
@@ -318,6 +321,16 @@ function turnUI(){if(!current)return;
   const finalReason=current.history.at(-1)?.reason;
   const resultKind=practice?'practice':finalReason==='eight-cleared'?'clean':'foul';
   $('matchResult').dataset.finish=resultKind;
+  const last=drill||practice?null:decisiveShot(current.history);
+  $('resultLastShot').hidden=!last;
+  if(last)setText('resultLastShotText',last.label);
+  // Never spotlight an eight unless the referee recorded a legal pot.
+  $('tableArea').dataset.finishSpot=last?.clean&&last.pocket!==null?'yes':'no';
+  if(last?.clean&&last.pocket!==null){
+   const [px,py]=POCKETS[last.pocket], [sx,sy]=table.project(px,py);
+   $('tableArea').style.setProperty('--finish-x',`${clamp(sx/Math.max(1,table.w)*100,0,100)}%`);
+   $('tableArea').style.setProperty('--finish-y',`${clamp(sy/Math.max(1,table.h)*100,0,100)}%`);
+  }
    if(drill){
     const best=progress.drills?.[current.drillId];
     setText('matchResultDetail',current.drillOutcome==='completed'?
@@ -554,7 +567,7 @@ $('lockerGrid').onclick=event=>{const card=event.target.closest('[data-cue]');
  if(!card)return;lockerSelected=card.dataset.cue;renderLocker();card.focus();};
 $('pauseButton').onclick=pauseMatch;$('resumeMatch').onclick=resumeMatch;
 $('pauseSettings').onclick=openSettings;$('rerack').onclick=()=>{resetMatch();resumeMatch();};$('quitMatch').onclick=quitToLobby;
-$('playAgain').onclick=()=>{if(active==='game'&&current?.over)resetMatch();};
+$('playAgain').onclick=()=>{if(active==='game'&&current?.over){resetMatch();$('gameCanvas').focus();}};
 $('resultMenu').onclick=quitToLobby;
 $('closeSettings').onclick=closeSettings;
 $('openRecord').onclick=openRecord;$('closeRecord').onclick=closeRecord;
