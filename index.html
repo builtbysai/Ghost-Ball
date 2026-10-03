@@ -2,7 +2,7 @@
 <html lang="en"><head>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
  <meta name="theme-color" content="#0b1510"><meta name="description" content="Ghost Ball. A beautifully tactile billiards clubhouse.">
- <title>Ghost Ball | The Clubhouse</title><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon-192.png"> <script type="importmap">{"imports":{"./src/ai.js":"./src/ai.js?v=ghostball-20261002-p4-ledger-1","./src/casual-rules.js":"./src/casual-rules.js?v=ghostball-20261002-p4-ledger-1","./src/audio.js":"./src/audio.js?v=ghostball-20261002-p4-ledger-1","./src/cue-feel.js":"./src/cue-feel.js?v=ghostball-20261002-p4-ledger-1","./src/game.js":"./src/game.js?v=ghostball-20261002-p4-ledger-1","./src/physics.js":"./src/physics.js?v=ghostball-20261002-p4-ledger-1","./src/random.js":"./src/random.js?v=ghostball-20261002-p4-ledger-1","./src/render.js":"./src/render.js?v=ghostball-20261002-p4-ledger-1","./src/table-finishes.js":"./src/table-finishes.js?v=ghostball-20261002-p4-ledger-1","./src/table-transition.js":"./src/table-transition.js?v=ghostball-20261002-p4-ledger-1","./src/touch-controls.js":"./src/touch-controls.js?v=ghostball-20261002-p4-ledger-1"}}</script><link rel="stylesheet" href="src/style.css?v=ghostball-20261002-p4-ledger-1"><link rel="stylesheet" href="src/landscape.css?v=ghostball-20261002-p4-ledger-1"><link rel="stylesheet" href="src/transition.css?v=ghostball-20261002-p4-ledger-1"><link rel="stylesheet" href="src/feel.css?v=ghostball-20261002-p4-ledger-1"><link rel="stylesheet" href="src/polish.css?v=ghostball-20261002-p4-ledger-1"><link rel="stylesheet" href="src/responsive-ui.css?v=ghostball-20261002-p4-ledger-1"><link rel="manifest" href="manifest.webmanifest">
+ <title>Ghost Ball | The Clubhouse</title><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon-192.png"> <script type="importmap">{"imports":{"./src/ai.js":"./src/ai.js?v=ghostball-20261002-p4-cues-1","./src/casual-rules.js":"./src/casual-rules.js?v=ghostball-20261002-p4-cues-1","./src/audio.js":"./src/audio.js?v=ghostball-20261002-p4-cues-1","./src/cue-feel.js":"./src/cue-feel.js?v=ghostball-20261002-p4-cues-1","./src/game.js":"./src/game.js?v=ghostball-20261002-p4-cues-1","./src/physics.js":"./src/physics.js?v=ghostball-20261002-p4-cues-1","./src/random.js":"./src/random.js?v=ghostball-20261002-p4-cues-1","./src/render.js":"./src/render.js?v=ghostball-20261002-p4-cues-1","./src/table-finishes.js":"./src/table-finishes.js?v=ghostball-20261002-p4-cues-1","./src/table-transition.js":"./src/table-transition.js?v=ghostball-20261002-p4-cues-1","./src/touch-controls.js":"./src/touch-controls.js?v=ghostball-20261002-p4-cues-1"}}</script><link rel="stylesheet" href="src/style.css?v=ghostball-20261002-p4-cues-1"><link rel="stylesheet" href="src/landscape.css?v=ghostball-20261002-p4-cues-1"><link rel="stylesheet" href="src/transition.css?v=ghostball-20261002-p4-cues-1"><link rel="stylesheet" href="src/feel.css?v=ghostball-20261002-p4-cues-1"><link rel="stylesheet" href="src/polish.css?v=ghostball-20261002-p4-cues-1"><link rel="stylesheet" href="src/responsive-ui.css?v=ghostball-20261002-p4-cues-1"><link rel="stylesheet" href="src/cue-locker.css?v=ghostball-20261002-p4-cues-1"><link rel="manifest" href="manifest.webmanifest">
 </head><body>
 <main id="app">
  <div class="room" aria-hidden="true"><div class="room-wall"></div><div class="frames"><div class="art" id="roomArt">THE PARLOR</div><div class="art badge-art" id="roomPlaque">1893</div></div><div class="wainscot"></div><div class="room-floor"></div><div class="room-lamp"><span></span></div><div class="light-beam"></div></div>
@@ -21,7 +21,22 @@
 
   <p class="footnote">Casual 8-ball is the first playable ruleset. Tournament called-shot rules and more formats are on the roadmap.</p>
  </section>
- <section class="club-menu" id="clubMenu" aria-label="Club menu" hidden><header><div><small>GHOST BALL</small><h2>The Clubhouse</h2></div><button id="closeMenu" aria-label="Close menu" class="round">×</button></header><div class="menu-items"><button id="menuPractice"><span>◌</span> Practice <small>WORKSHOP</small></button><button disabled><span>✧</span> Challenges <small>COMING LATER</small></button><button disabled><span>◎</span> Locker <small>COMING LATER</small></button><button id="menuSettings"><span>⚙</span> Settings <small>CONTROLS & AUDIO</small></button></div></section>
+ <section class="club-menu" id="clubMenu" aria-label="Club menu" hidden><header><div><small>GHOST BALL</small><h2>The Clubhouse</h2></div><button id="closeMenu" aria-label="Close menu" class="round">×</button></header><div class="menu-items"><button id="menuPractice"><span>◌</span> Practice <small>WORKSHOP</small></button><button disabled><span>✧</span> Challenges <small>COMING LATER</small></button><button id="menuLocker" aria-haspopup="dialog"><span>◎</span> Cue Locker <small>YOUR EQUIPMENT</small></button><button id="menuSettings"><span>⚙</span> Settings <small>CONTROLS & AUDIO</small></button></div></section>
+ <section class="locker-sheet" id="lockerSheet" role="dialog" aria-modal="true" aria-label="Cue Locker" aria-labelledby="lockerTitle" hidden>
+  <div class="locker-panel">
+   <header class="locker-heading"><div><small>THE CLUBHOUSE / EQUIPMENT</small><h2 id="lockerTitle">Cue Locker</h2></div><button id="closeLocker" type="button">DONE <span aria-hidden="true">✓</span></button></header>
+   <div class="locker-layout">
+    <div class="locker-collection" id="lockerGrid" role="group" aria-label="Preview a cue"></div>
+    <section class="locker-inspect" aria-label="Selected cue details">
+     <div class="locker-preview-frame"><canvas id="lockerPreview" width="640" height="150" aria-label="Full-length cosmetic cue preview" role="img"></canvas></div>
+     <div class="locker-info"><div><small id="lockerStatus">READY</small><h3 id="lockerName">House Maple</h3><p id="lockerDescription"></p><p id="lockerRequirement"></p></div>
+      <div class="locker-actions"><button id="lockerEquip" type="button">EQUIP</button><button id="lockerFavorite" type="button" aria-pressed="false" aria-label="Mark cue as favorite">☆</button></div>
+     </div>
+     <p class="locker-fairness">Every cue has identical shot physics.</p>
+    </section>
+   </div>
+  </div>
+ </section>
  <section class="settings-sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-label="Game preferences" hidden>
   <div class="prefs-panel">
    <header class="prefs-heading"><div><small>GHOST BALL / GAME OPTIONS</small><h2>Preferences</h2></div><button id="closeSettings" class="close-sheet">DONE <span aria-hidden="true">✓</span></button></header>
@@ -85,4 +100,4 @@
    <section class="spin-sheet" id="spinSheet" role="dialog" aria-modal="true" aria-label="Cue ball spin" hidden><div class="spin-head"><h2>Cue-ball spin</h2><button id="spinDone" aria-label="Done adjusting spin">DONE</button></div><p>Drag the red contact point to adjust spin.</p><div class="spin-ball" id="spinBall" role="img" aria-label="Drag to choose side spin, follow or draw"><i id="spinDot"></i></div><div id="spinLabel" class="spin-description">CENTER</div><button id="spinReset">RESET TO CENTER</button></section>
  </section>
  <div id="updateNotice" class="update-notice" role="status" aria-live="polite" hidden><span>New version ready</span><button id="applyUpdate">RELOAD</button></div>
-</main><script type="module" src="src/main.js?v=ghostball-20261002-p4-ledger-1"></script></body></html>
+</main><script type="module" src="src/main.js?v=ghostball-20261002-p4-cues-1"></script></body></html>
