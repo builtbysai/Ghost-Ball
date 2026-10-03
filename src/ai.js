@@ -1,6 +1,7 @@
 import {Simulation,POCKETS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
 import {groupContains} from './casual-rules.js';
+import {initialCuePlacement} from './placement-guide.js';
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
@@ -88,6 +89,58 @@ export function assessShot(sim,candidate,group='open',{maxSteps=960}={}){
  return {score,targetPocket,legalFirst,scratch,earlyEight,first,
    complete,railAfterContact,foul,made};
 }
+/**
+ * Find an actually legal and geometrically useful ball-in-hand position.
+ * This is shared by live AI and the full-rack lab; neither gets a shortcut
+ * or a magic ghost placement. No mutations to the authoritative sim.
+ * The benchmark intentionally does not use any candidate that the real
+ * opponent cannot legally place.
+ */
+export function chooseAiCuePlacement(sim,group='open',difficulty='rookie'){
+ if(!sim||!sim.atRest())return null;
+ const fallback=initialCuePlacement(sim)?.candidate;
+ const targets=sim.balls.filter(ball=>!ball.pocketed&&groupContains(ball.id,group))
+   .map(ball=>({ball,pockets:POCKETS
+     .map(([x,y],pocket)=>({x,y,pocket,distance:Math.hypot(x-ball.x,y-ball.y)}))
+     .sort((a,b)=>a.distance-b.distance||a.pocket-b.pocket)}))
+   .sort((a,b)=>a.pockets[0].distance-b.pockets[0].distance||a.ball.id-b.ball.id);
+ const candidateSpots=[];
+ // Direct target-to-pocket lines create sensible achievable ball-in-hand
+ // chances. Cap evaluation explicitly for predictable mobile CPU costs.
+ for(const {ball,pockets} of targets.slice(0,difficulty==='club'?5:3)){
+  for(const pocket of pockets.slice(0,difficulty==='club'?3:2)){
+   const dx=(pocket.x-ball.x)/pocket.distance;
+   const dy=(pocket.y-ball.y)/pocket.distance;
+   for(const approach of difficulty==='club'?[100,175]:[135]){
+    candidateSpots.push({x:ball.x-dx*(TABLE.radius*2+approach),
+      y:ball.y-dy*(TABLE.radius*2+approach)});
+   }
+  }
+ }
+ // Common safe sites make the routine robust when a cut's ideal point
+ // collides with a blocker or lies beyond the cloth.
+ candidateSpots.push({x:240,y:250},{x:370,y:250},{x:500,y:250},{x:640,y:250});
+ let best=null;
+ const initial=sim.snapshot();
+ for(const site of candidateSpots){
+  if(!sim.canPlaceCue(site.x,site.y))continue;
+  const trial=new Simulation(initial.balls.map(ball=>({
+   ...ball,orientation:[...(ball.orientation||[1,0,0,0])]
+  })));
+  if(!trial.placeCue(site.x,site.y))continue;
+  const options=candidateShots(trial,group);
+  const first=options[0];
+  if(!first)continue;
+  const rank=first.cost;
+  if(!best||rank<best.cost)best={x:site.x,y:site.y,cost:rank,
+    target:first.target,pocket:first.pocket};
+  // A low-cost, legal, unblocked approach deserves early termination.
+  if(best.cost<120)break;
+ }
+ if(best)return best;
+ return fallback?{x:fallback.x,y:fallback.y,cost:Infinity}:null;
+}
+
 /** Numeric compatibility wrapper for existing simple AI tests. */
 export function previewShot(sim,candidate,group='open',options={}){
  return assessShot(sim,candidate,group,options).score;
