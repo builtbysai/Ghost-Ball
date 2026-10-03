@@ -90,13 +90,15 @@ test('recorded shot group captures BEFORE balls are pocketed',()=>{
  g.turnShot.first=7;g.turnShot.pots=[7,8];g.turnShot.rail=true;
  g.resolve();
  assert.equal(g.over,true);assert.equal(g.winner,1);
- assert.equal(g.history.length,1);
+ assert.equal(g.history.length,2);
+ assert.deepEqual(g.history.at(-1).groups,['solids','stripes']);
+ assert.equal(g.history.at(-1).reason,'early-eight');
 });
 test('foul notifications expose the actual reason to UI',()=>{
  let events=[];const g=new Game({kind:'match',players:'local',seed:3,onTurn:e=>events.push(e)});
  g.break=false;g.groups=['solids','stripes'];
  g.turnShot={first:9,pots:[],rail:true,groupAtStart:'solids'};
  g.resolve();
- assert.deepEqual(events,[{type:'foul',turn:1,ballInHand:true,reason:'wrong-ball-first'}]);
+ assert.deepEqual(events,[{type:'foul',turn:1,ballInHand:true,reason:'wrong-ball-first',retain:false,assignment:null}]);
  assert.equal(g.ballInHand,true);
 });
