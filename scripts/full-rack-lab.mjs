@@ -113,11 +113,17 @@ export function summary(run){
 
 if(process.argv[1]?.endsWith('/full-rack-lab.mjs')){
  const seeds=(process.env.GHOST_SEEDS||'17,41,73,109').split(',').map(Number);
+ const seatFlips=(process.env.GHOST_SEAT_FLIP_SEEDS||'').split(',')
+   .filter(Boolean).map(Number);
  const maxShots=Number(process.env.GHOST_MAX_SHOTS||120);
- const runs=seeds.map(seed=>runRack(seed,{maxShots}));
+ const runs=[
+   ...seeds.map(seed=>runRack(seed,{maxShots})),
+   ...seatFlips.map(seed=>runRack(seed,{maxShots,tiers:['club','rookie']}))
+ ];
  console.log(JSON.stringify({generatedAt:new Date().toISOString(),
    benchmark:'headless Node reference hardware, NOT Android',
-   fixture:{seeds,maxShots,tiers:['rookie','club']},
+   fixture:{seeds,seatFlips,maxShots,tiers:['rookie','club'],
+     flippedTiers:['club','rookie']},
    runs:runs.map(summary)},null,2));
  if(process.env.GHOST_REPLAY==='1'){
   for(const run of runs){
