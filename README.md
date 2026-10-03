@@ -80,6 +80,10 @@ The Parlor, Observatory and Foundry now offer three **real** permanent local mas
 
 Open **Menu → Settings → Local Record** to see your completed-match totals and recent verified results. **Export your record** saves a private JSON file to your device. **Reset local record** requires confirmation and removes match/cue unlock progress, favorites and chosen room from this browser, but keeps audio and control preferences. Data never leaves the browser unless you explicitly export it; no account synchronization is offered. If saved progress is unreadable or from a newer version, Ghost Ball will not overwrite or delete it automatically.
 
+## Private casual multiplayer foundation (not a playable mode)
+
+A pure shot-intent protocol gate and deterministic dual-game tests establish the first host-authoritative validation boundary. This code is intentionally not wired to a menu, signaling service or WebRTC yet. Consult [the private-match design and disconnect/rejoin acceptance criteria](docs/P6-PRIVATE-MATCH-DESIGN.md) before enabling Online. Direct WebRTC plus optional game-scoped TURN are candidates, not a deployed Ghost Ball service. Real two-device session and owner gameplay acceptance are still required.
+
 ## Recovery
 
 The previous main is preserved on GitHub as `archive/pre-clubhouse-rebuild-2026-10-01`. The rebuild is intentionally a new tree, not modifications to the previous engine. On GitHub Pages use relative asset paths so `/Ghost-Ball/` loads correctly. Avoid caching stale scripts until a versioned service-worker update flow is implemented.
