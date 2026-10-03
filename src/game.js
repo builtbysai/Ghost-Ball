@@ -130,6 +130,7 @@ export class Game {
      if(this.sim.balls.every(b=>b.id===0||b.pocketed)){this.notify('Table cleared. Rack again to replay.');this.over=true;this.onTurn({type:'win',practice:true});}
      return;
    }
+   const shooter=this.turn,previousGroups=[...this.groups];
    const result=resolveCasualEight({
      turn:this.turn,breakShot:this.break,groups:this.groups,shot
    });
@@ -156,7 +157,9 @@ export class Game {
        ?`Player ${this.turn+1} keeps the table.`
        :`Player ${this.turn+1} to shoot.`);
      this.onTurn({type:result.type==='foul'?'foul':'turn',turn:this.turn,
-       ballInHand:this.ballInHand,reason:result.reason});
+       ballInHand:this.ballInHand,reason:result.reason,
+       retain:result.type==='retain',
+       assignment:result.groups[shooter]!==previousGroups[shooter]?result.groups[shooter]:null});
    }
    this.timer=0;
 
