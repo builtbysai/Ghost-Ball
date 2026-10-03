@@ -6,7 +6,6 @@ import {chooseShot} from './ai.js';
 export {chooseShot} from './ai.js';
 export const SHOT_CLOCK_SECONDS=45;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
-const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 export class Game {
  constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
   this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;
