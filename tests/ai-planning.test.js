@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Simulation,makeBall} from '../src/physics.js';
 import {createRandom} from '../src/random.js';
-import {candidateShots,chooseShot,previewShot,assessShot} from '../src/ai.js';
+import {candidateShots,chooseShot,previewShot,assessShot,chooseAiCuePlacement} from '../src/ai.js';
 import {Game} from '../src/game.js';
 
 function sparse(){
@@ -80,4 +80,33 @@ test('physics previews detect an early eight and account for scratch risk',()=>{
  const pocket=assessShot(scratch,{angle:-Math.PI*.75,power:.4,target:1,pocket:0,cost:40},'open');
  assert.equal(pocket.scratch,true);
  assert.equal(pocket.foul,true);
+});
+
+test('AI placement searches legal real cloth without moving any game ball',()=>{
+ const sim=sparse(),cue=sim.cue();
+ cue.pocketed=true;
+ const snapshot=sim.snapshot();
+ const spot=chooseAiCuePlacement(sim,'solids','club');
+ assert.ok(spot&&Number.isFinite(spot.x)&&Number.isFinite(spot.y));
+ assert.equal(sim.canPlaceCue(spot.x,spot.y),true);
+ assert.deepEqual(sim.snapshot(),snapshot,'placement planner mutated the authoritative sim');
+ const trial=new Simulation(sim.snapshot().balls);
+ assert.equal(trial.placeCue(spot.x,spot.y),true);
+ assert.ok(candidateShots(trial,'solids').length>0,
+   'a strategic ball-in-hand should preserve a real open pocket option');
+});
+test('live CPU and benchmark share exactly the same real placement validation',()=>{
+ const game=new Game({kind:'match',players:'cpu',difficulty:'club',seed:29});
+ game.turn=1;game.break=false;game.groups=['solids','stripes'];
+ game.sim=new Simulation([makeBall(0,25,25),makeBall(9,530,230),makeBall(2,450,330)]);
+ game.sim.cue().pocketed=true;game.ballInHand=true;
+ const expected=chooseAiCuePlacement(game.sim,'stripes','club');
+ assert.ok(expected);
+ game.update(.025);
+ assert.equal(game.ballInHand,false);
+ assert.equal(game.sim.cue().pocketed,false);
+ assert.deepEqual({x:game.sim.cue().x,y:game.sim.cue().y},
+   {x:expected.x,y:expected.y});
+ assert.deepEqual(game.history.at(-1),
+   {kind:'placement',x:expected.x,y:expected.y});
 });
