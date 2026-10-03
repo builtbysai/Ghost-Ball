@@ -2,7 +2,7 @@
 <html lang="en"><head>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
  <meta name="theme-color" content="#0b1510"><meta name="description" content="Ghost Ball. A beautifully tactile billiards clubhouse.">
- <title>Ghost Ball | The Clubhouse</title><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon-192.png"> <script type="importmap">{"imports":{"./src/ai.js":"./src/ai.js?v=ghostball-20261002-p4-cues-1","./src/casual-rules.js":"./src/casual-rules.js?v=ghostball-20261002-p4-cues-1","./src/audio.js":"./src/audio.js?v=ghostball-20261002-p4-cues-1","./src/cue-feel.js":"./src/cue-feel.js?v=ghostball-20261002-p4-cues-1","./src/cue-catalog.js":"./src/cue-catalog.js?v=ghostball-20261002-p4-cues-1","./src/game.js":"./src/game.js?v=ghostball-20261002-p4-cues-1","./src/physics.js":"./src/physics.js?v=ghostball-20261002-p4-cues-1","./src/random.js":"./src/random.js?v=ghostball-20261002-p4-cues-1","./src/render.js":"./src/render.js?v=ghostball-20261002-p4-cues-1","./src/table-finishes.js":"./src/table-finishes.js?v=ghostball-20261002-p4-cues-1","./src/table-transition.js":"./src/table-transition.js?v=ghostball-20261002-p4-cues-1","./src/touch-controls.js":"./src/touch-controls.js?v=ghostball-20261002-p4-cues-1"}}</script><link rel="stylesheet" href="src/style.css?v=ghostball-20261002-p4-cues-1"><link rel="stylesheet" href="src/landscape.css?v=ghostball-20261002-p4-cues-1"><link rel="stylesheet" href="src/transition.css?v=ghostball-20261002-p4-cues-1"><link rel="stylesheet" href="src/feel.css?v=ghostball-20261002-p4-cues-1"><link rel="stylesheet" href="src/polish.css?v=ghostball-20261002-p4-cues-1"><link rel="stylesheet" href="src/responsive-ui.css?v=ghostball-20261002-p4-cues-1"><link rel="stylesheet" href="src/cue-locker.css?v=ghostball-20261002-p4-cues-1"><link rel="manifest" href="manifest.webmanifest">
+ <title>Ghost Ball | The Clubhouse</title><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon-192.png"> <script type="importmap">{"imports":{"./src/ai.js":"./src/ai.js?v=ghostball-20261002-p4-record-1","./src/casual-rules.js":"./src/casual-rules.js?v=ghostball-20261002-p4-record-1","./src/audio.js":"./src/audio.js?v=ghostball-20261002-p4-record-1","./src/cue-feel.js":"./src/cue-feel.js?v=ghostball-20261002-p4-record-1","./src/cue-catalog.js":"./src/cue-catalog.js?v=ghostball-20261002-p4-record-1","./src/record-summary.js":"./src/record-summary.js?v=ghostball-20261002-p4-record-1","./src/game.js":"./src/game.js?v=ghostball-20261002-p4-record-1","./src/physics.js":"./src/physics.js?v=ghostball-20261002-p4-record-1","./src/random.js":"./src/random.js?v=ghostball-20261002-p4-record-1","./src/render.js":"./src/render.js?v=ghostball-20261002-p4-record-1","./src/table-finishes.js":"./src/table-finishes.js?v=ghostball-20261002-p4-record-1","./src/table-transition.js":"./src/table-transition.js?v=ghostball-20261002-p4-record-1","./src/touch-controls.js":"./src/touch-controls.js?v=ghostball-20261002-p4-record-1"}}</script><link rel="stylesheet" href="src/style.css?v=ghostball-20261002-p4-record-1"><link rel="stylesheet" href="src/landscape.css?v=ghostball-20261002-p4-record-1"><link rel="stylesheet" href="src/transition.css?v=ghostball-20261002-p4-record-1"><link rel="stylesheet" href="src/feel.css?v=ghostball-20261002-p4-record-1"><link rel="stylesheet" href="src/polish.css?v=ghostball-20261002-p4-record-1"><link rel="stylesheet" href="src/responsive-ui.css?v=ghostball-20261002-p4-record-1"><link rel="stylesheet" href="src/cue-locker.css?v=ghostball-20261002-p4-record-1"><link rel="stylesheet" href="src/local-record.css?v=ghostball-20261002-p4-record-1"><link rel="manifest" href="manifest.webmanifest">
 </head><body>
 <main id="app">
  <div class="room" aria-hidden="true"><div class="room-wall"></div><div class="frames"><div class="art" id="roomArt">THE PARLOR</div><div class="art badge-art" id="roomPlaque">1893</div></div><div class="wainscot"></div><div class="room-floor"></div><div class="room-lamp"><span></span></div><div class="light-beam"></div></div>
@@ -57,8 +57,35 @@
       <div class="prefs-block prefs-readonly"><h3>Orientation</h3><div class="prefs-readonly-line"><span>Landscape layout</span><strong>ACTIVE</strong></div></div>
     </div>
    </div>
-   <p class="prefs-footer">Changes apply immediately.</p>
+   <div class="prefs-footer"><button id="openRecord" type="button" aria-haspopup="dialog">LOCAL RECORD ↗</button><span>Saved on this device only.</span></div>
   </div>
+ </section>
+ <section class="record-sheet" id="recordSheet" role="dialog" aria-modal="true" aria-labelledby="recordHeading" hidden>
+   <div class="record-panel">
+     <header class="record-heading"><div><small>THE CLUBHOUSE / PRIVACY</small><h2 id="recordHeading">Your local record</h2></div><button id="closeRecord" type="button">BACK TO SETTINGS <span aria-hidden="true">↗</span></button></header>
+     <div class="record-body">
+       <section class="record-stat-panel" aria-label="Your recorded match statistics">
+         <div class="record-stats">
+           <div><small>FINISHED MATCHES</small><strong id="recordMatches">0</strong></div>
+           <div><small>VS CPU W / L</small><strong id="recordRivals">0 / 0</strong></div>
+           <div><small>CLEAN WINS</small><strong id="recordClean">0</strong></div>
+           <div><small>BEST LEGAL RUN</small><strong id="recordRun">0</strong></div>
+         </div>
+         <div class="record-recent"><strong>RECENT MATCHES</strong><div id="recordHistory" role="list" aria-label="Recent match results">No finished matches yet.</div></div>
+       </section>
+       <section class="record-privacy" aria-label="Local progress privacy">
+         <strong id="recordStorage">THIS DEVICE ONLY</strong>
+         <p>Matches, cues, favorites and room choice stay in this browser. No account or cloud sync.</p>
+         <button id="exportRecord" type="button">EXPORT YOUR RECORD <span aria-hidden="true">↓</span></button>
+         <button id="resetRecord" type="button">RESET LOCAL RECORD</button>
+         <div id="recordConfirm" class="record-confirm" hidden>
+           <p>This permanently clears your match history, cue unlocks, favorites and room choice from this browser. Controls and audio settings stay unchanged.</p>
+           <div><button id="cancelRecordReset" type="button">CANCEL</button><button id="confirmRecordReset" type="button">RESET RECORD</button></div>
+         </div>
+         <span id="recordMessage" role="status" aria-live="polite"></span>
+       </section>
+     </div>
+   </div>
  </section>
  <section class="game-screen" id="gameScreen" aria-label="Landscape pool game" hidden>
    <header class="match-hud">
@@ -100,4 +127,4 @@
    <section class="spin-sheet" id="spinSheet" role="dialog" aria-modal="true" aria-label="Cue ball spin" hidden><div class="spin-head"><h2>Cue-ball spin</h2><button id="spinDone" aria-label="Done adjusting spin">DONE</button></div><p>Drag the red contact point to adjust spin.</p><div class="spin-ball" id="spinBall" role="img" aria-label="Drag to choose side spin, follow or draw"><i id="spinDot"></i></div><div id="spinLabel" class="spin-description">CENTER</div><button id="spinReset">RESET TO CENTER</button></section>
  </section>
  <div id="updateNotice" class="update-notice" role="status" aria-live="polite" hidden><span>New version ready</span><button id="applyUpdate">RELOAD</button></div>
-</main><script type="module" src="src/main.js?v=ghostball-20261002-p4-cues-1"></script></body></html>
+</main><script type="module" src="src/main.js?v=ghostball-20261002-p4-record-1"></script></body></html>

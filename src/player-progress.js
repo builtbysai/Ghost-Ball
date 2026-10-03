@@ -123,5 +123,6 @@ export function exportLocalProgress(progress){
  return validProgress(progress)?JSON.stringify(progress,null,2):null;
 }
 export function resetLocalProgress(storage=()=>globalThis.localStorage){
- try{storage()?.removeItem(PROGRESS_KEY);return true;}catch{return false;}
+ try{const store=storage();if(!store||typeof store.removeItem!=='function')return false;
+  store.removeItem(PROGRESS_KEY);return true;}catch{return false;}
 }
