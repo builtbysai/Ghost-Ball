@@ -2,7 +2,7 @@
 
 An independent, lightweight browser pool game. The Clubhouse rebuild follows the supplied **Clubhouse v3** direction and has a live exhibition playing on the lobby table rather than static decoration.
 
-**Status:** P2 casual referee and opponent-planning pass. Top-down 2D is the only playable view; the live lobby table rotates and its balls assemble into the match rack. Full WPA tournament rules, other cameras and online play are still planned.
+**Status:** P2.1 deterministic full-rack reliability and fair opponent-planning pass. Top-down 2D is the only playable view; the live lobby table rotates and its balls assemble into the match rack. Full WPA tournament rules, other cameras and online play are still planned.
 
 ## Available now
 
@@ -45,7 +45,15 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/feel.css`: responsive, motion-aware power rail feedback.
 - `src/style.css`: viewport-contained presentation; design tokens.
 
-See the [active roadmap](docs/ROADMAP.md), [pool-game engagement research](docs/ENGAGEMENT-RESEARCH.md), [P2 rules architecture](docs/P2-RULES-ARCHITECTURE.md) and [physics/visual research](docs/RESEARCH.md). Focused Node regression tests cover input geometry, cue loading and collision physics; Playwright browser smoke checks the live entrance, all three hall palettes, and responsive mouse/touch input. Do not bolt future game modes into `main.js`: extract state machines and provide explicit tests.
+See the [active roadmap](docs/ROADMAP.md), [measured full-rack reliability results](docs/P2-1-RELIABILITY-LAB.md), [pool-game engagement research](docs/ENGAGEMENT-RESEARCH.md), [P2 rules architecture](docs/P2-RULES-ARCHITECTURE.md) and [physics/visual research](docs/RESEARCH.md). Focused Node regression tests cover input geometry, cue loading and collision physics; Playwright browser smoke checks the live entrance, all three hall palettes, and responsive mouse/touch input. Do not bolt future game modes into `main.js`: extract state machines and provide explicit tests.
+
+## P2.1 progress and device limits
+
+Full-rack tests now include nine repeatable CPU matches, reversed seats,
+legal 8-ball completions and exact replay/history comparisons. Club Pro plans
+in bounded batches across animation frames and keeps its cue visible while
+aiming. Those are automated, non-rendered results; physical Android control
+comfort, screen-edge gestures and real phone frame timing are still open.
 
 ## Upcoming: fair equipment and new rooms
 
