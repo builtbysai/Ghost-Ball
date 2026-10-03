@@ -45,7 +45,11 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/feel.css`: responsive, motion-aware power rail feedback.
 - `src/style.css`: viewport-contained presentation; design tokens.
 
-See [roadmap](docs/ROADMAP.md), [P2 rules architecture](docs/P2-RULES-ARCHITECTURE.md) and [research](docs/RESEARCH.md). Focused Node regression tests cover input geometry, cue loading and collision physics; Playwright browser smoke checks the live entrance, all three hall palettes, and responsive mouse/touch input. Do not bolt future game modes into `main.js`: extract state machines and provide explicit tests.
+See the [active roadmap](docs/ROADMAP.md), [pool-game engagement research](docs/ENGAGEMENT-RESEARCH.md), [P2 rules architecture](docs/P2-RULES-ARCHITECTURE.md) and [physics/visual research](docs/RESEARCH.md). Focused Node regression tests cover input geometry, cue loading and collision physics; Playwright browser smoke checks the live entrance, all three hall palettes, and responsive mouse/touch input. Do not bolt future game modes into `main.js`: extract state machines and provide explicit tests.
+
+## Upcoming: fair equipment and new rooms
+
+The October 2 research pass moved **original cue choices/unlocks** and **two genuinely new room designs** earlier in the development order, following complete-match/real-device verification and shot feel. These features are **planned, not shipped**. Cues are proposed as skill-earned cosmetics with identical competitive physics; venue unlocks use actual authored challenges, not purchase pressure. See [research notes](docs/ENGAGEMENT-RESEARCH.md) and the [reordered roadmap](docs/ROADMAP.md).
 
 ## Recovery
 

@@ -1,4 +1,6 @@
 # Ghost Ball: findings validation and execution plan
+
+> **Priority note (October 2, 2026):** This file records validated technical findings and the original P0–P5 milestones. The **active, research-led shipping order** is now in [ROADMAP.md](ROADMAP.md), with cues and additional rooms moved forward after match reliability. The [engagement research](ENGAGEMENT-RESEARCH.md) documents competitor evidence, skill-based cue unlocks, room mastery and non-exploitative player goals. Later phase numbers in this historical audit are not delivery commitments.
 _Reviewed 2026-10-02 against main tree `a269d1824db690e63ff8f7cda0c2e5e07a980298`. The initial implementation was merged to `main` in [PR #12](https://github.com/builtbysai/Ghost-Ball/pull/12)._
 
 ## Evidence quality
