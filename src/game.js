@@ -142,6 +142,8 @@ export class Game {
    this.history.push({kind:'ruling',shot:this.shots,shooter,result:result.type,
      reason:result.reason,turn:result.turn,groups:[...result.groups],
      ballInHand:result.ballInHand,winner:result.winner,
+     groupAtStart:shot.groupAtStart,firstContact:shot.first,
+     railAfterFirst:!!shot.rail,elapsedSimSeconds:this.sim.elapsed,
      potRecords:[...(shot.potRecords||[])],
      breakRailBalls:[...(shot.railBalls||[])]});
    if(result.spotEight)this.spotEight();
