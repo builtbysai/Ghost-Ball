@@ -84,9 +84,16 @@ export function runRack(seed,{maxShots=120,tiers=['rookie','club']}={}){
  ensure(rulings.length===game.shots,`seed ${seed}: ruling/shot mismatch`);
  const winner=game.winner;
  ensure(!game.over||winner===0||winner===1,`seed ${seed}: finished match without winner`);
+ const terminalReason=game.over?game.history.at(-1)?.reason:null;
+ const winnerGroup=game.over?game.groups[winner]:null;
+ const winnerGroupRemaining=winnerGroup?
+   game.sim.balls.filter(b=>!b.pocketed&&groupContains(b.id,winnerGroup)).length:null;
+ if(terminalReason==='eight-cleared')
+   ensure(winnerGroupRemaining===0,`seed ${seed}: 8 win while winner still owns unpocketed balls`);
  return {
   seed,tiers,maxShots,shots:game.shots,finished:game.over,winner,
-  reason:rulings.at(-1)?.reason||null,
+  terminalReason,legalEightFinish:terminalReason==='eight-cleared',
+  winnerGroupRemaining,
   remaining:game.sim.balls.filter(b=>b.id>0&&!b.pocketed).length,
   counts,byTier,stagnant,steps,simulationSeconds:steps*TABLE.step,
   planning:{totalMs:decisionTotal,meanMs:decisionTotal/decisions.length,
@@ -96,8 +103,10 @@ export function runRack(seed,{maxShots=120,tiers=['rookie','club']}={}){
 }
 
 export function summary(run){
- const {seed,tiers,shots,finished,winner,remaining,counts,byTier,stagnant,steps,planning}=run;
- return {seed,tiers,shots,finished,winner,remaining,counts,byTier,stagnant,
+ const {seed,tiers,shots,finished,winner,terminalReason,legalEightFinish,
+   winnerGroupRemaining,remaining,counts,byTier,stagnant,steps,planning}=run;
+ return {seed,tiers,shots,finished,winner,terminalReason,legalEightFinish,
+   winnerGroupRemaining,remaining,counts,byTier,stagnant,
    steps,planning:{meanMs:+planning.meanMs.toFixed(2),
     p95Ms:+planning.p95Ms.toFixed(2),maxMs:+planning.maxMs.toFixed(2)}};
 }
