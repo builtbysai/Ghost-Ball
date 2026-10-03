@@ -6,7 +6,7 @@
  */
 import {performance} from 'node:perf_hooks';
 import {Game,chooseShot} from '../src/game.js';
-import {initialCuePlacement} from '../src/placement-guide.js';
+import {chooseAiCuePlacement} from '../src/ai.js';
 import {TABLE} from '../src/physics.js';
 import {groupContains} from '../src/casual-rules.js';
 
@@ -24,9 +24,9 @@ export function runRack(seed,{maxShots=120,tiers=['rookie','club']}={}){
  let repeated=0,previousSignature=null,steps=0,decisionTotal=0;
  for(let n=0;n<maxShots&&!game.over;n++){
   if(game.ballInHand){
-   const placement=initialCuePlacement(game.sim);
-   ensure(placement?.candidate,`seed ${seed}, shot ${n+1}: no legal cue placement`);
-   ensure(game.placeCue(placement.candidate.x,placement.candidate.y),
+   const placement=chooseAiCuePlacement(game.sim,game.group,tiers[game.turn]||'rookie');
+   ensure(placement,`seed ${seed}, shot ${n+1}: no legal cue placement`);
+   ensure(game.placeCue(placement.x,placement.y),
      `seed ${seed}, shot ${n+1}: legal placement rejected`);
    counts.placements++;
    tierStats(tiers[game.turn]||'rookie').placements++;
