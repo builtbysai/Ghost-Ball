@@ -8,8 +8,9 @@ import {flyTable} from './table-transition.js';
 import {cueGeometry,tensionStage} from './cue-feel.js';
 import {cuePlacementDraft,initialCuePlacement} from './placement-guide.js';
 import {CUES,cueUnlocked,cueById,equippedCue,equipCue,toggleFavorite,paintCuePreview} from './cue-catalog.js';
-import {readLocalProgress,writeLocalProgress,recordLiveMatch,bestLegalRun,chooseRoom}
- from './player-progress.js';
+import {readLocalProgress,writeLocalProgress,recordLiveMatch,bestLegalRun,chooseRoom,
+ freshProgress,exportLocalProgress,resetLocalProgress} from './player-progress.js';
+import {recordSummary} from './record-summary.js';
 const $=id=>document.getElementById(id);
 const all=(query)=>[...document.querySelectorAll(query)];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -159,6 +160,67 @@ function openLocker(){
 function closeLocker(){
  if($('lockerSheet').hidden)return;
  hide('lockerSheet');show('clubMenu');$('menuLocker').focus();
+}
+function showRecord(){
+ const summary=recordSummary(progress);
+ setText('recordMatches',String(summary.matches));
+ setText('recordRivals',summary.wins+' / '+summary.losses);
+ setText('recordClean',String(summary.clean));
+ setText('recordRun',String(summary.run));
+ const rows=summary.recent.map(item=>{
+  const row=document.createElement('div');row.className='record-row';row.setAttribute('role','listitem');
+  const title=document.createElement('strong');title.textContent=item.title+' · '+item.opponent;
+  const detail=document.createElement('span');detail.textContent=item.detail+' · '+item.shots+' SHOTS';
+  row.append(title,detail);return row;
+ });
+ if(!rows.length){
+  const empty=document.createElement('span');empty.textContent='No completed matches yet.';
+  rows.push(empty);
+ }
+ $('recordHistory').replaceChildren(...rows);
+ let label='THIS DEVICE ONLY',reason='';
+ if(!progressAccess.writable){
+  label=progressAccess.reason==='unsupported-version'?'NEWER SAVED FORMAT':
+    progressAccess.reason==='invalid-data'?'SAVED DATA NEEDS REVIEW':'SESSION ONLY';
+  reason=progressAccess.reason==='unsupported-version'?
+    'An existing record uses a newer format. It was not changed.':
+    progressAccess.reason==='invalid-data'?
+    'An existing record could not be read. It was not changed.':
+    'Storage is unavailable. This session may not be saved.';
+ }
+ setText('recordStorage',label);
+ setText('recordMessage',reason);
+ $('exportRecord').disabled=progressAccess.reason==='unsupported-version'||
+  progressAccess.reason==='invalid-data';
+ $('resetRecord').disabled=!progressAccess.writable;
+ $('recordConfirm').hidden=true;$('resetRecord').hidden=false;
+}
+function openRecord(){
+ if($('settingsSheet').hidden)return;
+ hide('settingsSheet');showRecord();show('recordSheet');$('closeRecord').focus();
+}
+function closeRecord(){
+ if($('recordSheet').hidden)return;
+ hide('recordSheet');$('recordConfirm').hidden=true;$('resetRecord').hidden=false;
+ show('settingsSheet');$('openRecord').focus();
+}
+function downloadRecord(){
+ const contents=exportLocalProgress(progress);
+ if(!contents){setText('recordMessage','Record could not be exported.');return;}
+ const object=URL.createObjectURL(new Blob([contents],{type:'application/json'}));
+ const anchor=document.createElement('a');
+ anchor.href=object;anchor.download='ghost-ball-record-'+new Date().toISOString().slice(0,10)+'.json';
+ anchor.style.display='none';document.body.append(anchor);
+ try{anchor.click();setText('recordMessage','Export prepared. Your data stays local.');}
+ finally{anchor.remove();setTimeout(()=>URL.revokeObjectURL(object),2000);}
+}
+function confirmLocalReset(){
+ if(!progressAccess.writable)return;
+ if(!resetLocalProgress()){setText('recordMessage','Could not clear storage. No progress was reset.');return;}
+ progress=freshProgress();room=progress.selectedRoom;newlyEarnedCueCount=0;
+ syncEquippedCue();applyRoom();showRecord();
+ setText('recordMessage','Local match history and equipment progress cleared.');
+ $('resetRecord').focus();
 }
 function openMenu(){show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){setText('matchSummary',mode==='practice'?'Open practice table':rival==='local'?'8-Ball · Two players':`8-Ball vs ${rival==='rookie'?'Rookie':'Club Pro'}`);
@@ -420,6 +482,16 @@ $('pauseSettings').onclick=openSettings;$('rerack').onclick=()=>{resetMatch();re
 $('playAgain').onclick=()=>{if(active==='game'&&current?.over)resetMatch();};
 $('resultMenu').onclick=quitToLobby;
 $('closeSettings').onclick=closeSettings;
+$('openRecord').onclick=openRecord;$('closeRecord').onclick=closeRecord;
+$('exportRecord').onclick=downloadRecord;
+$('resetRecord').onclick=()=>{
+ $('recordMessage').textContent='';$('resetRecord').hidden=true;
+ $('recordConfirm').hidden=false;$('cancelRecordReset').focus();
+};
+$('cancelRecordReset').onclick=()=>{
+ $('recordConfirm').hidden=true;$('resetRecord').hidden=false;$('resetRecord').focus();
+};
+$('confirmRecordReset').onclick=confirmLocalReset;
  all('[data-power-side]').forEach(b=>b.onclick=()=>{powerSide=b.dataset.powerSide;savePreference('ghostball-power-side',powerSide);syncPowerSide();});
 $('soundToggle').onchange=event=>{audio.enabled=event.target.checked;if(audio.enabled)audio.unlock();else audio.suspend();savePreference('ghostball-sound',audio.enabled?'on':'off');};
 $('motionToggle').onchange=event=>{motion=event.target.checked;savePreference('ghostball-motion',motion?'on':'off');};
@@ -521,6 +593,17 @@ function cancelTablePointer(e){
 $('gameCanvas').addEventListener('pointercancel',cancelTablePointer);
 $('gameCanvas').addEventListener('lostpointercapture',cancelTablePointer);
 window.addEventListener('keydown',e=>{
+  if(!$('recordSheet').hidden){
+   if(e.key==='Escape'){e.preventDefault();closeRecord();return;}
+   if(e.key==='Tab'){
+    const actions=[...$('recordSheet').querySelectorAll('button:not([hidden]):not(:disabled)')]
+      .filter(button=>button.offsetParent!==null);
+    const first=actions[0],last=actions.at(-1);
+    if(e.shiftKey&&document.activeElement===first){last.focus();e.preventDefault();}
+    else if(!e.shiftKey&&document.activeElement===last){first.focus();e.preventDefault();}
+   }
+   return;
+  }
   if(!$('lockerSheet').hidden){
     const options=[...$('lockerGrid').querySelectorAll('[data-cue]')];
     if(e.key==='Escape'){e.preventDefault();closeLocker();return;}
