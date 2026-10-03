@@ -2,14 +2,21 @@ import {Simulation,rack,POCKETS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
 import {resolveCasualEight,groupContains} from './casual-rules.js';
 import {chooseShot,chooseAiCuePlacement,createShotPlanner,candidateShots} from './ai.js';
+import {skillDrillById,skillDrillBalls,gradeSkillDrill} from './skill-drills.js';
 export {chooseShot} from './ai.js';
 export const SHOT_CLOCK_SECONDS=45;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 export class Game {
- constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
+ constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),drillId=null,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
   this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;
+   if(kind==='drill'&&!skillDrillById(drillId))throw new RangeError('Unknown skill drill');
+   this.drillId=kind==='drill'?drillId:null;
   this.onPocket=onPocket;this.onTurn=onTurn;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
- reset(){this.rackSeed=this.random()*100000|0;this.sim=new Simulation(rack(this.rackSeed));this.turn=0;this.groups=[null,null];this.break=true;this.foul=false;this.ballInHand=false;this.over=false;this.winner=null;this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;
+ reset(){this.rackSeed=this.random()*100000|0;
+   this.sim=new Simulation(this.kind==='drill'?skillDrillBalls(this.drillId):rack(this.rackSeed));
+   this.turn=0;this.groups=[null,null];this.break=this.kind!=='drill';
+   this.foul=false;this.ballInHand=false;this.over=false;this.winner=null;
+   this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;this.drillOutcome=null;
   this.history=[];this.previewShot=null;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.activeStroke=null;
   this.shotRemaining=SHOT_CLOCK_SECONDS;this.shotClockKey='';
   this.notify('A fresh rack. Take your time.');}
@@ -161,6 +168,21 @@ export class Game {
    }
  }
  resolve(){const shot=this.turnShot;if(!shot)return;this.turnShot=null;this.planIterator=null;if(this.kind==='attract'){this.turn=1-this.turn;this.timer=0;this.break=false;this.previewShot=null;return;}
+   if(this.kind==='drill'){
+     const grade=gradeSkillDrill(this.drillId,{shots:this.shots,shot});
+     this.history.push({kind:'drill-ruling',drillId:this.drillId,shot:this.shots,
+       reason:grade.reason,status:grade.status,potRecords:[...(shot.potRecords||[])]});
+     this.timer=0;
+     if(grade.status==='completed'||grade.status==='failed'){
+       this.drillOutcome=grade.status;this.over=true;
+       const complete=grade.status==='completed';
+       this.notify(complete?'Skill completed.':'Attempt finished. Reset to try again.');
+       this.onTurn({type:'drill-end',kind:'drill',drillId:this.drillId,
+         completed:complete,reason:grade.reason,shots:this.shots,
+         evidence:{pots:[...shot.pots],potRecords:[...shot.potRecords]}});
+     }else this.notify('One more shot. Pick your angle.');
+     return;
+   }
    if(this.kind==='practice'){
      if(shot.pots.includes(0)){this.sim.placeCue(240,245);this.notify('Scratch. Tap an open spot to place the cue ball.');this.ballInHand=true;}
      else if(shot.pots.length)this.notify(`${shot.pots.filter(id=>id!==0).length} pocketed. Nice touch.`);
