@@ -1,5 +1,5 @@
 // Build identifier changes the service-worker bytes with each release.
-const RELEASE="ghostball-20261003-p5-bank-2";
+const RELEASE="ghostball-20261003-p3-finish-3";
 // v0.2 transitional service worker: retire all caches from the previous Ghost Ball.
 // Intentionally no fetch handler. New code uses network until offline/update UX ships.
 self.addEventListener('install',event=>{event.waitUntil(self.skipWaiting());});
