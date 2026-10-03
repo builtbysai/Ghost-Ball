@@ -76,6 +76,14 @@ with sync_playwright() as p:
             page.screenshot(path=str((root / 'screenshots' / f'afterhours-{width}x{height}.png').resolve()))
         for _ in range(3): page.locator('#prevRoom').click()
         assert page.locator('#roomArt').inner_text() == 'THE OBSERVATORY'
+        # Actually start a new venue's match and test its live entrance on
+        # both standard desktop and shortest supported touch landscape.
+        chosen='THE OBSERVATORY'
+        if width in (1280,568):
+            for _ in range(2 if width==1280 else 3):
+                page.locator('#nextRoom').click()
+            chosen='THE WINTERGARDEN' if width==1280 else 'THE AFTERHOURS'
+            assert page.locator('#roomArt').inner_text() == chosen
         page.screenshot(path=str((root / 'screenshots' / f'menu-{width}x{height}.png').resolve()))
         # Verify actual pointer hit targets, not force-click bypasses.
         if width<900:
@@ -95,6 +103,7 @@ with sync_playwright() as p:
         page.wait_for_timeout(1240)
         assert page.locator('.table-flight').count() == 0, 'flight not cleaned up'
         assert page.locator('#gameScreen').is_visible(), 'match missing'
+        assert page.locator('#roundLabel').inner_text() == chosen, 'match used the wrong venue'
         assert page.locator('#pauseButton').is_visible(), 'pause control missing'
         assert page.locator('#shootBtn').count() == 0
         assert page.locator('#leaveGame').count() == 0
