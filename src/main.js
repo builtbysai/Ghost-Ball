@@ -7,10 +7,17 @@ import {bindPower,bindAimWheel,spinFromPoint,cueShaftHit,rearAimAngle,wrapAngle}
 import {flyTable} from './table-transition.js';
 import {cueGeometry,tensionStage} from './cue-feel.js';
 import {cuePlacementDraft,initialCuePlacement} from './placement-guide.js';
+import {readLocalProgress,writeLocalProgress,recordLiveMatch,bestLegalRun,chooseRoom}
+ from './player-progress.js';
 const $=id=>document.getElementById(id);
 const all=(query)=>[...document.querySelectorAll(query)];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-let room=1,mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
+const progressAccess=readLocalProgress();
+let progress=progressAccess.progress;
+const newMatchId=()=>globalThis.crypto?.randomUUID?.()||
+  `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+let matchEventId=null;
+let room=clamp(progress.selectedRoom,0,halls.length-1),mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
 let current=null,active='lobby',motion=true,placement=null,pointerMode=null,placeGesture=null;
 let settingsOrigin='lobby',updateWaiting=false,powerSide='left';
 let matchElapsed=0,lastClockSecond=-1;
@@ -35,6 +42,23 @@ function matchTurn(event){
  if(active!=='game')return;
  if(event.type==='win'){
   clearTableToast();
+  if(current.kind==='match'&&current.over&&matchEventId){
+   const before=progress;
+   progress=recordLiveMatch(progress,{
+    kind:'match',source:'live',id:matchEventId,
+    at:new Date().toISOString(),shots:current.shots,winner:current.winner,
+    players:current.players,difficulty:current.difficulty,room,
+    reason:event.reason,
+    bestRun:current.players==='local'
+      ?Math.max(bestLegalRun(current.history,0),bestLegalRun(current.history,1))
+      :bestLegalRun(current.history,0)
+   });
+   // Matches discarded via quit, restart, replay or exhibition can never
+   // mint achievements; a finished match is recorded at most once.
+   matchEventId=null;
+   if(progress!==before&&progressAccess.writable&&
+      !writeLocalProgress(progress))progressAccess.writable=false;
+  }
   audio.play({type:event.practice||current.players==='local'||event.winner===0?'win':'loss'});
   return;
  }
@@ -60,6 +84,11 @@ function matchTurn(event){
  }
 }
 function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);
+ const selected=chooseRoom(progress,room,halls.length);
+ if(selected!==progress){
+  progress=selected;
+  if(progressAccess.writable&&!writeLocalProgress(progress))progressAccess.writable=false;
+ }
   document.documentElement.style.setProperty('--hall',h.felt);document.documentElement.style.setProperty('--room-aura',h.aura);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
   setText('roomPlaque',String(h.year));setText('roomArt',h.name.toUpperCase());$('roomEyebrow').dataset.short=`ROOM 0${room+1} · ${h.year}`;setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
   setText('playText',mode==='practice'?`Practice at ${h.name}`:`Break at ${h.name}`);
@@ -139,6 +168,7 @@ function begin(kind){
  lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();placeGesture=null;$('collectedBalls').replaceChildren();hide('clubMenu');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  current=new Game({kind,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',notify,onPocket:animatePocket,onTurn:matchTurn});
+ matchEventId=kind==='match'?newMatchId():null;
  if(kind==='attract'){current.turn=0;notify('An exhibition between our house rivals.');}
  let needsHint=false;try{needsHint=localStorage.getItem('ghostball-controls-taught')!=='yes';}catch{}
  if(kind==='match'&&needsHint)show('controlsHint');else hide('controlsHint');
@@ -159,7 +189,7 @@ function begin(kind){
  catch(err){console.warn('Table entrance skipped',err);finish();}
 }
 function finishLobby(){
- active='lobby';current=null;placement=null;placeGesture=null;pointerMode=null;shotMotion=null;pullProgress=0;tensionLevel=0;clearTableToast();
+ active='lobby';current=null;matchEventId=null;placement=null;placeGesture=null;pointerMode=null;shotMotion=null;pullProgress=0;tensionLevel=0;clearTableToast();
  hide('spinShade');hide('spinSheet');hide('pauseMenu');hide('gameScreen');hide('controlsHint');
  $('gameScreen').classList.remove('entering','leaving');$('app').classList.remove('entering-match','leaving-match');
  $('ambient').style.visibility='';$('lobby').removeAttribute('aria-hidden');resize();$('menuBtn').focus();
@@ -181,7 +211,7 @@ function pauseMatch(){
 }
 function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('pauseButton').focus();turnUI();}
 function resetMatch(){
- if(!current)return;current.reset();lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();
+ if(!current)return;current.reset();matchEventId=current.kind==='match'?newMatchId():null;lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();
  $('collectedBalls').replaceChildren();placement=null;placeGesture=null;angle=0;spin={x:0,y:0};syncAim();syncSpin();
  setPower(50);powerControl.reset();$('powerTrack').classList.remove('impact');turnUI();
 }
