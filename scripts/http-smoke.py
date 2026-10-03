@@ -107,6 +107,8 @@ try:
   page.locator('#pauseButton').click()
   page.locator('#quitMatch').click()
   page.wait_for_timeout(1850)
+  assert page.locator('#roomMasteryCount').inner_text()=='1 / 3', 'the verified bank must earn Foundry skill mastery'
+  assert 'RIVAL MATCH' in page.locator('#roomMasteryNext').inner_text()
   page.locator('#menuBtn').click()
   page.locator('#menuSettings').click()
   page.locator('#openRecord').click()

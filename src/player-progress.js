@@ -4,6 +4,7 @@
  */
 import {groupContains} from './casual-rules.js';
 import {skillDrillById,gradeSkillDrill} from './skill-drills.js';
+import {awardRoomMatch,awardRoomDrill} from './room-mastery.js';
 
 export const PROGRESS_KEY='ghostball-progress-v1';
 export const PROGRESS_VERSION=1;
@@ -13,7 +14,7 @@ const FINISH_REASONS=new Set(['eight-cleared','early-eight','scratch-on-eight','
 export function freshProgress(){
  return {version:PROGRESS_VERSION,matchesPlayed:0,vsCpuWins:0,vsCpuLosses:0,
   localMatches:0,cleanWins:0,bestRun:0,selectedCue:'house',selectedRoom:1,favorites:[],
-  achievements:[],records:[],drills:{},drillEvents:[]};
+  achievements:[],records:[],drills:{},drillEvents:[],roomMastery:{}};
 }
 function validProgress(p){
  const count=n=>Number.isSafeInteger(n)&&n>=0;
@@ -30,6 +31,9 @@ function validProgress(p){
    shots>=1&&shots<=skillDrillById(id).attempts)))&&
   (p.drillEvents===undefined||(Array.isArray(p.drillEvents)&&p.drillEvents.length<=48&&
    p.drillEvents.every(id=>typeof id==='string'&&id.length>0&&id.length<=128)))&&
+  (p.roomMastery===undefined||(p.roomMastery&&typeof p.roomMastery==='object'&&
+   !Array.isArray(p.roomMastery)&&Object.entries(p.roomMastery).every(([room,mask])=>
+    ['0','1','2'].includes(room)&&Number.isInteger(mask)&&mask>=0&&mask<=7)))&&
   Array.isArray(p.records)&&p.records.length<=RECORD_LIMIT&&
   p.records.every(e=>e&&typeof e.id==='string'&&e.id.length<=128);
 }
@@ -49,7 +53,7 @@ export function readLocalProgress(storage=()=>globalThis.localStorage){
   // Existing version-one ledgers predate favorites; safely default only that
   // optional cosmetic field without touching saved match records.
   return {progress:{...parsed,favorites:parsed.favorites||[],drills:parsed.drills||{},
-    drillEvents:parsed.drillEvents||[]},writable:true,reason:null};
+    drillEvents:parsed.drillEvents||[],roomMastery:parsed.roomMastery||{}},writable:true,reason:null};
  }catch{
   return {progress:freshProgress(),writable:false,reason:'unavailable'};
  }
@@ -119,7 +123,8 @@ export function recordLiveMatch(previous,event){
   cleanWins:previous.cleanWins+(humanWin&&clean?1:0),
   bestRun:Math.max(previous.bestRun,event.bestRun),
   achievements:[...achievements],
-  records:[compact,...previous.records].slice(0,RECORD_LIMIT)};
+  records:[compact,...previous.records].slice(0,RECORD_LIMIT),
+  roomMastery:awardRoomMatch(previous,event)};
 }
 /** A proof of actual settled target-pocket physics, minted by Game.resolve,
  * never by clicking a challenge card, watching the lobby or free Practice.
@@ -138,7 +143,8 @@ export function recordLiveDrill(previous,event){
  const drills={...(previous.drills||{}),[drill.id]:best?Math.min(best,event.shots):event.shots};
  const achievements=[...new Set([...previous.achievements,'drill-'+drill.id])];
  return {...previous,drills,achievements,
-  drillEvents:[event.id,...(previous.drillEvents||[])].slice(0,48)};
+  drillEvents:[event.id,...(previous.drillEvents||[])].slice(0,48),
+  roomMastery:awardRoomDrill(previous,event)};
 }
 export function chooseRoom(previous,room,maxRooms){
  if(!validProgress(previous)||!Number.isInteger(room)||room<0||

@@ -13,6 +13,7 @@ import {readLocalProgress,writeLocalProgress,recordLiveMatch,bestLegalRun,choose
 import {SKILL_DRILLS,skillDrillById} from './skill-drills.js';
 import {recordSummary} from './record-summary.js';
 import {decisiveShot} from './match-finish.js';
+import {roomMastery} from './room-mastery.js';
 const $=id=>document.getElementById(id);
 const all=(query)=>[...document.querySelectorAll(query)];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -30,7 +31,7 @@ let previousShotAngles=[0,0],toastTimeout=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
 function syncEquippedCue(){const cue=equippedCue(progress);ambient.setCue(cue.id);table.setCue(cue.id);}
-function saveProgress(next){if(next===progress)return;progress=next;syncEquippedCue();
+function saveProgress(next){if(next===progress)return;progress=next;syncEquippedCue();renderRoomMastery();
  if(progressAccess.writable&&!writeLocalProgress(progress))progressAccess.writable=false;}
 const setText=(id,value)=>{$(id).textContent=value;};
 function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
@@ -107,6 +108,16 @@ function matchTurn(event){
   if(local||human)audio.play({type:'turn'});
  }
 }
+function renderRoomMastery(){
+ const badge=$('roomMastery'),model=roomMastery(progress,room);
+ badge.hidden=!model;
+ if(!model)return; // The other two halls stay free until authored skills ship.
+ setText('roomMasteryCount',model.count+' / '+model.total);
+ setText('roomMasteryNext',model.complete?'ROOM MASTERED':'NEXT · '+model.next);
+ badge.dataset.mastered=String(model.complete);
+ badge.setAttribute('aria-label',halls[room].name+' mastery: '+model.count+' of 3. '+model.next);
+ badge.title=model.steps.map(step=>(step.done?'✓ ':'○ ')+step.label).join('\n');
+}
 function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);
  const selected=chooseRoom(progress,room,halls.length);
  if(selected!==progress){
@@ -116,6 +127,7 @@ function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(roo
   document.documentElement.style.setProperty('--hall',h.felt);document.documentElement.style.setProperty('--room-aura',h.aura);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
   setText('roomPlaque',String(h.year));setText('roomArt',h.name.toUpperCase());$('roomEyebrow').dataset.short=`ROOM 0${room+1} · ${h.year}`;setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
   setText('playText',mode==='practice'?`Practice at ${h.name}`:`Break at ${h.name}`);
+  renderRoomMastery();
   if(current)setText('roundLabel',h.name.toUpperCase());
 }
 function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
