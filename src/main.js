@@ -180,6 +180,7 @@ function showRecord(){
  setText('recordRivals',summary.wins+' / '+summary.losses);
  setText('recordClean',String(summary.clean));
  setText('recordRun',String(summary.run));
+ setText('recordDrills',Object.keys(progress.drills||{}).length+' / '+SKILL_DRILLS.length+' SKILLS');
  const rows=summary.recent.map(item=>{
   const row=document.createElement('div');row.className='record-row';row.setAttribute('role','listitem');
   const title=document.createElement('strong');title.textContent=item.title+' · '+item.opponent;
