@@ -113,11 +113,12 @@ export class Game {
      if(event.type==='contact'&&this.turnShot&&!this.turnShot.first&&(event.a===0||event.b===0))this.turnShot.first=event.a===0?event.b:event.a;
      if(event.type==='rail'&&this.turnShot){
        if(this.turnShot.first!==null)this.turnShot.rail=true;
-       if(event.id!==0&&!this.turnShot.railBalls.includes(event.id))this.turnShot.railBalls.push(event.id);
+       const rails=this.turnShot.railBalls??=[];
+       if(event.id!==0&&!rails.includes(event.id))rails.push(event.id);
      }
      if(event.type==='pocket'){this.onPocket(event);}
      if(event.type==='pocket'&&this.turnShot){this.turnShot.pots.push(event.id);
-       this.turnShot.potRecords.push({id:event.id,pocket:event.pocket});
+       (this.turnShot.potRecords??=[]).push({id:event.id,pocket:event.pocket});
        const [px,py]=POCKETS[event.pocket],ball=this.sim.balls.find(b=>b.id===event.id);
        this.fx.push({type:'pocket',x:px,y:py,sourceX:ball?.x??px,sourceY:ball?.y??py,color:ball?.color,life:1});
        if(haptics&&this.kind!=='attract')navigator.vibrate?.(12);}
