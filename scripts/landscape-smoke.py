@@ -19,7 +19,7 @@ def module_data(name, cache=None):
 
 def html_source():
     doc = (root / 'index.html').read_text()
-    for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css', 'responsive-ui.css', 'cue-locker.css', 'local-record.css']:
+    for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css', 'responsive-ui.css', 'cue-locker.css', 'local-record.css', 'skill-drills.css']:
         doc = re.sub(fr'<link rel="stylesheet" href="src/{re.escape(name)}(?:\?[^"]*)?">',
                      f'<style>{(root / "src" / name).read_text()}</style>', doc)
     doc = doc.replace('<link rel="manifest" href="manifest.webmanifest">', '')
@@ -93,6 +93,16 @@ with sync_playwright() as p:
             page.locator('#closeMenu').click()
         page.locator('#menuBtn').click()
         assert page.locator('#clubMenu').is_visible()
+        page.locator('#menuChallenges').click()
+        assert page.locator('#challengeSheet').is_visible() and page.locator('#challengeCards button').count()==2
+        cpanel=page.locator('.challenge-panel').bounding_box()
+        assert inside_viewport(cpanel,width,height),f'{width}x{height}: challenge picker clipped'
+        assert page.locator('.challenge-panel').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'challenge panel overflow'
+        assert page.locator('#challengeCards').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'skill cards clipped'
+        page.screenshot(path=str((root/'screenshots'/f'skill-drills-{width}x{height}.png').resolve()))
+        page.keyboard.press('Escape')
+        assert page.locator('#challengeSheet').is_hidden() and page.locator('#clubMenu').is_visible()
+        assert page.evaluate('document.activeElement.id')=='menuChallenges','skill picker focus not restored'
         page.locator('#menuLocker').click()
         assert page.locator('#lockerSheet').is_visible(), 'Cue Locker failed to open'
         assert page.locator('#lockerGrid [data-cue]').count()==6, 'six original cues not rendered'
