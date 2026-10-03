@@ -21,7 +21,7 @@ export class Game {
   // Pre-strike state is obtained from the new sim snapshot; the velocities are
   // replaced by zeros for deterministic playback/bug reports without a giant log.
   this.history.push({angle,power,spin:typeof spin==='number'?{x:spin,y:0}:{...spin},turn:this.turn,shot:this.shots+1});
-  this.turnShot={first:null,pots:[],rail:false,groupAtStart:this.group};this.shots++;this.notify('');return true;}
+  this.turnShot={first:null,pots:[],potRecords:[],rail:false,railBalls:[],groupAtStart:this.group};this.shots++;this.notify('');return true;}
  placeBreakCue(x,y){if(!this.break||this.shots||this.sim.moving||this.over||x>265||!this.sim.placeCue(x,y))return false;this.history.push({kind:'break-placement',x,y});this.notify('Cue positioned. Line up your break.');return true;}
  placeCue(x,y){if(!this.ballInHand)return false;const placed=this.sim.placeCue(x,y);if(placed){this.history.push({kind:'placement',x,y});this.ballInHand=false;this.shotClockKey='';this.notify('Cue ball placed. Line up your shot.');}return placed;}
  spotEight(){
@@ -112,9 +112,13 @@ export class Game {
    const events=this.sim.step();if(this.sim.moving)this.timer=0;
    for(const event of events){
      if(event.type==='contact'&&this.turnShot&&!this.turnShot.first&&(event.a===0||event.b===0))this.turnShot.first=event.a===0?event.b:event.a;
-     if(event.type==='rail'&&this.turnShot?.first)this.turnShot.rail=true;
+     if(event.type==='rail'&&this.turnShot){
+       if(this.turnShot.first!==null)this.turnShot.rail=true;
+       if(event.id!==0&&!this.turnShot.railBalls.includes(event.id))this.turnShot.railBalls.push(event.id);
+     }
      if(event.type==='pocket'){this.onPocket(event);}
      if(event.type==='pocket'&&this.turnShot){this.turnShot.pots.push(event.id);
+       this.turnShot.potRecords.push({id:event.id,pocket:event.pocket});
        const [px,py]=POCKETS[event.pocket],ball=this.sim.balls.find(b=>b.id===event.id);
        this.fx.push({type:'pocket',x:px,y:py,sourceX:ball?.x??px,sourceY:ball?.y??py,color:ball?.color,life:1});
        if(haptics&&this.kind!=='attract')navigator.vibrate?.(12);}
@@ -134,6 +138,12 @@ export class Game {
    const result=resolveCasualEight({
      turn:this.turn,breakShot:this.break,groups:this.groups,shot
    });
+   // Serializable ruling log supports future match replays and referee QA.
+   this.history.push({kind:'ruling',shot:this.shots,shooter,result:result.type,
+     reason:result.reason,turn:result.turn,groups:[...result.groups],
+     ballInHand:result.ballInHand,winner:result.winner,
+     potRecords:[...(shot.potRecords||[])],
+     breakRailBalls:[...(shot.railBalls||[])]});
    if(result.spotEight)this.spotEight();
    this.groups=result.groups;this.break=false;
    if(result.type==='end'){
