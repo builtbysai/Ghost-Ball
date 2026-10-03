@@ -63,11 +63,45 @@ try:
   assert page.locator('[data-cue="house"]').get_attribute('aria-label').endswith('equipped'), 'reset failed to revert equipped cue'
   assert page.locator('#lockerFavorite').get_attribute('aria-pressed')=='false', 'reset failed to clear favorites'
   page.locator('#closeLocker').click()
+  page.locator('#menuChallenges').click()
+  assert page.locator('#challengeCards [data-drill]').count()==2
+  assert 'PLAY CHALLENGE' in page.locator('[data-drill="center-drop"] .challenge-card-status').inner_text()
+  page.locator('[data-drill="center-drop"]').click()
+  page.wait_for_timeout(1840)
+  assert page.locator('#gameScreen').is_visible()
+  assert page.locator('#gameScreen').get_attribute('data-drill')=='true'
+  assert abs(float(page.locator('#aimRange').input_value())+90)<.1,'center drop starts with correct reference alignment'
+  # Real accessible keyboard power entry; 8% + nine 5% increments = 53%.
+  page.locator('#powerTrack').focus()
+  page.keyboard.press('Home')
+  for _ in range(9): page.keyboard.press('ArrowDown')
+  assert page.locator('#powerTrack').get_attribute('aria-valuenow')=='53'
+  page.keyboard.press('Enter')
+  assert page.locator('#gameScreen').get_attribute('data-shots')=='1','drill keyboard strike failed'
+  page.wait_for_function("!document.getElementById('matchResult').hidden",timeout=15000)
+  assert page.locator('#matchResultTitle').inner_text()=='DRILL COMPLETE', 'physical drill failed its authored baseline shot'
+  assert page.evaluate("JSON.parse(localStorage.getItem('ghostball-progress-v1')).drills['center-drop']")==1
+  page.locator('#playAgain').click()
+  assert page.locator('#gameScreen').get_attribute('data-shots')=='0','drill replay did not reset'
+  page.locator('#pauseButton').click()
+  page.locator('#quitMatch').click()
+  page.wait_for_timeout(1850)
+  assert page.locator('#lobby').is_visible(),'drill failed to return to menu'
+  page.locator('#menuBtn').click()
+  page.locator('#menuChallenges').click()
+  assert 'BEST 1 SHOT' in page.locator('[data-drill="center-drop"] .challenge-card-status').inner_text()
+  page.locator('#closeChallenges').click()
+  page.locator('#menuSettings').click()
+  page.locator('#openRecord').click()
+  assert page.locator('#recordDrills').inner_text()=='1 / 2 SKILLS','local record omitted earned drill'
+  assert page.locator('#recordMatches').inner_text()=='0','skill artificially inflated match ledger'
+  page.locator('#closeRecord').click()
+  page.locator('#closeSettings').click()
   page.locator('#closeMenu').click()
   page.locator('#playBtn').click()
   page.wait_for_timeout(1640)
   assert page.locator('#pauseButton').is_visible() and not errors,errors
-  print('HTTP module graph, persistent cues, local export, guarded reset and unforced game clicks passed')
+  print('Real HTTP equipment, export/reset, solved live drill, earned best and match separation passed')
   context.close();browser.close()
 finally:
  server.shutdown();server.server_close()
