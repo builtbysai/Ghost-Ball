@@ -2,38 +2,11 @@ import {Simulation,rack,POCKETS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
 import {nearbyLegalCuePlacement} from './placement-guide.js';
 import {resolveCasualEight} from './casual-rules.js';
+import {chooseShot} from './ai.js';
+export {chooseShot} from './ai.js';
 export const SHOT_CLOCK_SECONDS=45;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
-const allowed=(id,group)=>id!==0&&(id===8?group==='eight':group==='open'||(group==='solids'?id<=7:id>=9));
-function segmentClear(x1,y1,x2,y2,balls,exclude){
- const dx=x2-x1,dy=y2-y1,den=dx*dx+dy*dy;
- return !balls.some(ball=>{
-   if(ball.pocketed||exclude.includes(ball.id))return false;
-   const t=Math.max(0,Math.min(1,((ball.x-x1)*dx+(ball.y-y1)*dy)/den));
-   return dist(ball.x,ball.y,x1+t*dx,y1+t*dy)<TABLE.radius*2.18;
- });
-}
-/** A transparent geometry-based CPU: evaluate ghost-ball cut angles and obstructed paths. */
-export function chooseShot(sim,group='open',difficulty='rookie',random=createRandom(1)){
- const cue=sim.cue();if(!cue||cue.pocketed)return {angle:0,power:.58};
- let choices=[];
- for(const ball of sim.balls){if(ball.pocketed||!allowed(ball.id,group))continue;
-   for(const [px,py] of POCKETS){const d=dist(ball.x,ball.y,px,py),ux=(px-ball.x)/d,uy=(py-ball.y)/d;
-     const gx=ball.x-ux*TABLE.radius*2,gy=ball.y-uy*TABLE.radius*2;
-     if(gx<20||gx>980||gy<20||gy>480)continue;
-     if(!segmentClear(cue.x,cue.y,gx,gy,sim.balls,[0,ball.id]))continue;
-     if(!segmentClear(ball.x,ball.y,px,py,sim.balls,[ball.id]))continue;
-     const approach=dist(cue.x,cue.y,gx,gy),ax=(gx-cue.x)/approach,ay=(gy-cue.y)/approach;
-     const alignment=ax*ux+ay*uy;
-     const cost=d*.67+approach*.5+(1-alignment)*550;
-     choices.push({angle:Math.atan2(gy-cue.y,gx-cue.x),power:Math.min(.9,Math.max(.23,(approach+d*.45)/1450)),cost});
-   }
- }
- choices.sort((a,b)=>a.cost-b.cost);
- const best=choices[0];if(best)return {angle:best.angle+(difficulty==='rookie'?(random()-.5)*.055:(random()-.5)*.017),power:best.power};
- const nearest=sim.balls.filter(b=>!b.pocketed&&allowed(b.id,group)).sort((a,b)=>dist(a.x,a.y,cue.x,cue.y)-dist(b.x,b.y,cue.x,cue.y))[0];
- return nearest?{angle:Math.atan2(nearest.y-cue.y,nearest.x-cue.x)+(random()-.5)*.045,power:.52}:{angle:0,power:.5};
-}
+const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 export class Game {
  constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
   this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;
