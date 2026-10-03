@@ -82,6 +82,8 @@ with sync_playwright() as p:
         assert early['last']['reason']=='early-eight'
         assert page.locator('#matchResult').is_visible()
         assert 'PLAYER TWO WINS' in page.locator('#matchResultTitle').inner_text()
+        assert 'EARLY EIGHT' in page.locator('#resultLastShotText').inner_text(), 'last shot not grounded'
+        assert page.evaluate('document.activeElement.id')=='playAgain', 'rematch button did not receive focus'
         overlay=page.locator('#matchResult')
         assert overlay.evaluate('(el)=>el.scrollHeight<=el.clientHeight+2'), 'result overlay internal scrolling'
         page.screenshot(path=str(root/'screenshots'/f'p2-end-{width}x{height}.png'))
