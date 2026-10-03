@@ -29,7 +29,8 @@ jobs:
           GHOST_SEEDS: "17,41,73,109,211,337"
           GHOST_MAX_SHOTS: "120"
           GHOST_REPLAY: "1"
-          GHOST_MIN_LEGAL_FINISHES: "2"
+          GHOST_SEAT_FLIP_SEEDS: "17,41,73"
+          GHOST_MIN_LEGAL_FINISHES: "6"
         run: |
           node scripts/full-rack-lab.mjs > full-rack-report.json
           cat full-rack-report.json
