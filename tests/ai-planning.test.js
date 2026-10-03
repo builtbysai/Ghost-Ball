@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Simulation,makeBall} from '../src/physics.js';
 import {createRandom} from '../src/random.js';
-import {candidateShots,chooseShot,previewShot} from '../src/ai.js';
+import {candidateShots,chooseShot,previewShot,assessShot} from '../src/ai.js';
 import {Game} from '../src/game.js';
 
 function sparse(){
@@ -50,4 +50,34 @@ test('match and exhibition retain their seeded opponent choices',()=>{
  a.update(.08);b.update(.08);
  assert.deepEqual(a.previewShot,b.previewShot);
  assert.ok(Number.isFinite(a.previewShot.angle));
+});
+
+test('physics previews penalize wrong first contact even when a solid is on the path',()=>{
+ const sim=new Simulation([makeBall(0,200,250),makeBall(9,355,250),makeBall(1,500,250)]);
+ const snapshot=sim.snapshot();
+ const verdict=assessShot(sim,{angle:0,power:.48,target:1,pocket:2,cost:30},'solids');
+ assert.equal(verdict.first,9);
+ assert.equal(verdict.legalFirst,false);
+ assert.equal(verdict.foul,true);
+ assert.ok(verdict.score<0);
+ assert.deepEqual(sim.snapshot(),snapshot,'a prediction must never strike the actual game table');
+});
+test('physics previews detect a legal first hit separately from pocket predictions',()=>{
+ const sim=new Simulation([makeBall(0,200,250),makeBall(1,450,250)]);
+ const shot={angle:0,power:.45,target:1,pocket:2,cost:50};
+ const verdict=assessShot(sim,shot,'solids');
+ assert.equal(verdict.first,1);
+ assert.equal(verdict.legalFirst,true);
+ assert.equal(verdict.score,previewShot(sim,shot,'solids'));
+});
+test('physics previews detect an early eight and account for scratch risk',()=>{
+ const eight=new Simulation([makeBall(0,200,250),makeBall(8,420,250),makeBall(1,800,350)]);
+ const early=assessShot(eight,{angle:0,power:.4,target:1,pocket:0,cost:50},'solids');
+ assert.equal(early.first,8);
+ assert.equal(early.earlyEight,false,'early 8 means pocketed, not merely first contact');
+ assert.equal(early.legalFirst,false);
+ const scratch=new Simulation([makeBall(0,58,58),makeBall(1,700,200)]);
+ const pocket=assessShot(scratch,{angle:-Math.PI*.75,power:.4,target:1,pocket:0,cost:40},'open');
+ assert.equal(pocket.scratch,true);
+ assert.equal(pocket.foul,true);
 });
