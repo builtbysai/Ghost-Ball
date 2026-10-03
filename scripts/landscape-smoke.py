@@ -19,7 +19,7 @@ def module_data(name, cache=None):
 
 def html_source():
     doc = (root / 'index.html').read_text()
-    for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css', 'responsive-ui.css']:
+    for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css', 'responsive-ui.css', 'cue-locker.css']:
         doc = re.sub(fr'<link rel="stylesheet" href="src/{re.escape(name)}(?:\?[^"]*)?">',
                      f'<style>{(root / "src" / name).read_text()}</style>', doc)
     doc = doc.replace('<link rel="manifest" href="manifest.webmanifest">', '')
@@ -93,6 +93,31 @@ with sync_playwright() as p:
             page.locator('#closeMenu').click()
         page.locator('#menuBtn').click()
         assert page.locator('#clubMenu').is_visible()
+        page.locator('#menuLocker').click()
+        assert page.locator('#lockerSheet').is_visible(), 'Cue Locker failed to open'
+        assert page.locator('#lockerGrid [data-cue]').count()==6, 'six original cues not rendered'
+        assert page.locator('#lockerEquip').is_disabled(), 'already equipped starter should not re-equip'
+        assert page.locator('#lockerGrid [data-cue="nightfall"]').get_attribute('aria-label').startswith('Nightfall, locked')
+        panel=page.locator('.locker-panel').bounding_box()
+        within(panel,page.locator('#lockerSheet').bounding_box(),f'{width}x{height}: locker bounds')
+        assert page.locator('.locker-panel').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'locker scroll trapped'
+        assert page.locator('.locker-collection').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'cue collection clipped'
+        page.locator('#lockerGrid [data-cue="nightfall"]').click()
+        assert page.locator('#lockerEquip').is_disabled(), 'locked cue must not equip'
+        page.locator('#lockerGrid [data-cue="house"]').focus()
+        page.keyboard.press('ArrowRight')
+        assert page.locator('[data-cue="smoke"]').get_attribute('aria-pressed')=='true', 'arrow selection did not advance'
+        page.locator('#lockerEquip').click()
+        assert page.locator('[data-cue="smoke"]').get_attribute('aria-label').endswith('equipped')
+        page.locator('#lockerFavorite').click()
+        assert page.locator('#lockerFavorite').get_attribute('aria-pressed')=='true'
+        page.screenshot(path=str((root/'screenshots'/f'cue-locker-{width}x{height}.png').resolve()))
+        page.keyboard.press('Escape')
+        assert page.locator('#lockerSheet').is_hidden() and page.locator('#clubMenu').is_visible()
+        assert page.evaluate('document.activeElement.id')=='menuLocker', 'Locker focus not restored'
+        page.locator('#menuLocker').click()
+        assert page.locator('[data-cue="smoke"]').get_attribute('aria-label').endswith('equipped'), 'equipment did not survive reopen'
+        page.locator('#closeLocker').click()
         page.locator('#closeMenu').click()
         page.locator('#openSetup').click()
         assert page.locator('#setupSheet').is_visible()

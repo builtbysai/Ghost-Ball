@@ -38,7 +38,9 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/table-finishes.js`: shared table construction plus hall-specific materials (visual only; physics unchanged).
 - `src/cue-feel.js`: pure cue travel, contact stroke timing and tactile stage math.
 - `src/audio.js`: gesture-unlocked physical impact and restrained result sounds.
-- `src/player-progress.js`: versioned offline match and room-choice ledger (no network tracking).
+- `src/player-progress.js`: versioned offline match, room choice, equipment and favorites ledger.
+- `src/cue-catalog.js`: six original purely cosmetic cues, exact milestone unlocks and shared preview appearance.
+- `src/cue-locker.css`: viewport-fitted 3×2 equipment browsing in landscape and portrait.
 - `src/main.js`: app wiring, responsive controls, lifecycle.
 - `src/touch-controls.js`: tested rear-shaft hit testing, pointer pull, wheel aim and spin-contact math.
 - `src/table-transition.js`: live-to-play table motion and deterministic rack assembly.
@@ -56,9 +58,9 @@ in bounded batches across animation frames and keeps its cue visible while
 aiming. Those are automated, non-rendered results; physical Android control
 comfort, screen-edge gestures and real phone frame timing are still open.
 
-## Upcoming: fair equipment and room mastery
+## Earned equipment and upcoming room mastery
 
-The October 2 research pass moved **original cue choices/unlocks** and **two genuinely new room designs** earlier in the development order, following complete-match/real-device verification and shot feel. Two new original venues are already playable alongside the original three. A local match ledger now tracks real finishes and remembers the chosen room. **Cue Locker/equippable art and challenge-locked mastery remain planned**, not shipped. Cues will have identical competitive physics; future venue unlocks require real authored challenges, not purchase pressure. See [research notes](docs/ENGAGEMENT-RESEARCH.md) and the [reordered roadmap](docs/ROADMAP.md).
+The October 2 research pass moved **original cue choices/unlocks** and **two genuinely new room designs** earlier in the development order, following complete-match/real-device verification and shot feel. All five rooms are playable. The real **Cue Locker** has two starter cues and four original permanently unlockable cosmetics, automatically earned from adjudicated casual match milestones. Preview, favorite and equip them; the visible shaft/tip/wrap changes in the lobby and during shots without altering shot physics. Persistent local favorites and selected cue require available browser storage. **Authored challenges and room locks are not shipped yet.** See [research notes](docs/ENGAGEMENT-RESEARCH.md) and the [reordered roadmap](docs/ROADMAP.md).
 
 ## Recovery
 

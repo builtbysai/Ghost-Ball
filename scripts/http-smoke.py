@@ -24,11 +24,27 @@ try:
   assert page.locator('#lobby').is_visible()
   page.locator('#menuBtn').click()
   assert page.locator('#clubMenu').is_visible()
+  page.locator('#menuLocker').click()
+  assert page.locator('#lockerStatus').inner_text()!='SESSION ONLY', 'local HTTP storage should work'
+  page.locator('[data-cue="smoke"]').click()
+  assert page.locator('#lockerEquip').is_enabled()
+  page.locator('#lockerEquip').click()
+  page.locator('#lockerFavorite').click()
+  assert page.locator('#lockerFavorite').get_attribute('aria-pressed')=='true'
+  page.locator('#closeLocker').click()
+  page.locator('#closeMenu').click()
+  page.reload(wait_until='load')
+  page.wait_for_timeout(100)
+  page.locator('#menuBtn').click()
+  page.locator('#menuLocker').click()
+  assert page.locator('[data-cue="smoke"]').get_attribute('aria-label').endswith('equipped'), 'equipped cue lost after reload'
+  assert page.locator('#lockerFavorite').get_attribute('aria-pressed')=='true', 'favorite lost after reload'
+  page.locator('#closeLocker').click()
   page.locator('#closeMenu').click()
   page.locator('#playBtn').click()
   page.wait_for_timeout(1640)
   assert page.locator('#pauseButton').is_visible() and not errors,errors
-  print('HTTP module graph, versioned stylesheets and unforced menu/game clicks passed')
+  print('HTTP module graph, persistent real equipment/favorites, and unforced game clicks passed')
   context.close();browser.close()
 finally:
  server.shutdown();server.server_close()

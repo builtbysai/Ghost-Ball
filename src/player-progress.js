@@ -11,7 +11,7 @@ const FINISH_REASONS=new Set(['eight-cleared','early-eight','scratch-on-eight','
 
 export function freshProgress(){
  return {version:PROGRESS_VERSION,matchesPlayed:0,vsCpuWins:0,vsCpuLosses:0,
-  localMatches:0,cleanWins:0,bestRun:0,selectedCue:'house',selectedRoom:1,
+  localMatches:0,cleanWins:0,bestRun:0,selectedCue:'house',selectedRoom:1,favorites:[],
   achievements:[],records:[]};
 }
 function validProgress(p){
@@ -21,6 +21,8 @@ function validProgress(p){
    .every(key=>count(p[key]))&&
   typeof p.selectedCue==='string'&&p.selectedCue.length<=64&&
   count(p.selectedRoom)&&p.selectedRoom<64&&
+  (p.favorites===undefined||Array.isArray(p.favorites)&&p.favorites.length<=6&&
+   p.favorites.every(id=>typeof id==='string'&&id.length<=64))&&
   Array.isArray(p.achievements)&&p.achievements.every(id=>typeof id==='string')&&
   Array.isArray(p.records)&&p.records.length<=RECORD_LIMIT&&
   p.records.every(e=>e&&typeof e.id==='string'&&e.id.length<=128);
@@ -38,7 +40,9 @@ export function readLocalProgress(storage=()=>globalThis.localStorage){
    return {progress:freshProgress(),writable:false,reason:'unsupported-version'};
   if(!validProgress(parsed))
    return {progress:freshProgress(),writable:false,reason:'invalid-data'};
-  return {progress:parsed,writable:true,reason:null};
+  // Existing version-one ledgers predate favorites; safely default only that
+  // optional cosmetic field without touching saved match records.
+  return {progress:{...parsed,favorites:parsed.favorites||[]},writable:true,reason:null};
  }catch{
   return {progress:freshProgress(),writable:false,reason:'unavailable'};
  }
