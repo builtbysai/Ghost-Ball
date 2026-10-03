@@ -39,6 +39,7 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/cue-feel.js`: pure cue travel, contact stroke timing and tactile stage math.
 - `src/audio.js`: gesture-unlocked physical impact and restrained result sounds.
 - `src/player-progress.js`: versioned offline match, room choice, equipment and favorites ledger.
+- `src/record-summary.js` and `src/local-record.css`: compact private stats and recent results, JSON export and guarded local-only reset via Preferences.
 - `src/cue-catalog.js`: six original purely cosmetic cues, exact milestone unlocks and shared preview appearance.
 - `src/cue-locker.css`: viewport-fitted 3×2 equipment browsing in landscape and portrait.
 - `src/main.js`: app wiring, responsive controls, lifecycle.
@@ -61,6 +62,10 @@ comfort, screen-edge gestures and real phone frame timing are still open.
 ## Earned equipment and upcoming room mastery
 
 The October 2 research pass moved **original cue choices/unlocks** and **two genuinely new room designs** earlier in the development order, following complete-match/real-device verification and shot feel. All five rooms are playable. The real **Cue Locker** has two starter cues and four original permanently unlockable cosmetics, automatically earned from adjudicated casual match milestones. Preview, favorite and equip them; the visible shaft/tip/wrap changes in the lobby and during shots without altering shot physics. Persistent local favorites and selected cue require available browser storage. **Authored challenges and room locks are not shipped yet.** See [research notes](docs/ENGAGEMENT-RESEARCH.md) and the [reordered roadmap](docs/ROADMAP.md).
+
+## Your local record
+
+Open **Menu → Settings → Local Record** to see your completed-match totals and recent verified results. **Export your record** saves a private JSON file to your device. **Reset local record** requires confirmation and removes match/cue unlock progress, favorites and chosen room from this browser, but keeps audio and control preferences. Data never leaves the browser unless you explicitly export it; no account synchronization is offered. If saved progress is unreadable or from a newer version, Ghost Ball will not overwrite or delete it automatically.
 
 ## Recovery
 
