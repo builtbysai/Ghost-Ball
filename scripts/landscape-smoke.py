@@ -159,6 +159,21 @@ with sync_playwright() as p:
         prefs=page.locator('.prefs-panel').bounding_box()
         assert inside_viewport(prefs,width,height), f'preferences clipped: {prefs}'
         assert page.locator('.prefs-panel').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'preferences have internal overflow'
+        page.locator('#openRecord').click()
+        assert page.locator('#recordSheet').is_visible() and page.locator('#settingsSheet').is_hidden(), 'private record panel failed to open'
+        assert page.locator('#recordMatches').inner_text()=='0', 'new record should have no fake matches'
+        record=page.locator('.record-panel').bounding_box()
+        assert inside_viewport(record,width,height), f'{width}x{height}: record clipped {record}'
+        assert page.locator('.record-panel').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'record panel scroll overflow'
+        assert page.locator('.record-privacy').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'privacy controls overflow'
+        page.locator('#resetRecord').click()
+        assert page.locator('#recordConfirm').is_visible() and page.locator('#recordMatches').inner_text()=='0'
+        page.locator('#cancelRecordReset').click()
+        assert page.locator('#recordConfirm').is_hidden(), 'cancel failed'
+        page.screenshot(path=str((root/'screenshots'/f'local-record-{width}x{height}.png').resolve()))
+        page.keyboard.press('Escape')
+        assert page.locator('#recordSheet').is_hidden() and page.locator('#settingsSheet').is_visible(), 'Escape did not restore preferences'
+        assert page.evaluate('document.activeElement.id')=='openRecord', 'record focus did not return'
         page.locator('[data-power-side="right"]').click()
         assert page.locator('#gameScreen').evaluate("(el)=>el.classList.contains('power-right')"), 'power-side preference unresponsive'
         page.locator('[data-power-side="left"]').click()
