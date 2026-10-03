@@ -61,7 +61,8 @@ with sync_playwright() as p:
             ['solids','stripes'])""")
         assert wrong['turn']==1 and wrong['ballInHand'],wrong
         assert wrong['last']['reason']=='wrong-ball-first'
-        assert page.locator('#turnLabel').inner_text()=='PLAYER 2 PLACING'
+        assert page.locator('#turnLabel').inner_text()=='P2 PLACING'
+        assert page.locator('#turnLabel').evaluate('(el)=>el.scrollWidth<=el.clientWidth+2'), 'pass-and-play turn truncated'
         assert 'WRONG BALL' in page.locator('#tableToast').inner_text()
         assert page.locator('#placementTools').is_visible()
         page.screenshot(path=str(root/'screenshots'/f'p2-foul-{width}x{height}.png'))
@@ -70,7 +71,8 @@ with sync_playwright() as p:
             [null,null])""")
         assert assignment['groups']==['solids','stripes']
         assert assignment['turn']==0 and not assignment['ballInHand']
-        assert page.locator('#turnLabel').inner_text()=='PLAYER 1 TURN'
+        assert page.locator('#turnLabel').inner_text()=='P1 TURN'
+        assert page.locator('#turnLabel').evaluate('(el)=>el.scrollWidth<=el.clientWidth+2'), 'assignment turn truncated'
         assert 'SOLIDS' in page.locator('#tableToast').inner_text()
         page.screenshot(path=str(root/'screenshots'/f'p2-assignment-{width}x{height}.png'))
         early=page.evaluate("""window.__ghostRules.stage(
