@@ -68,13 +68,42 @@ for seed 17, and 9.37/36.24/61.48 ms for seed 41. These numbers motivated
 cooperative search; do not present GitHub CI timings as an Android FPS result.
 After the generator refactor, measure real Android frame pacing separately.
 
+## Expanded deterministic match evidence
+
+[Expanded six-seed + three reversed-seat run 37085168133](https://github.com/builtbysai/Ghost-Ball/actions/runs/37085168133)
+ran **nine independent CPU-vs-CPU matches** with production 240 Hz physics
+and authoritative casual rulings. All nine terminated with a
+`terminalReason: "eight-cleared"` and `winnerGroupRemaining: 0`, rather
+than an early 8-ball foul. The workflow also replayed all nine seeds with
+the same seat allocations, confirming identical shot/ruling histories
+and final ball snapshots. This is a bounded deterministic regression
+sample, **not** proof that arbitrary seeds or human matches always finish.
+
+| Rack seed | Seat order (P1 / P2) | Shots to legal finish | Fouls |
+| --- | --- | ---: | ---: |
+| 17 | Rookie / Club | 71 | 13 |
+| 41 | Rookie / Club | 50 | 7 |
+| 73 | Rookie / Club | 37 | 6 |
+| 109 | Rookie / Club | 55 | 7 |
+| 211 | Rookie / Club | 55 | 8 |
+| 337 | Rookie / Club | 78 | 8 |
+| 17 | Club / Rookie | 31 | 6 |
+| 41 | Club / Rookie | 63 | 8 |
+| 73 | Club / Rookie | 70 | 14 |
+
+CI now requires **all nine** to finish legally and replay identically.
+A deliberately restricted headless runner cannot establish Android
+frame time or device ergonomics. The frame-sliced live planner and
+provisional visible-cue animation are checked separately with seeded
+parity, full browser interaction and viewport tests.
+
 ## Run and inspect
 
 ```sh
 npm test
 node scripts/full-rack-lab.mjs
 GHOST_SEEDS=17,41 GHOST_MAX_SHOTS=96 node scripts/full-rack-lab.mjs
-GHOST_SEEDS=17,41 GHOST_MAX_SHOTS=96 GHOST_REPLAY=1 node scripts/full-rack-lab.mjs
+GHOST_SEEDS=17,41,73,109,211,337 GHOST_SEAT_FLIP_SEEDS=17,41,73 GHOST_MAX_SHOTS=120 GHOST_REPLAY=1 GHOST_MIN_LEGAL_FINISHES=9 node scripts/full-rack-lab.mjs
 ```
 
 Output summarizes shots, legitimate/illegal termination, each opponent's
@@ -92,11 +121,11 @@ the former without affecting the latter.
 
 ## Next exit gates
 
-1. Rerun the latest frame-sliced, stricter legal-finish instrumentation
-   over seeds 17/41 plus a broader seed set, including varied
-   Rookie/Club seat assignments. Maintain a seed list of failed and
-   deliberately challenging late layouts; no “all AI games finish” claim
-   from only two fast examples.
+1. **Done for the initial regression suite:** six fixed seeds plus three
+   reversed-seat matches finish legally and replay identically. Expand
+   beyond these nine fixtures with human-like defensive plans, fresh
+   seeds and deliberately awkward blocked/final-8 layouts before
+   inferring broader population performance.
 2. Add regression fixtures for blocked direct lanes, a final-group ball,
    an already-clear 8-ball, illegal-first contacts, a table almost empty,
    simultaneous group-plus-8 and a stuck cue. Compare scripted
