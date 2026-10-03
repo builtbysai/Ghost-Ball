@@ -48,7 +48,13 @@ export function candidateShots(sim,group='open'){
 /** Lightweight real-physics prediction. Evaluate the ruling along with
  * target pocket instead of treating an illegal pocket as a successful shot.
  * maxSteps is a bounded planning window, NOT a replacement for the referee. */
-export function assessShot(sim,candidate,group='open',{maxSteps=960}={}){
+/**
+ * One yielded step = at most one real 240 Hz simulation step. A full,
+ * deterministic search can be performed synchronously in lab tests, while
+ * the live browser can spread it over animation frames with no altered
+ * physics or RNG behavior.
+ */
+function* simulateAssessment(sim,candidate,group='open',{maxSteps=960}={}){
  const predicted=new Simulation(sim.snapshot().balls);
  if(!predicted.strike(candidate.angle,candidate.power)){
    return {score:-Infinity,targetPocket:false,legalFirst:false,scratch:false,complete:false};
@@ -72,11 +78,9 @@ export function assessShot(sim,candidate,group='open',{maxSteps=960}={}){
    }else if(groupContains(event.id,group))own++;
   }
   if(!predicted.moving){complete=true;break;}
+  yield; // cooperative browser scheduling without wall-clock-dependent decisions
  }
  const legalFirst=first!==null&&groupContains(first,group);
- // Predict a legal made ball, not a visually successful but foul-ridden pot.
- // A clean positional fallback remains preferable when the planned target
- // cannot be made during the bounded preview window.
  const foul=scratch||earlyEight||!legalFirst||
    (complete&&!anyPocket&&!railAfterContact);
  const made=legalFirst&&targetPocket&&!foul;
@@ -88,6 +92,14 @@ export function assessShot(sim,candidate,group='open',{maxSteps=960}={}){
    -candidate.cost*.25-candidate.power*25;
  return {score,targetPocket,legalFirst,scratch,earlyEight,first,
    complete,railAfterContact,foul,made};
+}
+function drain(generator){
+ let state=generator.next();
+ while(!state.done)state=generator.next();
+ return state.value;
+}
+export function assessShot(sim,candidate,group='open',options={}){
+ return drain(simulateAssessment(sim,candidate,group,options));
 }
 /**
  * Find an actually legal and geometrically useful ball-in-hand position.
@@ -145,19 +157,16 @@ export function chooseAiCuePlacement(sim,group='open',difficulty='rookie'){
 export function previewShot(sim,candidate,group='open',options={}){
  return assessShot(sim,candidate,group,options).score;
 }
-/** Purely local shot selection, deterministic with the supplied seeded PRNG.
- * Both opponents get exactly the same physics; only planning changes. */
-export function chooseShot(sim,group='open',difficulty='rookie',random=createRandom(1)){
+/** A pure deterministic planning generator. Advance at most a fixed
+ * number of yielded 240-Hz prediction steps per frame in the browser.
+ * Draining the same generator yields exactly the same plan in headless CI. */
+export function* createShotPlanner(sim,group='open',difficulty='rookie',random=createRandom(1)){
  const cue=sim.cue();
  if(!cue||cue.pocketed)return {angle:0,power:.58};
  const candidates=candidateShots(sim,group);
  if(candidates.length){
   if(difficulty==='club'){
-   // Keep evaluation bounded and deterministic on modest devices. Vary
-   // target/pocket before replaying the same narrow cut with many strengths.
-   // Six to eight previews per turn; never run an exhaustive tree.
-   const short=candidates.slice(0,5);
-   const plans=[];
+   const short=candidates.slice(0,5),plans=[];
    for(let i=0;i<short.length;i++){
     const base=short[i];
     plans.push({...base});
@@ -165,10 +174,8 @@ export function chooseShot(sim,group='open',difficulty='rookie',random=createRan
    }
    let best=null;
    for(const plan of plans){
-    const verdict=assessShot(sim,plan,group);
+    const verdict=yield* simulateAssessment(sim,plan,group);
     if(!best||verdict.score>best.verdict.score)best={plan,verdict};
-    // A genuinely predicted legal pocket is stronger evidence than trying
-    // more expensive speculative lines. Keep the selected result stable.
     if(verdict.made&&verdict.score>1120)break;
    }
    const selected=best.plan;
@@ -178,13 +185,11 @@ export function chooseShot(sim,group='open',difficulty='rookie',random=createRan
      predictedPot:best.verdict.made,plan:'preview'};
   }
   const range=Math.min(2,candidates.length);
-  // Rookie reads a decent simple angle but remains noticeably imprecise.
   const selected=candidates[Math.floor(random()*range)];
   return {angle:selected.angle+(random()-.5)*.035,
     power:clamp(selected.power*(.92+random()*.15),.23,.92),
     target:selected.target,pocket:selected.pocket,plan:'geometry'};
  }
- // No clean pot: use an unobstructed legal first contact if possible.
  const targets=sim.balls.filter(ball=>!ball.pocketed&&groupContains(ball.id,group))
    .map(ball=>({ball,range:distance(cue,ball)}))
    .sort((a,b)=>a.range-b.range||a.ball.id-b.ball.id);
@@ -194,4 +199,9 @@ export function chooseShot(sim,group='open',difficulty='rookie',random=createRan
  return {angle:Math.atan2(target.y-cue.y,target.x-cue.x)
      +(random()-.5)*(difficulty==='club'?.01:.06),
    power:difficulty==='club'?.45:.52,target:target.id,plan:'contact'};
+}
+/** Synchronous convenience for tests and batch matches, sharing every
+ * decision with the frame-sliced live match generator. */
+export function chooseShot(sim,group='open',difficulty='rookie',random=createRandom(1)){
+ return drain(createShotPlanner(sim,group,difficulty,random));
 }
