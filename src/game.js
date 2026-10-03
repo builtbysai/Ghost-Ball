@@ -1,8 +1,7 @@
 import {Simulation,rack,POCKETS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
-import {nearbyLegalCuePlacement} from './placement-guide.js';
 import {resolveCasualEight} from './casual-rules.js';
-import {chooseShot} from './ai.js';
+import {chooseShot,chooseAiCuePlacement} from './ai.js';
 export {chooseShot} from './ai.js';
 export const SHOT_CLOCK_SECONDS=45;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
@@ -70,17 +69,15 @@ export class Game {
      }
      if(this.isAI()&&!this.over){
        if(this.kind==='match'&&this.ballInHand){
-         const preferred=[[240,250],[320,220],[360,300],[210,150]];
-         // Fall back when the normal ball-in-hand positions are obstructed.
-         for(let x=100;x<=900;x+=100)for(const y of [250,150,350])preferred.push([x,y]);
-         for(const [x,y] of preferred){
-           const spot=nearbyLegalCuePlacement(this.sim,x,y,{maxDistance:52});
-           if(spot&&this.sim.placeCue(spot.x,spot.y)){
-             this.ballInHand=false;this.shotClockKey='';break;
-           }
+         const placement=chooseAiCuePlacement(this.sim,this.group,this.difficulty);
+         if(placement&&this.placeCue(placement.x,placement.y)){
+           // Reusing Game.placeCue ensures the actual AI follows the same
+           // referee and event-history path as local play and our bench.
+           this.timer=0;
          }
          this.previewShot=null;
        }
+       if(this.ballInHand)return; // no strike while there is no legal site
        if(!this.previewShot){
          this.previewShot=this.break?{angle:0,power:this.kind==='attract'?.83:.82}:
            chooseShot(this.sim,this.kind==='attract'?'open':this.group,
