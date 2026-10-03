@@ -168,3 +168,25 @@
  background:#10253ae8;color:#fff2d5;text-align:center;
  font:800 clamp(8px,.8vw,10px)/1.2 system-ui;letter-spacing:.06em;
  max-width:90%;white-space:normal;pointer-events:none}
+
+/* Room mastery reads permanent authentic records, never disables room choices. */
+#app .room-mastery[hidden]{display:none!important}
+#app .room-mastery{display:flex;flex-direction:column;gap:3px;max-width:min(240px,100%);
+ margin:8px 0 0;padding:6px 9px;border-left:2px solid #dcbd7d;
+ background:linear-gradient(90deg,#2e402bc4,#12231922);
+ font:800 clamp(8px,.85vw,10px)/1.2 system-ui;letter-spacing:.09em;color:#f2dbab;
+ text-shadow:0 1px 2px #000c}
+#app .room-mastery span{display:flex;justify-content:space-between;gap:10px;white-space:nowrap}
+#app .room-mastery b{color:#f9ecd0}
+#app .room-mastery small{font:700 clamp(7px,.7vw,9px)/1.2 system-ui;
+ color:#e4dec8;letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app .room-mastery[data-mastered="true"]{border-color:#80d9ae;color:#adf2d0}
+@media(max-height:480px){
+ #app .room-mastery{max-width:100%;margin-top:4px;padding:4px 6px;gap:0}
+ #app .room-mastery small{font-size:7px}
+}
+@media(max-height:350px){
+ #app .room-details:has(.room-mastery:not([hidden])) #roomDescription{display:none}
+ #app .room-mastery{font-size:7px}
+ #app .room-mastery small{display:none}
+}
