@@ -323,7 +323,8 @@ function turnUI(){if(!current)return;
     setText('matchResultDetail',current.drillOutcome==='completed'?
      `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · ${best?progressAccess.writable?'SAVED BEST: '+best:'SESSION BEST: '+best:'COMPLETED'}`:
      ({scratch:'SCRATCH · RESET AND TRY AGAIN','wrong-pocket':'WRONG POCKET · TRY AGAIN',
-       'out-of-shots':'TWO SHOTS USED · TRY AGAIN'})[current.history.at(-1)?.reason]||'RESET AND TRY AGAIN');
+       'out-of-shots':'TWO SHOTS USED · TRY AGAIN',
+        'no-bank':'NO CUSHION BANK · TRY AGAIN'})[current.history.at(-1)?.reason]||'RESET AND TRY AGAIN');
    }else
   setText('matchResultDetail',practice?`${current.shots} SHOTS THIS SESSION`:
      `${current.shots} SHOTS · ${resultKind==='clean'?'CLEAN 8-BALL':'FOUL ON THE 8'}`+

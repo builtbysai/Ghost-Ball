@@ -17,7 +17,14 @@ export const SKILL_DRILLS=Object.freeze([
   brief:'READ THE CORNER ANGLE',
   room:1,targetId:2,targetPocket:2,attempts:2,
   cue:Object.freeze({x:594,y:333}),target:Object.freeze({x:725,y:225}),
-  referenceAngle:Math.atan2(-232,282)})
+  referenceAngle:Math.atan2(-232,282)}),
+ Object.freeze({id:'rail-return',name:'Rail Return',subtitle:'The one-cushion bank',
+  instruction:'Bank the 3 off the bottom cushion into top middle. No scratch.',
+  brief:'BOTTOM CUSHION → TOP MIDDLE',room:2,targetId:3,targetPocket:1,
+  requiredCushion:true,attempts:2,
+  cue:Object.freeze({x:750,y:60}),target:Object.freeze({x:680,y:210}),
+  // Solved with real settled physics at 40% and keyboard 53% power.
+  referenceAngle:116.5*Math.PI/180})
 ]);
 export const skillDrillById=id=>SKILL_DRILLS.find(drill=>drill.id===id)||null;
 export function skillDrillBalls(id){
@@ -38,9 +45,14 @@ export function gradeSkillDrill(id,{shots,shot}={}){
  const scratched=shot.pots.includes(0);
  const target=shot.potRecords.find(record=>record?.id===drill.targetId);
  if(scratched)return {status:'failed',reason:'scratch'};
- if(target)return target.pocket===drill.targetPocket
-  ?{status:'completed',reason:'target-pocket'}
-  :{status:'failed',reason:'wrong-pocket'};
+ if(target){
+  if(target.pocket!==drill.targetPocket)return {status:'failed',reason:'wrong-pocket'};
+  // A true bank requires a non-jaw cushion collision by the target ball.
+  if(drill.requiredCushion&&(!Array.isArray(shot.cushionBalls)||
+    !shot.cushionBalls.includes(drill.targetId)))
+   return {status:'failed',reason:'no-bank'};
+  return {status:'completed',reason:'target-pocket'};
+ }
  return shots>=drill.attempts
   ?{status:'failed',reason:'out-of-shots'}
   :{status:'continue',reason:'try-again'};

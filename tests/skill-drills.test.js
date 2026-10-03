@@ -19,8 +19,8 @@ function takeShot(id,angle,power){
  assert.equal(g.history[0].shot,1);
  return {g,before,announcements,steps};
 }
-test('two original drill layouts have valid distinct cues, pockets and rules',()=>{
- assert.equal(SKILL_DRILLS.length,2);
+test('three original drill layouts have valid distinct cues, pockets and rules',()=>{
+ assert.equal(SKILL_DRILLS.length,3);
  assert.equal(new Set(SKILL_DRILLS.map(d=>d.id)).size,2);
  for(const drill of SKILL_DRILLS){
   assert.equal(skillDrillById(drill.id),drill);
@@ -50,6 +50,8 @@ test('each authored drill is finishable with actual settled fixed-step shots',()
   assert.equal(event.evidence.potRecords.some(x=>x.id===drill.targetId&&
     x.pocket===drill.targetPocket),true);
   assert.equal(event.evidence.pots.includes(0),false,'baseline scratched');
+  if(drill.requiredCushion)assert.ok(event.evidence.cushionBalls.includes(drill.targetId),
+    'bank completion must include a real target-ball cushion rebound');
   assert.equal(success.g.history.at(-1).status,'completed');
   assert.equal(success.g.shots,1);
   // Matching seed, input and physics must always produce identical evidence.
@@ -75,6 +77,20 @@ test('invalid pocket, scratch, and exhausted attempts cannot mint completion',()
   result(drill.id,evidence,{completed:false}),
   result(drill.id,evidence,{shots:0})
  ])assert.equal(recordLiveDrill(initial,forged),initial);
+});
+test('bank rejects direct pots and jaw-only evidence before saving a completion',()=>{
+ const bank=skillDrillById('rail-return'),proof={pots:[3],potRecords:[{id:3,pocket:1}]};
+ assert.equal(bank.requiredCushion,true);
+ assert.equal(gradeSkillDrill(bank.id,{shots:1,shot:proof}).reason,'no-bank');
+ assert.equal(gradeSkillDrill(bank.id,{shots:1,shot:{...proof,railBalls:[3]}}).status,'failed');
+ assert.equal(gradeSkillDrill(bank.id,{shots:1,shot:{...proof,cushionBalls:[0]}}).status,'failed');
+ assert.equal(gradeSkillDrill(bank.id,{shots:1,shot:{...proof,cushionBalls:[3]}}).status,'completed');
+ const before=freshProgress();
+ assert.equal(recordLiveDrill(before,result(bank.id,proof)),before);
+ const earned=recordLiveDrill(before,result(bank.id,{...proof,cushionBalls:[3]}));
+ assert.equal(earned.drills[bank.id],1);
+ assert.ok(earned.achievements.includes('drill-rail-return'));
+ assert.equal(earned.matchesPlayed,0);
 });
 test('verified personal best and achievement persist but never inflate match stats',()=>{
  const proof={pots:[1],potRecords:[{id:1,pocket:1}]};

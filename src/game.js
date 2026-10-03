@@ -26,7 +26,7 @@ export class Game {
   // Pre-strike state is obtained from the new sim snapshot; the velocities are
   // replaced by zeros for deterministic playback/bug reports without a giant log.
   this.history.push({angle,power,spin:typeof spin==='number'?{x:spin,y:0}:{...spin},turn:this.turn,shot:this.shots+1});
-  this.turnShot={first:null,pots:[],potRecords:[],rail:false,railBalls:[],groupAtStart:this.group};this.shots++;this.notify('');return true;}
+  this.turnShot={first:null,pots:[],potRecords:[],rail:false,railBalls:[],cushionBalls:[],groupAtStart:this.group};this.shots++;this.notify('');return true;}
  placeBreakCue(x,y){if(!this.break||this.shots||this.sim.moving||this.over||x>265||!this.sim.placeCue(x,y))return false;this.history.push({kind:'break-placement',x,y});this.notify('Cue positioned. Line up your break.');return true;}
  placeCue(x,y){if(!this.ballInHand)return false;const placed=this.sim.placeCue(x,y);if(placed){this.history.push({kind:'placement',x,y});this.ballInHand=false;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.shotClockKey='';this.notify('Cue ball placed. Line up your shot.');}return placed;}
  spotEight(){
@@ -156,6 +156,9 @@ export class Game {
        if(this.turnShot.first!==null)this.turnShot.rail=true;
        const rails=this.turnShot.railBalls??=[];
        if(event.id!==0&&!rails.includes(event.id))rails.push(event.id);
+       // Separate true cushion contacts from jaw contacts at pocket mouths.
+       if(!event.jaw&&event.id!==0&&!this.turnShot.cushionBalls.includes(event.id))
+         this.turnShot.cushionBalls.push(event.id);
      }
      if(event.type==='pocket'){this.onPocket(event);}
      if(event.type==='pocket'&&this.turnShot){this.turnShot.pots.push(event.id);
@@ -171,7 +174,8 @@ export class Game {
    if(this.kind==='drill'){
      const grade=gradeSkillDrill(this.drillId,{shots:this.shots,shot});
      this.history.push({kind:'drill-ruling',drillId:this.drillId,shot:this.shots,
-       reason:grade.reason,status:grade.status,potRecords:[...(shot.potRecords||[])]});
+       reason:grade.reason,status:grade.status,potRecords:[...(shot.potRecords||[])],
+       cushionBalls:[...(shot.cushionBalls||[])]});
      this.timer=0;
      if(grade.status==='completed'||grade.status==='failed'){
        this.drillOutcome=grade.status;this.over=true;
@@ -179,7 +183,8 @@ export class Game {
        this.notify(complete?'Skill completed.':'Attempt finished. Reset to try again.');
        this.onTurn({type:'drill-end',kind:'drill',drillId:this.drillId,
          completed:complete,reason:grade.reason,shots:this.shots,
-         evidence:{pots:[...shot.pots],potRecords:[...shot.potRecords]}});
+         evidence:{pots:[...shot.pots],potRecords:[...shot.potRecords],
+           cushionBalls:[...(shot.cushionBalls||[])]}});
      }else{
        this.notify('One more shot. Pick your angle.');
        this.onTurn({type:'drill-continue',kind:'drill',drillId:this.drillId,remaining:1});
