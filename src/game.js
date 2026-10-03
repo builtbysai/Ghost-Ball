@@ -1,6 +1,7 @@
 import {Simulation,rack,POCKETS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
 import {nearbyLegalCuePlacement} from './placement-guide.js';
+import {resolveCasualEight} from './casual-rules.js';
 export const SHOT_CLOCK_SECONDS=45;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 const allowed=(id,group)=>id!==0&&(id===8?group==='eight':group==='open'||(group==='solids'?id<=7:id>=9));
@@ -47,7 +48,7 @@ export class Game {
   // Pre-strike state is obtained from the new sim snapshot; the velocities are
   // replaced by zeros for deterministic playback/bug reports without a giant log.
   this.history.push({angle,power,spin:typeof spin==='number'?{x:spin,y:0}:{...spin},turn:this.turn,shot:this.shots+1});
-  this.turnShot={first:null,pots:[],rail:false};this.shots++;this.notify('');return true;}
+  this.turnShot={first:null,pots:[],rail:false,groupAtStart:this.group};this.shots++;this.notify('');return true;}
  placeBreakCue(x,y){if(!this.break||this.shots||this.sim.moving||this.over||x>265||!this.sim.placeCue(x,y))return false;this.history.push({kind:'break-placement',x,y});this.notify('Cue positioned. Line up your break.');return true;}
  placeCue(x,y){if(!this.ballInHand)return false;const placed=this.sim.placeCue(x,y);if(placed){this.history.push({kind:'placement',x,y});this.ballInHand=false;this.shotClockKey='';this.notify('Cue ball placed. Line up your shot.');}return placed;}
  spotEight(){
@@ -156,23 +157,35 @@ export class Game {
      if(this.sim.balls.every(b=>b.id===0||b.pocketed)){this.notify('Table cleared. Rack again to replay.');this.over=true;this.onTurn({type:'win',practice:true});}
      return;
    }
-   const pocket=shot.pots.filter(id=>id!==0&&id!==8),scratch=shot.pots.includes(0),eight=shot.pots.includes(8);
-   if(eight&&!this.break){
-     const legalGroup=this.group==='eight';const legal=legalGroup&&!scratch&&shot.first===8;
-     this.over=true;this.winner=legal?this.turn:1-this.turn;
-     this.notify(legal?`Player ${this.turn+1} clears the table!`:`Early or illegal 8-ball. Player ${2-this.turn} wins.`);
-     this.onTurn({type:'win',winner:this.winner,legal});return;}
-   // v0: Casual 8-ball (no manual called pockets); authoritative official rules are a later milestone.
-   let foul=scratch||(!this.break&&(shot.first===null||(this.group==='eight'?shot.first!==8:this.groups[this.turn]?!allowed(shot.first,this.group):shot.first===8)));
-   if(!this.break&&!foul&&shot.first!==null&&!shot.rail&&!shot.pots.length)foul=true;
-   if(eight&&this.break)this.spotEight();
-   if(!this.break&&!foul&&!this.groups[this.turn]&&pocket.length){const pick=pocket[0];this.groups[this.turn]=pick<=7?'solids':'stripes';this.groups[1-this.turn]=pick<=7?'stripes':'solids';}
-   const mine=!this.groups[this.turn]?pocket.length>0:pocket.some(id=>allowed(id,this.group));
-   const wasBreak=this.break;this.break=false;
-   if(foul||(!mine&&!wasBreak)||(!pocket.length&&wasBreak)){this.turn=1-this.turn;this.ballInHand=foul;this.foul=foul;
-     this.notify(foul?'Foul. Opponent has ball in hand.':`Player ${this.turn+1} to shoot.`);
-     this.onTurn({type:foul?'foul':'turn',turn:this.turn,ballInHand:foul});}
-   else{this.foul=false;this.notify(`Player ${this.turn+1} keeps the table.`);}
+   const result=resolveCasualEight({
+     turn:this.turn,breakShot:this.break,groups:this.groups,shot
+   });
+   if(result.spotEight)this.spotEight();
+   this.groups=result.groups;this.break=false;
+   if(result.type==='end'){
+     this.over=true;this.winner=result.winner;this.foul=false;this.ballInHand=false;
+     const finished=result.legal
+       ?`Player ${this.turn+1} clears the table!`
+       :`Early or illegal 8-ball. Player ${result.winner+1} wins.`;
+     this.notify(finished);
+     this.onTurn({type:'win',winner:this.winner,legal:result.legal,reason:result.reason});
+   }else{
+     this.turn=result.turn;this.ballInHand=result.ballInHand;this.foul=result.foul;
+     if(result.type==='foul'){
+       const messages={
+         scratch:'Scratch. Opponent has ball in hand.',
+         'no-contact':'No contact. Opponent has ball in hand.',
+         'wrong-ball-first':'Wrong ball first. Opponent has ball in hand.',
+         'no-rail':'No rail after contact. Opponent has ball in hand.'
+       };
+       this.notify(messages[result.reason]||'Foul. Opponent has ball in hand.');
+     }else this.notify(result.type==='retain'
+       ?`Player ${this.turn+1} keeps the table.`
+       :`Player ${this.turn+1} to shoot.`);
+     this.onTurn({type:result.type==='foul'?'foul':'turn',turn:this.turn,
+       ballInHand:this.ballInHand,reason:result.reason});
+   }
    this.timer=0;
+
  }
 }
