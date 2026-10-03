@@ -33,7 +33,11 @@ test('timing out during frame-sliced Club planning discards the stale shot',()=>
  const game=new Game({kind:'match',players:'cpu',difficulty:'club',seed:482,
   onTurn:event=>events.push(event)});
  game.break=false;game.turn=1;game.groups=['stripes','solids'];
- game.sim=sparse();
+ // Use a clear pocket lane so Club Pro really enters cooperative prediction.
+ game.sim=new Simulation([
+  makeBall(0,240,250),makeBall(1,480,210),makeBall(2,660,340),
+  makeBall(9,350,380),makeBall(8,830,250)
+ ]);
  game.update(.016);
  assert.ok(game.planIterator,'the AI should have a partially searched plan');
  assert.ok(game.planningPose,'the visible cue must still have a provisional aim');
