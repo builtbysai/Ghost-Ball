@@ -39,6 +39,7 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/cue-feel.js`: pure cue travel, contact stroke timing and tactile stage math.
 - `src/audio.js`: gesture-unlocked physical impact and restrained result sounds.
 - `src/player-progress.js`: versioned offline match, room choice, equipment and favorites ledger.
+- `src/skill-drills.js` and `src/skill-drills.css`: two fixed-layout original physics-scored pocketing challenges and compact keyboard/touch picker.
 - `src/record-summary.js` and `src/local-record.css`: compact private stats and recent results, JSON export and guarded local-only reset via Preferences.
 - `src/cue-catalog.js`: six original purely cosmetic cues, exact milestone unlocks and shared preview appearance.
 - `src/cue-locker.css`: viewport-fitted 3×2 equipment browsing in landscape and portrait.
@@ -62,6 +63,10 @@ comfort, screen-edge gestures and real phone frame timing are still open.
 ## Earned equipment and upcoming room mastery
 
 The October 2 research pass moved **original cue choices/unlocks** and **two genuinely new room designs** earlier in the development order, following complete-match/real-device verification and shot feel. All five rooms are playable. The real **Cue Locker** has two starter cues and four original permanently unlockable cosmetics, automatically earned from adjudicated casual match milestones. Preview, favorite and equip them; the visible shaft/tip/wrap changes in the lobby and during shots without altering shot physics. Persistent local favorites and selected cue require available browser storage. **Authored challenges and room locks are not shipped yet.** See [research notes](docs/ENGAGEMENT-RESEARCH.md) and the [reordered roadmap](docs/ROADMAP.md).
+
+## Playable skill challenges
+
+Open **Menu → Skill Drills** for *Center Drop* and *Corner Line*. Both use the same real shot physics and rear-cue controls as a casual match. Sink the designated numbered ball into its named pocket within **two shots without scratching**; otherwise rerack and try again. Valid completion earns a permanent personal mark and local best-shot record. Select either challenge again to improve your best. Existing halls remain freely selectable; bank/positional drills and room mastery locks are still future work.
 
 ## Your local record
 
