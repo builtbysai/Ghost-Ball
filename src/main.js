@@ -107,6 +107,59 @@ function syncPowerSide(){
 }
 function openSettings(){syncPowerSide();settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('motionToggle').checked=motion;$('closeSettings').focus();}
 function closeSettings(){if($('settingsSheet').hidden)return;hide('settingsSheet');hide('backdrop');if(settingsOrigin==='menu'&&active==='lobby'){show('clubMenu');$('menuSettings').focus();}else if(active==='paused')$('pauseSettings').focus();else if(active==='lobby')$('menuBtn').focus();}
+function ensureLockerCards(){
+ if($('lockerGrid').children.length)return;
+ for(const cue of CUES){
+  const button=document.createElement('button');button.type='button';button.className='locker-card';
+  button.dataset.cue=cue.id;
+  for(const [property,color] of [['--cue-butt',cue.butt],['--cue-wrap',cue.wrap],
+      ['--cue-metal',cue.metal],['--cue-shaft',cue.shaft],['--cue-tip',cue.tip]])
+   button.style.setProperty(property,color);
+  const name=document.createElement('span');name.className='locker-card-name';name.textContent=cue.name;
+  const preview=document.createElement('span');preview.className='locker-mini-cue';preview.setAttribute('aria-hidden','true');
+  const status=document.createElement('span');status.className='locker-card-status';
+  button.append(name,preview,status);$('lockerGrid').append(button);
+ }
+}
+function renderLocker(){
+ ensureLockerCards();
+ const selected=cueById(lockerSelected),owned=cueUnlocked(progress,selected);
+ const equipped=equippedCue(progress).id;
+ for(const button of $('lockerGrid').children){
+  const cue=cueById(button.dataset.cue),available=cueUnlocked(progress,cue);
+  const favorite=(progress.favorites||[]).includes(cue.id);
+  button.classList.toggle('locked',!available);
+  button.setAttribute('aria-pressed',String(selected.id===cue.id));
+  button.setAttribute('aria-label',cue.name+', '+(!available?'locked, '+cue.earn:
+    equipped===cue.id?'equipped':favorite?'favorite, owned':'owned'));
+  button.lastElementChild.textContent=!available?'LOCKED':equipped===cue.id?'EQUIPPED':
+    favorite?'★ FAVORITE':'OWNED';
+ }
+ paintCuePreview($('lockerPreview'),selected);
+ $('lockerPreview').setAttribute('aria-label',selected.name+' full-length cue');
+ setText('lockerName',selected.name);
+ setText('lockerDescription',selected.description);
+ setText('lockerRequirement',owned?'Permanently owned':selected.earn);
+ setText('lockerStatus',!progressAccess.writable?'SESSION ONLY':!owned?'TO EARN':
+   selected.id===equipped?'EQUIPPED':'AVAILABLE');
+ $('lockerEquip').disabled=!owned||equipped===selected.id;
+ $('lockerEquip').textContent=!owned?'LOCKED':equipped===selected.id?'EQUIPPED':'EQUIP';
+ $('lockerFavorite').disabled=!owned;
+ const favorite=(progress.favorites||[]).includes(selected.id);
+ $('lockerFavorite').textContent=favorite?'★':'☆';
+ $('lockerFavorite').setAttribute('aria-pressed',String(favorite));
+ $('lockerFavorite').setAttribute('aria-label',favorite?'Remove from favorites':'Add to favorites');
+}
+function openLocker(){
+ if(active!=='lobby')return;
+ hide('clubMenu');lockerSelected=equippedCue(progress).id;renderLocker();
+ show('lockerSheet');
+ $('lockerGrid').querySelector('[data-cue="'+lockerSelected+'"]').focus();
+}
+function closeLocker(){
+ if($('lockerSheet').hidden)return;
+ hide('lockerSheet');show('clubMenu');$('menuLocker').focus();
+}
 function openMenu(){show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){setText('matchSummary',mode==='practice'?'Open practice table':rival==='local'?'8-Ball · Two players':`8-Ball vs ${rival==='rookie'?'Rookie':'Club Pro'}`);
   setText('playSubtitle',mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':'CASUAL 8-BALL · NO ENTRY FEE');
