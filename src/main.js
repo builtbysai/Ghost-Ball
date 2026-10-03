@@ -37,11 +37,21 @@ function matchTurn(event){
  const local=current.players==='local',human=event.turn===0;
  const who=local?`PLAYER ${event.turn+1}`:human?'YOU':'RIVAL';
  if(event.type==='foul'){
-  const label=local?`${who} HAS BALL IN HAND`:human?'BALL IN HAND':'RIVAL HAS BALL IN HAND';
-  tableToast(`FOUL · ${label}`,'foul');
+  const reasons={
+   scratch:'SCRATCH','no-contact':'NO CONTACT',
+   'wrong-ball-first':'WRONG BALL','no-rail':'NO RAIL',
+   'shot-clock':'TIMEOUT'
+  };
+  const reason=reasons[event.reason]||'FOUL';
+  const receiving=local?`${who} PLACES`:human?'BALL IN HAND':'RIVAL PLACES';
+  tableToast(`${reason} · ${receiving}`,'foul');
   audio.play({type:'foul'});
  }else if(event.type==='turn'){
-  tableToast(local?`${who} TO SHOOT`:human?'YOUR TURN':'RIVAL TURN');
+  const action=event.retain?'KEEPS TABLE':'TO SHOOT';
+  if(event.assignment){
+   const group=event.assignment.toUpperCase();
+   tableToast(`${group} · ${local?who:human?'YOU':'RIVAL'}`,'turn');
+  }else tableToast(local?`${who} ${action}`:human?event.retain?'YOUR TABLE':'YOUR TURN':event.retain?'RIVAL KEEPS TABLE':'RIVAL TURN');
   if(local||human)audio.play({type:'turn'});
  }
 }
@@ -83,7 +93,8 @@ function turnUI(){if(!current)return;
  const ai=current.isAI(),busy=current.sim.moving,practice=current.kind==='practice';
  $('gameScreen').dataset.practice=String(practice);
  $('twoCard').hidden=practice;
- setText('turnLabel',current.over?'FINISHED':current.ballInHand?current.isAI()?'RIVAL PLACING':'BALL IN HAND':current.kind==='practice'?'PRACTICE':current.kind==='attract'?'EXHIBITION':current.break?'THE BREAK':current.turn===0?'YOUR TURN':current.players==='local'?'PLAYER TWO':'RIVAL TURN');
+ const passAndPlay=current.players==='local'&&current.kind==='match';
+ setText('turnLabel',current.over?'FINISHED':current.ballInHand?passAndPlay?`PLAYER ${current.turn+1} PLACING`:current.isAI()?'RIVAL PLACING':'BALL IN HAND':current.kind==='practice'?'PRACTICE':current.kind==='attract'?'EXHIBITION':current.break?passAndPlay?`PLAYER ${current.turn+1} BREAK`:'THE BREAK':passAndPlay?`PLAYER ${current.turn+1} TURN`:current.turn===0?'YOUR TURN':'RIVAL TURN');
  const p1=current.groups[0]?.toUpperCase()||'OPEN',p2=current.groups[1]?.toUpperCase()||'OPEN';
  $('playerOne').innerHTML=practice?`YOU <small>${current.shots} SHOTS · ${current.sim.balls.filter(b=>b.id!==0&&b.pocketed).length} POCKETED</small>`:`${current.kind==='attract'?'CLUB PRO':current.players==='local'?'PLAYER ONE':'YOU'} <small>${p1}</small>`;
  $('playerTwo').innerHTML=`${current.kind==='attract'?'ROOKIE':current.players==='local'?'PLAYER TWO':rival==='club'?'CLUB PRO':'ROOKIE'} <small>${p2}</small>`;
