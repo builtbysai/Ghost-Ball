@@ -1,5 +1,5 @@
 /** Private casual multiplayer protocol spike. No transport or join UI yet.
- * This validates TURN-BOUND sender identity against the authoritative Game;
+ * This validates transport-bound sender identity against the authoritative Game;
  * a claimed seat in an untrusted packet never authorizes a shot.
  * The 32-bit digest detects ordinary stale state, NOT malicious cheating.
  */
