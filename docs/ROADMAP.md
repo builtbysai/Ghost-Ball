@@ -1,109 +1,98 @@
-# Ghost Ball rebuild roadmap
+# Ghost Ball: active development roadmap
 
-> **Current scope (October 2):** The only playable camera is top-down 2D. The live perspective exhibition table rotates into this view, with balls gathering into the rack. Aim by dragging the visible shaft behind the cue ball, not by touching the guideline in front. The orientation blocker and live view switcher are removed. Future camera/orientation choices are disabled in Preferences. The old experimental WebGL source and its smoke harness were deleted; future 2.5D will use the user's forthcoming Atelier reference.
+**Updated October 2, 2026 after competitor/game-design research.** This is the authoritative **future delivery order**. For why, competitor features, source links, cue designs and room unlock proposals see [ENGAGEMENT-RESEARCH.md](ENGAGEMENT-RESEARCH.md). Completed technical work and unresolved defects are recorded in [FINDINGS-VALIDATION.md](FINDINGS-VALIDATION.md). The [previous roadmap is archived](ROADMAP-ARCHIVE-2026-10-02.md) to prevent its obsolete unchecked items and removed 2.5D code from masquerading as active tasks.
 
+**Direction:** Make Ghost Ball an exceptionally tactile, fair, replayable pool game with its own clubhouse identity. **A satisfying shot and a completed match come before reward systems.** Then let players earn genuinely desirable cues and venues through skill, practice, fair rivalry and social matches, without an advertising/currency treadmill. Miniclip-style familiarity is a control/flow reference, not a license to copy its assets or every monetization system.
 
-Status: 2026-10-02 · v0.6 table materials, staged entrance and tactile power loading. Historical experimental 3D milestones below are superseded; see the current-scope note first.
+## What is already shipped
 
-## Active delivery roadmap
+- [x] P0: Independent fixed-step top-down 2D game; live AI lobby exhibition and camera-flight/rack-assembly entrance; three original table finishes; casual 8-ball against CPU and local pass-and-play; Practice.
+- [x] P0–P1: Landscape touch/mouse layout, rear-shaft aiming, fine wheel, power pull, spin, shot clock, result/rematch, explicit preferences; realistic animated rolling and staged cue recoil.
+- [x] P1.1: Off-screen 100%-power auto-fire guard; deliberate ball-in-hand ghost/nearby snap, PLACE/RESET and keyboard placement. [PR #14](https://github.com/builtbysai/Ghost-Ball/pull/14).
+- [x] P2 foundation: Pure casual referee and specific foul reasons; shot-start group fixes; serializable rulings; geometry Rookie versus bounded predictive Club Pro; clearer P1/P2 HUD. [PR #15](https://github.com/builtbysai/Ghost-Ball/pull/15).
+- [x] Research: feature and qualitative review of 8 Ball Pool, Pooking/Billiards City, Pool Blitz, Pure Pool Pro, Virtual Pool 4 and Pool Nation FX; documented fair, skill-based Cue Locker and original venue direction. **Research is complete; these new features are not yet coded.**
 
-See [validated findings and prioritized exit criteria](FINDINGS-VALIDATION.md). This document retains earlier build history, including superseded experimental milestones. **Active order: P0 gameplay reliability (shipped in #12) → P1.1 off-screen shots and ball-in-hand (shipped in #14; real Android edge-gesture validation pending) → P2 casual referee and seeded CPU planning (shipped in #15; full-rack/device benchmarks and separate tournament mode next) → P3 polish/local progression → P4 online → P5 extra modes and cameras.** Do not treat unchecked historical items below as higher priority than the current phases.
+**Currently playable:** only overhead **2D** gameplay. The live lobby has a decorative perspective rendering. Do not revive discarded experimental elevated/3D views or make their settings clickable before new working implementations exist.
 
-## Product principles
+## Active order: dependencies and acceptance
 
-1. One deterministic gameplay simulation shared by every renderer and mode. UI never owns ball positions.
-2. No dead controls, fake unlocks, mandatory ads, currency, pay-to-win or unnecessary vertical scroll.
-3. First-class touch, keyboard, desktop and accessibility. Stable aim and shot force matter more than effects.
-4. Separate simulation, rules, rendering, AI, audio, input, mode state and persistence as the project expands.
-5. Top-down 2D must stay fast and legible. Any future camera is a separate planned milestone, not currently selectable.
+### P2.1 — Close gameplay reliability and verify fun at the table
+**Next engineering milestone; blocks progression and online release.**
 
-## Current direction: 8 Ball Pool-style gameplay foundation
+- [ ] Run **real Android and desktop touch/mouse playtests** for the rear-cue, aiming wheel, spin, full-power screen-edge gestures (including display cutouts), foul-placement and portrait-rotated/568x320 UI. Test pause, shot clock, result, rematch and two players sharing one device. Treat emulated Chromium success as useful but not physical-device proof.
+- [ ] Reproduce complete **physical** casual 8-ball racks with saved seeds, actual rolling/settled events, fouls, finishing, result and rematch. Avoid claiming that staged unit fixtures alone prove full matches work. Add deterministic game fixtures and identify any stalemates or impossible finishes.
+- [ ] Benchmark Rookie and Club Pro over complete racks: legal first contact, made-shot rate, scratches, intended pocket, opponent turn pace, completion and **CPU planning/frame latency** on modest Android hardware. Tune personalities/strategic defense rather than giving the CPU secret aim/physics privileges.
+- [ ] Resolve serious gameplay/input/rendering defects discovered by the measurements before adding new modes. Validate all shipped match overlays on 1280x720, 844x390, 568x320 and physically portrait 390x844.
 
-For now, prioritize a familiar, touch- and mouse-first landscape playing experience inspired by Miniclip's publicly documented control model and the user-provided reference screenshot. Retain Ghost Ball's own assets and identity. **Do not** expand monetization, social menus, progression systems or unrelated game modes until the core match plays beautifully.
+**Exit:** humans can reliably finish, understand, and replay matches on real hardware; both opponent tiers create meaningfully different *fair* play and do not stall the browser.
 
-Shipped in v0.4:
+### P3 — Shot satisfaction and short-session replayability
+**Prioritize before expanding content; can be tuned concurrently with P2.1 findings.**
 
-- [x] Landscape-first game view with centered horizontal table, compact dual-player HUD and remaining-ball indicators, pull bar left, fine aim and spin on the right, bottom status. No bottom tray obstructing the felt.
-- [x] Top-down 2D only in matches. Unreleased elevated/surface camera and orientation choices live in Preferences as disabled placeholders. No rotate-device blocker.
-- [x] Pointer-captured drag-to-aim and pure pointer-relative fine aiming wheel, both mouse and touch compatible. Right wheel supports keyboard arrows.
-- [x] Pull downward **then release** to shoot by default; min travel, pointercancel protection, shot-state gate, explicit Shoot button and optional release-off preference.
-- [x] Tap spin icon for 2-axis contact selection. Side spin uses existing physics, vertical follow/draw is clearly documented as an approximate first pass.
-- [x] Move cue ball behind the break line before the first shot. Ball-in-hand drag/invalid-placement preview retained.
-- [x] Existing landscape viewport and pointer controls had browser smoke coverage. The new entrance and rear-cue interactions now have unit coverage; physical-device and new visual smoke verification remain release checks.
+- [ ] Polish contact timing, cue recoil/resistance at partial and max charge, actual visible cue tip, ball roll/deceleration, clean numbered balls, pocket collection, cushion/contact sounds, concise turn/foul feedback and subtle optional haptics. Respect global mute, reduced motion and tab lifecycle.
+- [ ] Make first-break and first-foul guidance learnable without modal clutter; refine optional first-contact aid, separate fine adjustment from the primary touch area, handedness and aim controls using real playtest observations. Never promise a physically impossible target path.
+- [ ] Improve result/celebration **tastefully**: winning hit, opponent reaction, brief camera/light treatment, visible last/decisive shot and immediate Play Again / Change Table. Keep all game HUD, pause/preferences and results inside short viewports, with keyboard focus and touch reach.
+- [ ] Add a minimal **last-shot replay / saveable deterministic match record** only after event timestamps, initial seed and input validation are sufficient; the replay must be visibly distinguishable from live play and cost-bounded on mobile.
+- [ ] Test the direct loop: open → match → satisfying first pot/foul explanation → result/rematch, with no forced navigation or fictional feature buttons.
 
-v0.6 refinements:
-- [x] Three differentiated original table finishes: detailed cushions, polished rails, grain/inlay, pocket rims and cloth lighting.
-- [x] Cache static board surfaces so per-frame physics and animated ball drawing do not redraw the full room.
-- [x] Sharpen and stage the menu-to-match flight, rolling ball gather and final seamless handoff. Preserve the reduced-motion fast path.
-- [x] Show a substantial physical cue retreat while pulling, a charged power rail, short tension ticks when enabled and a quick impact stroke.
-- [ ] Physical Android testing for cue visibility, pull latency and haptic intensity, and visual review of the recorded responsive screenshot artifacts.
+**Exit:** real players intentionally choose another match because shots, strategy and rematches feel good, not because a reward popup blocks them.
 
-v0.7 responsive HUD and visual roll (October 2):
-- [x] One four-column landscape HUD with separated pause control, countdown badges, player cards and responsive numbered ball slots. Unassigned groups display dim preview examples, never falsely claiming ownership.
-- [x] Rolling ball orientation tracks physical displacement, with moving stripes, number discs, and cue-ball markers. Snapshots deep-copy orientation; no collision calculation depends on graphics.
-- [x] Compact, non-scrolling landscape pause dialog and rebuilt game preferences with working left/right power bar, sound and impact switches. Only the available 2D/landscape options are shown.
-- [ ] Verify final composition on actual Android phones, including browser safe areas, very short viewports and sustained frame timing.
+### P4 — Clubhouse ownership: earnable Cue Locker + more tables
+**Moved forward from the old late-content backlog by owner request and research. Build a small complete vertical slice rather than a fake unlock menu.**
 
-Next, in this order:
+- [ ] First implement a tiny **versioned local player/progress ledger**: completed legitimate match/drill events, wins/losses, best run, selected cue and room, unlock/milestone IDs. Exclude exhibition/test/replay events from achievements. Reset/privacy/export options, localStorage failure handling and deterministic event IDs. Do not impose sign-in for offline play.
+- [ ] Create an original **Cue Locker** with two instantly usable cues and at least **four transparent, permanently skill-unlockable** originals. Preview shaft/tip/wrap/full cue, equipped vs locked, exact earning criteria, favorites, keyboard/touch selection and a true applied in-game appearance, including the lobby/pregame exhibition where appropriate.
+- [ ] **Fair equipment policy:** cue variants are primarily *cosmetic*, **identical gameplay stats/strike physics** in normal and online pool. Do not tie longer aim lines, extra shot time, more spin or superior force to premium/unlocked cosmetics. No recharge, duplicate fragments, random loot boxes, paywalls or grind-for-equivalent-stats. Any future alternate mechanical equipment must be a clearly separated **unranked** mode with rules disclosed.
+- [ ] Expand beyond the **three existing table finishes** with **at least two distinct, original venues/rooms** and thoughtful table designs, not merely two recolored felts. Give each room a recognizable setting, materials, lighting and compatible live-menu-to-match transition. Preserve clear ball numbers and legibility across cloth colors and short/rotated screens.
+- [ ] Start **room mastery** with just 2–3 authored challenges tied to meaningful achievements. Unlock additional halls and cues via disclosed skill milestones (example: a bank-shot drill, beat Rookie, complete a room challenge); give players attainable early rewards. Do not lock core Practice or the starter table.
+- [ ] Show earned cues and selected room in a respectful **single moment of celebration**, not intrusive per-shot popups. Keep the lobby's Play action dominant; cue selection and venue cards secondary and viewport-contained.
 
-1. **Control feel benchmark on real phones:** tap/drag thresholds, sensitivity presets, aiming-wheel acceleration, touch occlusion, thumb reach, handedness/power-side switch, proper shot cancel and two-finger protection. Measure input latency before adding extra animations.
-2. **Complete shot affordances:** cue-angle control; ball/ghost-ball contact guide accuracy, target trajectory and scratch-risk preview bounded by ability; clearer spin previews, smart shot sound and pocket effects; compare exact timings with personal screenshots/video rather than copying artwork.
-3. **Match rules and HUD reliability:** separate official 8-ball rules from Casual. Complete WPA break rules, open table, group assignment, fouls, called 8 pocket, legal game endings and ball-in-hand exceptions. Display pocketed balls and active turn accurately.
-4. **Opponent experience:** smarter legal shot planning, sensible rookie/pro tiers, defensive decisions and natural turn pace. Never modify physics in secret to favor opponents.
-5. **QA:** full-rack device sessions in multiple orientations; real WebGL/shader validation and fallback; keyboard and assistive-mode checks; replay logs for misfires.
+**Exit:** a new player can earn, select and actually see a different cue and a different room in one/two short sessions; normal tables and cosmetics produce **identical deterministic shot physics**; equipped state and achievements persist; no overlap or scroll traps.
 
-References: `docs/REFERENCE-CONTROLS.md`.
+### P5 — Practice Lab, skill mastery and meaningful replay goals
+**Build on the P4 ledger and authored challenge foundation. Can overlap networking planning once P2.1 is green.**
 
-## Phase 0 — Established in this rebuild
+- [ ] Expand a compact **Practice Lab**: replay the same shot/rack seed, ghost-ball teaching, pocket/cue-ball position drills, banks, safety/defense and cue-power/spin experiments. Teach by letting players attempt again, not walls of instructional text.
+- [ ] Offer an optional 3-stage per-room **table mastery** challenge with understandable criteria and tracked progression. Expand Circuit/Workshop only when real drill and milestone state exists. Use curated challenges, then bounded procedural variation if playtests justify it.
+- [ ] Add optional achievements/crests and a private local match ledger (streak is descriptive only, never an attendance obligation). Consider short “one perfect shot” challenges and sharable compact seed challenges once replays are trustworthy.
+- [ ] Improve opponent identity: distinguish named rivals by legal shot selection, positional play, mistakes, safety tactics and shot cadence. Profile every change so Rookie still offers hope and Club Pro still makes humanly plausible mistakes.
+- [ ] Introduce the full replay browser and selectable highlights only when reliable event-based recording, replay-state visuals, finite storage and share/privacy controls work together.
 
-- [x] Preserve previous repository on a recovery branch.
-- [x] Recreate the furnished Clubhouse v3 design as modular static web app.
-- [x] Live animated lobby table with AI exhibition rather than fixed decorative balls.
-- [x] Playable practice, casual 8-ball vs CPU and pass-and-play, with rack reset and ball in hand.
-- [x] Top-down 2D and projected elevated 2.5D using identical simulation state.
-- [x] Fixed-step engine, symmetric collisions, pockets, first-contact events, basic cue spin and audio events.
-- [x] Mobile/desktop controls: grab rear cue to aim, precision wheel, power pull, separate shoot and spin.
-- [x] Real feature gates; no fake online matchmaking.
-- [x] Small meaningful unit suite on simulation and basic AI/mode state.
+**Exit:** three distinct learnable short challenges and each genuine room milestone have replayable acceptance tests; earning gear demonstrates something accomplished rather than simply elapsed time.
 
-## Phase 1 — Shot feel and rules fidelity (in progress)
+### P6 — Private friends and fair online matches
+**Begin architectural research/transport spikes in parallel with P4–P5, but release only after P2.1's match/physics gate. Real friends before ranked economy, clubs or worldwide matchmaking.**
 
-Shipped in v0.2:
+- [ ] Design **host-authoritative turns/shots and critical results** around the existing deterministic fixed-step simulation and serializable referee/ruling history; validate aim/power/spin/clock/placement, turn ownership, seeds and replay integrity. Do not stream 240-Hz ball state blindly.
+- [ ] Evaluate Atelier's direct WebRTC, Cloudflare TURN fallback and reconnect test approach where actually useful; pool requires reliable ordered shot/event sync plus optional low-latency remote cue previews, not identical continuous air-hockey transport.
+- [ ] Ship private link/QR two-player **casual** matches first, reliable join/rejoin, obvious turn ownership and quick rematch. Keep each peer's selected cosmetic cue and room presentation while preserving identical shared match physics. Test real two-device network delay, interrupted turn, session recovery and uncertain host exits.
+- [ ] Add friend spectating and shareable highlights **after** validated private play, then fair matchmaking with disclosed skill rating if wanted. Anti-cheat means authoritative game state/input and server-side validation wherever trusted ranked play requires it; P2P authority alone is insufficient for strong ranked trust.
+- [ ] Defer big clubs, public chat, global ladders and social moderation infrastructure until the basic friend experience is safe and genuinely fun.
 
-- [x] Simplified sliding-to-rolling transition; bounded symmetric ball contact impulses; cushion spin effect; jaw guards, real pocket openings and deterministic fixed-step snapshots. These remain **gameplay-tuned approximations**, not complete scientific ball throw / cushion-nose models.
-- [x] Seeded rack and CPU shot selection with reproducible fixtures, rather than `Math.random()` in simulation / opponent decisions. Basic committed shot / placement history exists; complete replay needs explicit initial state and event timestamps.
-- [x] Safe, opt-in power release; power adjustment is non-firing by default. Ball-in-hand placement now previews validity and commits on release. In-match settings are accessible.
-- [x] Auto-upright pool table on tall phones, matching screen-to-world input in both 2D and projected 2.5D, with round-trip projection tests.
-- [x] 26 focused Node tests and isolated Chromium interaction / layout smoke at 320×568, 390×844, 844×390 and 1280×720. These browser runs are **not** physical-device performance or touch-usability certification.
+**Exit:** reliable cross-device private matches, authoritative non-cheating result handling within the documented trust model, reconnection recovery and screenshot/interaction coverage. No false online menus.
 
-Remaining work:
+### P7 — Formal competitive rules and additional modes
+**A separate track: can begin pure-rules design after P2.1, but do not delay casual cue/room rewards or private casual matches to ship a half-finished tournament mode. Official-rules ranked play is blocked until this phase passes.**
 
+- [ ] Add an **explicit tournament/WPA 8-ball ruleset** alongside the existing casual referee, with legal/illegal break and player choices, correct open-table assignment, called ball/pocket, safety, 8-ball conditions and ball-in-hand restrictions. Include an actual compact pre-shot call/choice UI for human, CPU and network players. See [P2-RULES-ARCHITECTURE.md](P2-RULES-ARCHITECTURE.md). Don't claim full WPA officiating for physics events we can't detect.
+- [ ] Ensure score/HUD, AI/legal-shot planner, rules engine, history, replay and spectators understand the selected mode version. Full-rack integration plus physical phone tests are required before enabling.
+- [ ] Next add **9-ball** as a truly independent rules module and targeted UX, then optional straight pool. Alternate arcade modes, timed trick-shot runs, local tournaments and broader official-ranked modes follow actual player interest and validated fairness.
+- [ ] Introduce opt-in broader competitive tiers/tournaments and limited evergreen rotating challenges only when matchmaking and anti-cheat support them. No financial stakes, expiration pressure, pay-to-win or unearned/artificial progress.
 
-- [ ] Instrument 120/60/30 fps and sub-30 ms input responsiveness on low-end Android. Add visual comparisons for 320x568, 390x844, landscape phone, tablet and desktop.
-- [ ] Measure and tune pocket shelf/jaw positions, sliding friction and rail nose by repeatable real-table video fixtures; model airborne balls, side throw and off-axis spin more faithfully. Add complete event-timed replay/seeded session restore.
-- [ ] Split `src/game.js` into independent explicit rulesets with shot event ledger, open-table choice, called-ball/pocket or safety, fouls, spotted 8 on break, illegal breaks and rack end exactly per current WPA rules. Distinguish casual/official clearly.
-- [ ] Improve computer opponent with unobstructed ghost-ball routes, defensive play, position planning and tested personalities; avoid manufactured cheating or impossible spin.
-- [ ] Run physical-device blind playtesting of release-to-shoot versus explicit release, thumb-side preferences, pointer occlusion, shot cancel, cue placement, aiming-wheel acceleration. Collect gamepad and keyboard findings.
-- [ ] Refine cue sound sampling, ball numbering and rotation, correct spin model, cushion audio, hit-stop micro-timing and graded pocket effects. Make haptics contextual.
+**Exit:** each enabled mode has its own complete rules, input flows and deterministic match/rack regression suite; no faux selection screens or undocumented game balance differences.
 
-## Phase 2 — Table presentation and quality
+### P8 — Additional cameras and long-term expansion
+- [ ] Collect the owner's **Atelier Air Hockey 2.5D** interaction/visual reference and establish performance budgets before writing a new camera. Start from current shared simulation and responsive inputs, not deleted experimental WebGL code.
+- [ ] Implement an optional true 2.5D/elevated view with validated projection/unprojection and touch/cue occlusion; keep overhead 2D as default. Test safe areas, contrast, reduced motion and low-end mobile frame timing.
+- [ ] Only then consider extra venues, more equipment cosmetic styles, advanced optional spin/physics, special table challenges and other-device support. Never let optional effects change authoritative normal-match results.
 
-- [ ] Future cameras (2.5D elevated/surface) will be designed from the user's Atelier reference. Old experimental WebGL implementation has been removed to keep v0 focused.
-- [ ] Visual timing and responsive QA for the new live-to-rack transition, including real Android and reduced-motion review.
-- [ ] Only implement new camera projection/unprojection together with a reviewed interaction model, rather than reviving the removed experiment.
-- [ ] Collect the Atelier 2.5D reference and scope separate graphics tests before making camera options interactive.
-- [ ] Responsive layout validation on devices with large safe-area insets, foldables, landscape and reduced-motion modes; automated screenshot comparisons.
-- [ ] Accessible labels, contrast, keyboard-only e2e, gamepad, screen-reader game status, focus trap/restore for dialogs.
-- [ ] Consolidate audio preferences with intentional global mute, separate effects and music when music exists, lifecycle and no autoplay.
+## Product invariants and priority rules
 
-## Phase 3 — Skill, social and game depth
+1. **Fair, tactile pool first.** Shared deterministic simulation is authoritative; renderers, cue cosmetics, venues, sound and achievement systems never silently modify outcomes. Fixed-seed results must match across normal tables/cues.
+2. **No monetization treadmill.** No mandatory ads, artificial currency, loot-box chances, limited cue energy, paid stats, forced daily login or fake progression. Real unlock criteria and permanent rewards, with Practice and base pool always available.
+3. **Responsive, touch-first and visually restrained.** Key game/pause/locker/table/result screens fit 568x320 and physically portrait 390x844 without unwanted vertical scroll, clipped balls or overlapping HUD. Mouse, touch, accessible labels/keyboard and reduced motion remain supported.
+4. **Ship vertical slices:** avoid standalone fake lockers/challenge buttons before they can award/equip something. For each stage: source/design review → module boundaries → focused rules/physics/persistence tests → real gameplay interaction tests → viewport screenshot review → real-device follow-up.
+5. **Meaningful evidence:** competitor descriptions are features, not proof of what causes success. Use small, consented novice/experienced playtests to measure misfires, comprehension, voluntary rematch, first unlock comprehension and frustration. Track no manipulative retention tricks. Profile AI seed sets and slow devices before claiming improvement.
+6. **Parallel work without blockers:** UI/art exploration and networking architecture can progress alongside reliability, but cannot replace verification or sneak unreleased settings into the clickable UI. Let user-provided future references override speculative camera styling.
 
-- [ ] 9-ball and straight pool **only after** properly tested independent rulesets; one-pocket later.
-- [ ] Meaningful Daily Run, trick-shot Workshop, multi-table Circuit and skill-based unlocks tied to mastery rather than grind.
-- [ ] Practice tools: target routes, repeat previous setup, bank-shot drills, ghost-ball trainer, shot feedback, recording and replay.
-- [ ] Two-player online with authoritative turn validation, efficient snapshot or shot-event sync, reconnection and spectators. Learn from Atelier's recovery and network testing, but don't transport 240-Hz state if shot-event replication suffices.
-- [ ] PWA update UX, optional local saves, finite-size replay logs, user-consented analytics of misfires and early quits.
-
-## Release gates
-
-Never ship incomplete modes as functional buttons. Before merge: JavaScript syntax, Node tests, viewport-fit browser smoke, simulated-rack continuity, and no JavaScript errors. Physical Android feel and new transition visuals remain manual review items.
+**Next concrete build:** finish P2.1's physical full-rack/opponent benchmark and Android control checklist, then a P3 shot-feel/result pass. In parallel, design the first **Cue Locker + two new rooms + one genuine early achievement**, with the minimum trustworthy local ledger needed to unlock them.
