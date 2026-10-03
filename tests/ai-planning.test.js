@@ -134,6 +134,8 @@ test('Club Pro live opponent yields frames while building the exact same shot',(
  a.update(.016);
  assert.ok(a.planIterator,'live opponent should keep partial planning in progress');
  assert.equal(a.previewShot,null,'do not advertise an unfinished predicted shot');
+ assert.ok(a.presentedCue&&Number.isFinite(a.presentedCue.angle),
+   'the rival cue must stay visible during cooperative analysis');
  for(let i=0;i<60&&!a.previewShot;i++)a.update(.016);
  assert.ok(a.previewShot,'real opponent did not finish bounded previews');
  assert.deepEqual(a.previewShot,synchronous,
@@ -141,4 +143,20 @@ test('Club Pro live opponent yields frames while building the exact same shot',(
  assert.equal(a.shots,0,'the opponent must not fire before the pre-shot cue animation');
  a.reset();
  assert.equal(a.planIterator,null,'rerack must discard any old planning state');
+});
+
+test('slow frame planning never fires before the visible cue finishes retargeting',()=>{
+ const game=new Game({kind:'match',players:'cpu',difficulty:'club',seed:95});
+ game.turn=1;game.break=false;game.groups=['stripes','solids'];
+ game.sim=sparse();
+ game.update(1.4);
+ assert.equal(game.shots,0);
+ let frames=0;
+ while(!game.previewShot&&frames++<65)game.update(.002);
+ assert.ok(game.previewShot&&game.presentedCue);
+ assert.equal(game.shots,0,'cannot fire in the same frame a slow plan finishes');
+ game.update(.1);
+ assert.equal(game.shots,0,'retain a visible cue adjustment before the strike');
+ game.update(.15);
+ assert.equal(game.shots,1,'strike only once after the full aim transition');
 });
