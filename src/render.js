@@ -10,6 +10,8 @@ const halls=[
  {name:'The Parlor',felt:'#315d4a',feltLight:'#56816c',rail:'#54351f',wood:'#a46d3d',wall:'#102017',aura:'#254536',year:'1893',detail:'Walnut rails · sage baize · leather pockets'},
  {name:'The Observatory',felt:'#176a8e',feltLight:'#3a98b2',rail:'#3c3029',wood:'#725b46',wall:'#111924',aura:'#224565',year:'1911',detail:'Smoked oak · ocean cloth · silver sights'},
  {name:'The Foundry',felt:'#3e6651',feltLight:'#6e8f70',rail:'#302b29',wood:'#665748',wall:'#1d1b17',aura:'#3b4940',year:'1927',detail:'Dark ash · copper trim · olive baize'},
+ {name:'The Wintergarden',felt:'#306c65',feltLight:'#5d9f91',rail:'#8b7960',wood:'#dbc49e',wall:'#172c27',aura:'#31594e',year:'1938',detail:'Pale oak · bottle-green cloth · round brass sights'},
+ {name:'The Afterhours',felt:'#654354',feltLight:'#936b7b',rail:'#211c24',wood:'#4a373f',wall:'#19121d',aura:'#453040',year:'1964',detail:'Black lacquer · mulberry baize · twin silver inlays'},
 ];
 export {halls};
 function polygon(g,vertices){g.beginPath();g.moveTo(...vertices[0]);for(let i=1;i<vertices.length;i++)g.lineTo(...vertices[i]);g.closePath();}

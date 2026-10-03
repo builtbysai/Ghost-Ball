@@ -1,4 +1,4 @@
-/** The three tables share physical geometry, not the same paint job.
+/** All five tables share physical geometry, not the same paint job.
  * All detail is visual: no changes to cushion or pocket collision coordinates.
  */
 import {POCKETS,TABLE} from './physics.js';
@@ -20,6 +20,8 @@ export const FINISHES=[
  {trim:'#bc966a',inlay:'#efddb9',grain:'#f3bb71',cushion:'#214934',pocket:'#332019',light:'#ebce9a',vignette:'#071a11',name:'walnut'},
  {trim:'#b0ac9e',inlay:'#f3efde',grain:'#d9bd9b',cushion:'#114b5e',pocket:'#202b32',light:'#a7dbe8',vignette:'#03263e',name:'smoked oak'},
  {trim:'#b48660',inlay:'#d1b28d',grain:'#8c6655',cushion:'#264936',pocket:'#27211c',light:'#d1c8a5',vignette:'#101c14',name:'dark ash'},
+ {trim:'#c7a466',inlay:'#f3e3ba',grain:'#f4dcb1',cushion:'#23534b',pocket:'#3b301e',light:'#fff0d1',vignette:'#193e33',name:'pale oak and brass',motif:'brass-disc'},
+ {trim:'#adb9c5',inlay:'#f0f2f2',grain:'#71606a',cushion:'#493040',pocket:'#16151c',light:'#c7c0cb',vignette:'#271e31',name:'black lacquer and silver',motif:'twin-bars'},
 ];
 export function paintFrame(g,{P,h,finish,bw,blend,portrait,margin}){
  const edge=[P(-margin,-margin),P(TABLE.width+margin,-margin),P(TABLE.width+margin,TABLE.height+margin),P(-margin,TABLE.height+margin)];
@@ -114,10 +116,26 @@ export function paintRailDetails(g,{P,finish,bw,margin}){
  for(const x of [-margin*.69,1000+margin*.69])for(const y of [110,205,295,390])sights.push([x,y]);
  const size=C(bw/380,1.15,3.4);
  for(const [x,y] of sights){const [sx,sy]=P(x,y);
-   g.save();g.translate(sx,sy);g.rotate(Math.PI/4);
-   g.shadowColor='#0008';g.shadowBlur=2;g.fillStyle='#34291e';g.fillRect(-size*1.12,-size*1.12,size*2.24,size*2.24);
-   g.fillStyle=finish.inlay;g.fillRect(-size*.83,-size*.83,size*1.66,size*1.66);
-   g.fillStyle='#fff8d9a0';g.fillRect(-size*.6,-size*.6,size*.82,size*.82);
+   g.save();g.translate(sx,sy);
+   g.shadowColor='#0008';g.shadowBlur=2;
+   if(finish.motif==='brass-disc'){
+     // Wintergarden: warm inset discs with a visible polished center.
+     g.beginPath();g.arc(0,0,size*1.16,0,Math.PI*2);g.fillStyle='#675438';g.fill();
+     g.beginPath();g.arc(0,0,size*.85,0,Math.PI*2);g.fillStyle=finish.trim;g.fill();
+     g.beginPath();g.arc(-size*.2,-size*.2,size*.34,0,Math.PI*2);g.fillStyle=finish.inlay;g.fill();
+   }else if(finish.motif==='twin-bars'){
+     // Afterhours: paired straight nickel sights, intentionally not diamonds.
+     g.rotate(Math.PI/4);
+     g.fillStyle='#241d28';g.fillRect(-size*1.22,-size*1.17,size*2.44,size*2.34);
+     g.fillStyle=finish.inlay;
+     g.fillRect(-size*.84,-size*.69,size*1.68,size*.43);
+     g.fillRect(-size*.84,size*.26,size*1.68,size*.43);
+   }else{
+     g.rotate(Math.PI/4);
+     g.fillStyle='#34291e';g.fillRect(-size*1.12,-size*1.12,size*2.24,size*2.24);
+     g.fillStyle=finish.inlay;g.fillRect(-size*.83,-size*.83,size*1.66,size*1.66);
+     g.fillStyle='#fff8d9a0';g.fillRect(-size*.6,-size*.6,size*.82,size*.82);
+   }
    g.restore();
  }
  g.restore();

@@ -91,11 +91,30 @@ sample, **not** proof that arbitrary seeds or human matches always finish.
 | 41 | Club / Rookie | 63 | 8 |
 | 73 | Club / Rookie | 70 | 14 |
 
-CI now requires **all nine** to finish legally and replay identically.
+The original CI milestone required **all nine** to finish legally and replay identically. The follow-up below raises the merged gate to all 12.
 A deliberately restricted headless runner cannot establish Android
 frame time or device ergonomics. The frame-sliced live planner and
 provisional visible-cue animation are checked separately with seeded
 parity, full browser interaction and viewport tests.
+
+## Follow-up: expanded 12-rack and safety-shot regression (October 2)
+
+[PR #20's passing run 37086315463](https://github.com/builtbysai/Ghost-Ball/actions/runs/37086315463)
+ran eight original/exploratory seed fixtures (17, 41, 73, 109, 211, 337, 439, 541)
+plus four reversed-seat variants (17, 41, 73, 109). All **12/12**
+finished through a legitimate `eight-cleared` ruling with no winner group
+balls remaining, and repeat runs generated identical histories and final
+physical snapshots. This is bounded CPU-vs-CPU evidence only.
+
+The added seeds diagnosed a specific weak path: when no direct pocket lane
+exists, Club Pro previously fired an unassessed straight contact that
+could accidentally pocket the eight. Club Pro now frame-slices up to six
+low-power, **real-physics** fallback previews, scoring legal first contact
+and penalizing early-eight and scratch risk. Rookie still makes ordinary
+geometry-based mistakes, but the wider layout distribution in this
+particular sample finished legally. The new CI gate requires all 12
+legal clearances. None of these measurements certifies real Android
+frame pacing, all possible table layouts, or real-player enjoyment.
 
 ## Run and inspect
 
@@ -103,7 +122,7 @@ parity, full browser interaction and viewport tests.
 npm test
 node scripts/full-rack-lab.mjs
 GHOST_SEEDS=17,41 GHOST_MAX_SHOTS=96 node scripts/full-rack-lab.mjs
-GHOST_SEEDS=17,41,73,109,211,337 GHOST_SEAT_FLIP_SEEDS=17,41,73 GHOST_MAX_SHOTS=120 GHOST_REPLAY=1 GHOST_MIN_LEGAL_FINISHES=9 node scripts/full-rack-lab.mjs
+GHOST_SEEDS=17,41,73,109,211,337,439,541 GHOST_SEAT_FLIP_SEEDS=17,41,73,109 GHOST_MAX_SHOTS=120 GHOST_REPLAY=1 GHOST_MIN_LEGAL_FINISHES=12 node scripts/full-rack-lab.mjs
 ```
 
 Output summarizes shots, legitimate/illegal termination, each opponent's
@@ -123,7 +142,7 @@ the former without affecting the latter.
 
 1. **Done for the initial regression suite:** six fixed seeds plus three
    reversed-seat matches finish legally and replay identically. Expand
-   beyond these nine fixtures with human-like defensive plans, fresh
+   beyond these 12 fixtures with human-like defensive plans, fresh
    seeds and deliberately awkward blocked/final-8 layouts before
    inferring broader population performance.
 2. Add regression fixtures for blocked direct lanes, a final-group ball,
@@ -139,7 +158,7 @@ the former without affecting the latter.
    ghost placement, pass-and-play turn handoff, break clock, finish sheet,
    pause/resume and rematch. Preserve screenshots and concrete defects.
 5. Only after this gate move substantial development capacity to
-   P3 shot feel, then P4 skill-earned cues and **two genuine new venues**.
+   P3 visual shot feel, P4 skill-earned cues and authored mastery for the now-playable new venues.
 
 The [active roadmap](ROADMAP.md) remains the priority authority. The
 [engagement research](ENGAGEMENT-RESEARCH.md) explains why earning equipment
