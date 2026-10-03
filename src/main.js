@@ -33,7 +33,11 @@ function tableToast(message,kind='turn'){
 }
 function matchTurn(event){
  if(active!=='game')return;
- if(event.type==='win'){clearTableToast();return;}
+ if(event.type==='win'){
+  clearTableToast();
+  audio.play({type:event.practice||current.players==='local'||event.winner===0?'win':'loss'});
+  return;
+ }
  const local=current.players==='local',human=event.turn===0;
  const who=local?`PLAYER ${event.turn+1}`:human?'YOU':'RIVAL';
  if(event.type==='foul'){
@@ -107,7 +111,11 @@ function turnUI(){if(!current)return;
  if(completed){
   const player=current.winner===0?(current.players==='local'?'PLAYER ONE':'YOU'):current.players==='local'?'PLAYER TWO':rival==='club'?'CLUB PRO':'ROOKIE';
   setText('matchResultTitle',practice?'TABLE CLEARED':`${player} WINS`);
-  setText('matchResultDetail',practice?`${current.shots} SHOTS THIS SESSION`:`${current.shots} SHOTS · RACK COMPLETE`);
+  const finalReason=current.history.at(-1)?.reason;
+  const resultKind=practice?'practice':finalReason==='eight-cleared'?'clean':'foul';
+  $('matchResult').dataset.finish=resultKind;
+  setText('matchResultDetail',practice?`${current.shots} SHOTS THIS SESSION`:
+    `${current.shots} SHOTS · ${resultKind==='clean'?'CLEAN 8-BALL':'FOUL ON THE 8'}`);
  }
  const seconds=Math.ceil(current.shotRemaining);const pct=current.kind==='match'?`${Math.max(0,current.shotRemaining/45)*100}%`:'100%';
  for(const [i,id,clock] of [[0,'oneCard','clockOne'],[1,'twoCard','clockTwo']]){
