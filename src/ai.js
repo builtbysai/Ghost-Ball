@@ -1,6 +1,7 @@
 import {Simulation,POCKETS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
 import {groupContains} from './casual-rules.js';
+import {initialCuePlacement} from './placement-guide.js';
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
@@ -44,60 +45,151 @@ export function candidateShots(sim,group='open'){
 }
 /** Cheap bounded deterministic preview. Only the stronger Club Pro executes
  * these trajectories; Rookie uses geometry with looser aim and tempo. */
-export function previewShot(sim,candidate,group='open',{maxSteps=960}={}){
+/** Lightweight real-physics prediction. Evaluate the ruling along with
+ * target pocket instead of treating an illegal pocket as a successful shot.
+ * maxSteps is a bounded planning window, NOT a replacement for the referee. */
+/**
+ * One yielded step = at most one real 240 Hz simulation step. A full,
+ * deterministic search can be performed synchronously in lab tests, while
+ * the live browser can spread it over animation frames with no altered
+ * physics or RNG behavior.
+ */
+function* simulateAssessment(sim,candidate,group='open',{maxSteps=960}={}){
  const predicted=new Simulation(sim.snapshot().balls);
- if(!predicted.strike(candidate.angle,candidate.power))return -Infinity;
+ if(!predicted.strike(candidate.angle,candidate.power)){
+   return {score:-Infinity,targetPocket:false,legalFirst:false,scratch:false,complete:false};
+ }
  let targetPocket=false,targetWrongPocket=false,scratch=false,earlyEight=false,own=0;
+ let first=null,railAfterContact=false,complete=false,anyPocket=false;
  const visited=new Set();
  for(let step=0;step<maxSteps;step++){
   const events=predicted.step();
   for(const event of events){
+   if(event.type==='contact'&&first===null&&(event.a===0||event.b===0))
+    first=event.a===0?event.b:event.a;
+   if(event.type==='rail'&&first!==null)railAfterContact=true;
    if(event.type!=='pocket'||visited.has(event.id))continue;
-   visited.add(event.id);
+   visited.add(event.id);anyPocket=true;
    if(event.id===0)scratch=true;
    else if(event.id===8&&group!=='eight')earlyEight=true;
    else if(event.id===candidate.target){
-    if(event.pocket===candidate.pocket)targetPocket=true;else targetWrongPocket=true;
+    if(event.pocket===candidate.pocket)targetPocket=true;
+    else targetWrongPocket=true;
    }else if(groupContains(event.id,group))own++;
   }
-  if(!predicted.moving)break;
+  if(!predicted.moving){complete=true;break;}
+  yield; // cooperative browser scheduling without wall-clock-dependent decisions
  }
- // Deliberately favor making the planned shot and avoiding the cue scratch.
- // Unexpected good pots can help, but cannot completely override a scratch.
- return (targetPocket?760:targetWrongPocket?260:0)+own*130
-   -(scratch?1250:0)-(earlyEight?1750:0)-candidate.cost*.5
-   -candidate.power*30;
+ const legalFirst=first!==null&&groupContains(first,group);
+ const foul=scratch||earlyEight||!legalFirst||
+   (complete&&!anyPocket&&!railAfterContact);
+ const made=legalFirst&&targetPocket&&!foul;
+ const score=(made?1200:targetWrongPocket&&legalFirst&&!foul?460:0)
+   +(!foul?own*170:0)+(legalFirst?160:0)
+   -(scratch?1600:0)-(earlyEight?2200:0)
+   -(!legalFirst?950:0)
+   -(complete&&!anyPocket&&!railAfterContact?420:0)
+   -candidate.cost*.25-candidate.power*25;
+ return {score,targetPocket,legalFirst,scratch,earlyEight,first,
+   complete,railAfterContact,foul,made};
 }
-/** Purely local shot selection, deterministic with the supplied seeded PRNG.
- * Both opponents get exactly the same physics; only planning changes. */
-export function chooseShot(sim,group='open',difficulty='rookie',random=createRandom(1)){
+function drain(generator){
+ let state=generator.next();
+ while(!state.done)state=generator.next();
+ return state.value;
+}
+export function assessShot(sim,candidate,group='open',options={}){
+ return drain(simulateAssessment(sim,candidate,group,options));
+}
+/**
+ * Find an actually legal and geometrically useful ball-in-hand position.
+ * This is shared by live AI and the full-rack lab; neither gets a shortcut
+ * or a magic ghost placement. No mutations to the authoritative sim.
+ * The benchmark intentionally does not use any candidate that the real
+ * opponent cannot legally place.
+ */
+export function chooseAiCuePlacement(sim,group='open',difficulty='rookie'){
+ if(!sim||!sim.atRest())return null;
+ const fallback=initialCuePlacement(sim)?.candidate;
+ const targets=sim.balls.filter(ball=>!ball.pocketed&&groupContains(ball.id,group))
+   .map(ball=>({ball,pockets:POCKETS
+     .map(([x,y],pocket)=>({x,y,pocket,distance:Math.hypot(x-ball.x,y-ball.y)}))
+     .sort((a,b)=>a.distance-b.distance||a.pocket-b.pocket)}))
+   .sort((a,b)=>a.pockets[0].distance-b.pockets[0].distance||a.ball.id-b.ball.id);
+ const candidateSpots=[];
+ // Direct target-to-pocket lines create sensible achievable ball-in-hand
+ // chances. Cap evaluation explicitly for predictable mobile CPU costs.
+ for(const {ball,pockets} of targets.slice(0,difficulty==='club'?5:3)){
+  for(const pocket of pockets.slice(0,difficulty==='club'?3:2)){
+   const dx=(pocket.x-ball.x)/pocket.distance;
+   const dy=(pocket.y-ball.y)/pocket.distance;
+   for(const approach of difficulty==='club'?[100,175]:[135]){
+    candidateSpots.push({x:ball.x-dx*(TABLE.radius*2+approach),
+      y:ball.y-dy*(TABLE.radius*2+approach)});
+   }
+  }
+ }
+ // Common safe sites make the routine robust when a cut's ideal point
+ // collides with a blocker or lies beyond the cloth.
+ candidateSpots.push({x:240,y:250},{x:370,y:250},{x:500,y:250},{x:640,y:250});
+ let best=null;
+ const initial=sim.snapshot();
+ for(const site of candidateSpots){
+  if(!sim.canPlaceCue(site.x,site.y))continue;
+  const trial=new Simulation(initial.balls.map(ball=>({
+   ...ball,orientation:[...(ball.orientation||[1,0,0,0])]
+  })));
+  if(!trial.placeCue(site.x,site.y))continue;
+  const options=candidateShots(trial,group);
+  const first=options[0];
+  if(!first)continue;
+  const rank=first.cost;
+  if(!best||rank<best.cost)best={x:site.x,y:site.y,cost:rank,
+    target:first.target,pocket:first.pocket};
+  // A low-cost, legal, unblocked approach deserves early termination.
+  if(best.cost<120)break;
+ }
+ if(best)return best;
+ return fallback?{x:fallback.x,y:fallback.y,cost:Infinity}:null;
+}
+
+/** Numeric compatibility wrapper for existing simple AI tests. */
+export function previewShot(sim,candidate,group='open',options={}){
+ return assessShot(sim,candidate,group,options).score;
+}
+/** A pure deterministic planning generator. Advance at most a fixed
+ * number of yielded 240-Hz prediction steps per frame in the browser.
+ * Draining the same generator yields exactly the same plan in headless CI. */
+export function* createShotPlanner(sim,group='open',difficulty='rookie',random=createRandom(1)){
  const cue=sim.cue();
  if(!cue||cue.pocketed)return {angle:0,power:.58};
  const candidates=candidateShots(sim,group);
  if(candidates.length){
   if(difficulty==='club'){
-   // Evaluate a handful of realistic options rather than a huge search that
-   // stalls budget Android phones. Also try a softer tempo when worthwhile.
+   const short=candidates.slice(0,5),plans=[];
+   for(let i=0;i<short.length;i++){
+    const base=short[i];
+    plans.push({...base});
+    if(i<3)plans.push({...base,power:clamp(base.power*1.2,.24,.95)});
+   }
    let best=null;
-   for(const base of candidates.slice(0,3)){
-    for(const factor of [1,.82]){
-     const plan={...base,power:clamp(base.power*factor,.2,.9)};
-     const score=previewShot(sim,plan,group);
-     if(!best||score>best.score)best={plan,score};
-    }
+   for(const plan of plans){
+    const verdict=yield* simulateAssessment(sim,plan,group);
+    if(!best||verdict.score>best.verdict.score)best={plan,verdict};
+    if(verdict.made&&verdict.score>1120)break;
    }
    const selected=best.plan;
-   return {angle:selected.angle+(random()-.5)*.009,power:selected.power,
-     target:selected.target,pocket:selected.pocket,plan:'preview'};
+   return {angle:selected.angle+(random()-.5)*.004,power:selected.power,
+     target:selected.target,pocket:selected.pocket,
+     predictedLegal:best.verdict.legalFirst,
+     predictedPot:best.verdict.made,plan:'preview'};
   }
-  const range=Math.min(3,candidates.length);
-  // Rookie usually spots easy pots but sometimes selects a harder cut.
+  const range=Math.min(2,candidates.length);
   const selected=candidates[Math.floor(random()*range)];
-  return {angle:selected.angle+(random()-.5)*.06,
-    power:clamp(selected.power*(.9+random()*.16),.2,.91),
+  return {angle:selected.angle+(random()-.5)*.035,
+    power:clamp(selected.power*(.92+random()*.15),.23,.92),
     target:selected.target,pocket:selected.pocket,plan:'geometry'};
  }
- // No clean pot: use an unobstructed legal first contact if possible.
  const targets=sim.balls.filter(ball=>!ball.pocketed&&groupContains(ball.id,group))
    .map(ball=>({ball,range:distance(cue,ball)}))
    .sort((a,b)=>a.range-b.range||a.ball.id-b.ball.id);
@@ -107,4 +199,9 @@ export function chooseShot(sim,group='open',difficulty='rookie',random=createRan
  return {angle:Math.atan2(target.y-cue.y,target.x-cue.x)
      +(random()-.5)*(difficulty==='club'?.01:.06),
    power:difficulty==='club'?.45:.52,target:target.id,plan:'contact'};
+}
+/** Synchronous convenience for tests and batch matches, sharing every
+ * decision with the frame-sliced live match generator. */
+export function chooseShot(sim,group='open',difficulty='rookie',random=createRandom(1)){
+ return drain(createShotPlanner(sim,group,difficulty,random));
 }

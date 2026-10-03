@@ -1,8 +1,7 @@
 import {Simulation,rack,POCKETS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
-import {nearbyLegalCuePlacement} from './placement-guide.js';
-import {resolveCasualEight} from './casual-rules.js';
-import {chooseShot} from './ai.js';
+import {resolveCasualEight,groupContains} from './casual-rules.js';
+import {chooseShot,chooseAiCuePlacement,createShotPlanner,candidateShots} from './ai.js';
 export {chooseShot} from './ai.js';
 export const SHOT_CLOCK_SECONDS=45;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
@@ -11,7 +10,7 @@ export class Game {
   this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;
   this.onPocket=onPocket;this.onTurn=onTurn;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
  reset(){this.rackSeed=this.random()*100000|0;this.sim=new Simulation(rack(this.rackSeed));this.turn=0;this.groups=[null,null];this.break=true;this.foul=false;this.ballInHand=false;this.over=false;this.winner=null;this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;
-  this.history=[];this.previewShot=null;this.activeStroke=null;
+  this.history=[];this.previewShot=null;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.activeStroke=null;
   this.shotRemaining=SHOT_CLOCK_SECONDS;this.shotClockKey='';
   this.notify('A fresh rack. Take your time.');}
  get group(){const group=this.groups[this.turn];if(!group)return 'open';return this.sim.balls.some(b=>!b.pocketed&&(group==='solids'?b.id<8&&b.id>0:b.id>8))?group:'eight';}
@@ -22,7 +21,7 @@ export class Game {
   this.history.push({angle,power,spin:typeof spin==='number'?{x:spin,y:0}:{...spin},turn:this.turn,shot:this.shots+1});
   this.turnShot={first:null,pots:[],potRecords:[],rail:false,railBalls:[],groupAtStart:this.group};this.shots++;this.notify('');return true;}
  placeBreakCue(x,y){if(!this.break||this.shots||this.sim.moving||this.over||x>265||!this.sim.placeCue(x,y))return false;this.history.push({kind:'break-placement',x,y});this.notify('Cue positioned. Line up your break.');return true;}
- placeCue(x,y){if(!this.ballInHand)return false;const placed=this.sim.placeCue(x,y);if(placed){this.history.push({kind:'placement',x,y});this.ballInHand=false;this.shotClockKey='';this.notify('Cue ball placed. Line up your shot.');}return placed;}
+ placeCue(x,y){if(!this.ballInHand)return false;const placed=this.sim.placeCue(x,y);if(placed){this.history.push({kind:'placement',x,y});this.ballInHand=false;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.shotClockKey='';this.notify('Cue ball placed. Line up your shot.');}return placed;}
  spotEight(){
    const eight=this.sim.balls.find(b=>b.id===8);if(!eight)return false;
    // Standard spot, then search nearby along the lengthwise centerline to
@@ -47,15 +46,25 @@ export class Game {
  }
  /** The CPU previews the real shot it will take, including cue motion. */
  get presentedCue(){
-   const shot=this.previewShot;
    if(this.activeStroke&&this.activeStroke.elapsed<.18){
      return {angle:this.activeStroke.angle,power:this.activeStroke.power,
        strike:{...this.activeStroke,progress:Math.min(1,this.activeStroke.elapsed/.16)},showGuide:false};
    }
+   const shot=this.previewShot||this.planningPose;
    if(!shot||this.sim.moving)return null;
    const duration=this.kind==='attract'?2.4:1.35;
    const ready=Math.min(1,this.timer/duration);
-   return {angle:shot.angle+.105*Math.sin(ready*Math.PI*1.7)*(1-ready),
+   let visualAngle=shot.angle;
+   if(this.previewShot&&this.planningPose){
+     // Rotate the visible cue from the immediate geometric guess toward the
+     // finished physical plan. Never change the actual chosen shot.
+     const t=Math.max(0,Math.min(1,(this.timer-this.planSettledAt)/.22));
+     const eased=t*t*(3-2*t);
+     const delta=Math.atan2(Math.sin(shot.angle-this.planningPose.angle),
+       Math.cos(shot.angle-this.planningPose.angle));
+     visualAngle=this.planningPose.angle+delta*eased;
+   }
+   return {angle:visualAngle+.105*Math.sin(ready*Math.PI*1.7)*(1-ready),
      power:shot.power,drawback:(.09+ready*.46)*(this.kind==='attract'?1:.65),showGuide:false};
  }
  update(dt,{audio=null,haptics=false}={}){
@@ -70,29 +79,50 @@ export class Game {
      }
      if(this.isAI()&&!this.over){
        if(this.kind==='match'&&this.ballInHand){
-         const preferred=[[240,250],[320,220],[360,300],[210,150]];
-         // Fall back when the normal ball-in-hand positions are obstructed.
-         for(let x=100;x<=900;x+=100)for(const y of [250,150,350])preferred.push([x,y]);
-         for(const [x,y] of preferred){
-           const spot=nearbyLegalCuePlacement(this.sim,x,y,{maxDistance:52});
-           if(spot&&this.sim.placeCue(spot.x,spot.y)){
-             this.ballInHand=false;this.shotClockKey='';break;
-           }
+         const placement=chooseAiCuePlacement(this.sim,this.group,this.difficulty);
+         if(placement&&this.placeCue(placement.x,placement.y)){
+           // Reusing Game.placeCue ensures the actual AI follows the same
+           // referee and event-history path as local play and our bench.
+           this.timer=0;
          }
          this.previewShot=null;
        }
+       if(this.ballInHand)return; // no strike while there is no legal site
        if(!this.previewShot){
-         this.previewShot=this.break?{angle:0,power:this.kind==='attract'?.83:.82}:
-           chooseShot(this.sim,this.kind==='attract'?'open':this.group,
-             this.kind==='attract'?(this.turn===0?'club':'rookie'):this.difficulty,this.random);
+         if(this.break)this.previewShot={angle:0,power:this.kind==='attract'?.83:.82};
+         else if(this.kind==='match'&&this.difficulty==='club'){
+           if(!this.planIterator){
+             this.planIterator=createShotPlanner(this.sim,this.group,this.difficulty,this.random);
+             const guess=candidateShots(this.sim,this.group)[0],cue=this.sim.cue();
+             const legal=this.sim.balls.filter(b=>!b.pocketed&&groupContains(b.id,this.group))
+               .sort((a,b)=>Math.hypot(a.x-cue.x,a.y-cue.y)-
+                 Math.hypot(b.x-cue.x,b.y-cue.y))[0];
+             this.planningPose=guess?{angle:guess.angle,power:guess.power}:
+               legal?{angle:Math.atan2(legal.y-cue.y,legal.x-cue.x),power:.45}:
+               {angle:0,power:.5};
+           }
+           // At most one predicted physical second per rendering frame. The
+           // cue remains visibly aimed at the provisional legal target.
+           for(let i=0;i<240;i++){
+             const result=this.planIterator.next();
+             if(result.done){
+               this.previewShot=result.value;this.planIterator=null;
+               this.planSettledAt=this.timer;break;
+             }
+           }
+         }else this.previewShot=chooseShot(this.sim,
+           this.kind==='attract'?'open':this.group,
+           this.kind==='attract'?(this.turn===0?'club':'rookie'):this.difficulty,
+           this.random);
        }
-       if(this.timer>=(this.kind==='attract'?2.4:1.35)){
+       if(this.previewShot&&this.timer>=(this.kind==='attract'?2.4:1.35)&&
+           (!this.planningPose||this.timer-this.planSettledAt>=.22)){
          const shot=this.previewShot, cue=this.sim.cue();
          if(cue&&!cue.pocketed&&this.beginShot(shot.angle,shot.power)){
            this.activeStroke={cue:{x:cue.x,y:cue.y},angle:shot.angle,power:shot.power,elapsed:0};
            if(this.kind==='match')audio?.play({type:'strike',power:shot.power});
          }
-         this.previewShot=null;this.timer=0;
+         this.previewShot=null;this.planningPose=null;this.planSettledAt=0;this.timer=0;
        }
      }
    }
@@ -126,7 +156,7 @@ export class Game {
      if(event.type!=='settled'&&this.kind!=='attract')audio?.play(event);
    }
  }
- resolve(){const shot=this.turnShot;if(!shot)return;this.turnShot=null;if(this.kind==='attract'){this.turn=1-this.turn;this.timer=0;this.break=false;this.previewShot=null;return;}
+ resolve(){const shot=this.turnShot;if(!shot)return;this.turnShot=null;this.planIterator=null;if(this.kind==='attract'){this.turn=1-this.turn;this.timer=0;this.break=false;this.previewShot=null;return;}
    if(this.kind==='practice'){
      if(shot.pots.includes(0)){this.sim.placeCue(240,245);this.notify('Scratch. Tap an open spot to place the cue ball.');this.ballInHand=true;}
      else if(shot.pots.length)this.notify(`${shot.pots.filter(id=>id!==0).length} pocketed. Nice touch.`);
@@ -142,6 +172,8 @@ export class Game {
    this.history.push({kind:'ruling',shot:this.shots,shooter,result:result.type,
      reason:result.reason,turn:result.turn,groups:[...result.groups],
      ballInHand:result.ballInHand,winner:result.winner,
+     groupAtStart:shot.groupAtStart,firstContact:shot.first,
+     railAfterFirst:!!shot.rail,elapsedSimSeconds:this.sim.elapsed,
      potRecords:[...(shot.potRecords||[])],
      breakRailBalls:[...(shot.railBalls||[])]});
    if(result.spotEight)this.spotEight();

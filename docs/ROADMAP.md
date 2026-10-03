@@ -11,6 +11,7 @@
 - [x] P1.1: Off-screen 100%-power auto-fire guard; deliberate ball-in-hand ghost/nearby snap, PLACE/RESET and keyboard placement. [PR #14](https://github.com/builtbysai/Ghost-Ball/pull/14).
 - [x] P2 foundation: Pure casual referee and specific foul reasons; shot-start group fixes; serializable rulings; geometry Rookie versus bounded predictive Club Pro; clearer P1/P2 HUD. [PR #15](https://github.com/builtbysai/Ghost-Ball/pull/15).
 - [x] Research: feature and qualitative review of 8 Ball Pool, Pooking/Billiards City, Pool Blitz, Pure Pool Pro, Virtual Pool 4 and Pool Nation FX; documented fair, skill-based Cue Locker and original venue direction. **Research is complete; these new features are not yet coded.**
+- [x] P2.1 laboratory milestone ([PR #17](https://github.com/builtbysai/Ghost-Ball/pull/17)): nine headless full-physics racks, including reversed opponent seats, reach legally cleared 8-ball finishes with reproducible shot histories. CPU now uses legal strategic ball-in-hand and a frame-sliced Club Pro search; the cue stays visible throughout planning. **Actual phone feel and frame timing remain unverified.**
 
 **Currently playable:** only overhead **2D** gameplay. The live lobby has a decorative perspective rendering. Do not revive discarded experimental elevated/3D views or make their settings clickable before new working implementations exist.
 
@@ -20,8 +21,10 @@
 **Next engineering milestone; blocks progression and online release.**
 
 - [ ] Run **real Android and desktop touch/mouse playtests** for the rear-cue, aiming wheel, spin, full-power screen-edge gestures (including display cutouts), foul-placement and portrait-rotated/568x320 UI. Test pause, shot clock, result, rematch and two players sharing one device. Treat emulated Chromium success as useful but not physical-device proof.
-- [ ] Reproduce complete **physical** casual 8-ball racks with saved seeds, actual rolling/settled events, fouls, finishing, result and rematch. Avoid claiming that staged unit fixtures alone prove full matches work. Add deterministic game fixtures and identify any stalemates or impossible finishes.
-- [ ] Benchmark Rookie and Club Pro over complete racks: legal first contact, made-shot rate, scratches, intended pocket, opponent turn pace, completion and **CPU planning/frame latency** on modest Android hardware. Tune personalities/strategic defense rather than giving the CPU secret aim/physics privileges.
+- [x] Establish real **fixed-step headless full-rack** matches: six seeds and three reversed-seat variants complete legally with identical replay logs and final balls. Capture faults, rulings, first-contact quality, pots and planning latency. See [the measured reliability lab](P2-1-RELIABILITY-LAB.md).
+- [x] Correct observed slow/unfinished CPU games with legal shot assessment, strategic ball-in-hand placement and frame-sliced Club Pro planning, without changing competition physics. Preserve the visible opponent cue as plans complete.
+- [ ] Expand fixture diversity and repeat true complete matches with **real human input**. Validate the result/rematch UI and any pathological late layouts, rather than generalizing from nine scripted CPU games.
+- [ ] Benchmark **actual per-frame** CPU planning, animation and touch latency on modest Android hardware. Headless CI runtime is not a phone-performance measurement.
 - [ ] Resolve serious gameplay/input/rendering defects discovered by the measurements before adding new modes. Validate all shipped match overlays on 1280x720, 844x390, 568x320 and physically portrait 390x844.
 
 **Exit:** humans can reliably finish, understand, and replay matches on real hardware; both opponent tiers create meaningfully different *fair* play and do not stall the browser.
