@@ -44,29 +44,53 @@ export function candidateShots(sim,group='open'){
 }
 /** Cheap bounded deterministic preview. Only the stronger Club Pro executes
  * these trajectories; Rookie uses geometry with looser aim and tempo. */
-export function previewShot(sim,candidate,group='open',{maxSteps=960}={}){
+/** Lightweight real-physics prediction. Evaluate the ruling along with
+ * target pocket instead of treating an illegal pocket as a successful shot.
+ * maxSteps is a bounded planning window, NOT a replacement for the referee. */
+export function assessShot(sim,candidate,group='open',{maxSteps=960}={}){
  const predicted=new Simulation(sim.snapshot().balls);
- if(!predicted.strike(candidate.angle,candidate.power))return -Infinity;
+ if(!predicted.strike(candidate.angle,candidate.power)){
+   return {score:-Infinity,targetPocket:false,legalFirst:false,scratch:false,complete:false};
+ }
  let targetPocket=false,targetWrongPocket=false,scratch=false,earlyEight=false,own=0;
+ let first=null,railAfterContact=false,complete=false,anyPocket=false;
  const visited=new Set();
  for(let step=0;step<maxSteps;step++){
   const events=predicted.step();
   for(const event of events){
+   if(event.type==='contact'&&first===null&&(event.a===0||event.b===0))
+    first=event.a===0?event.b:event.a;
+   if(event.type==='rail'&&first!==null)railAfterContact=true;
    if(event.type!=='pocket'||visited.has(event.id))continue;
-   visited.add(event.id);
+   visited.add(event.id);anyPocket=true;
    if(event.id===0)scratch=true;
    else if(event.id===8&&group!=='eight')earlyEight=true;
    else if(event.id===candidate.target){
-    if(event.pocket===candidate.pocket)targetPocket=true;else targetWrongPocket=true;
+    if(event.pocket===candidate.pocket)targetPocket=true;
+    else targetWrongPocket=true;
    }else if(groupContains(event.id,group))own++;
   }
-  if(!predicted.moving)break;
+  if(!predicted.moving){complete=true;break;}
  }
- // Deliberately favor making the planned shot and avoiding the cue scratch.
- // Unexpected good pots can help, but cannot completely override a scratch.
- return (targetPocket?760:targetWrongPocket?260:0)+own*130
-   -(scratch?1250:0)-(earlyEight?1750:0)-candidate.cost*.5
-   -candidate.power*30;
+ const legalFirst=first!==null&&groupContains(first,group);
+ // Predict a legal made ball, not a visually successful but foul-ridden pot.
+ // A clean positional fallback remains preferable when the planned target
+ // cannot be made during the bounded preview window.
+ const foul=scratch||earlyEight||!legalFirst||
+   (complete&&!anyPocket&&!railAfterContact);
+ const made=legalFirst&&targetPocket&&!foul;
+ const score=(made?1200:targetWrongPocket&&legalFirst&&!foul?460:0)
+   +(!foul?own*170:0)+(legalFirst?160:0)
+   -(scratch?1600:0)-(earlyEight?2200:0)
+   -(!legalFirst?950:0)
+   -(complete&&!anyPocket&&!railAfterContact?420:0)
+   -candidate.cost*.25-candidate.power*25;
+ return {score,targetPocket,legalFirst,scratch,earlyEight,first,
+   complete,railAfterContact,foul,made};
+}
+/** Numeric compatibility wrapper for existing simple AI tests. */
+export function previewShot(sim,candidate,group='open',options={}){
+ return assessShot(sim,candidate,group,options).score;
 }
 /** Purely local shot selection, deterministic with the supplied seeded PRNG.
  * Both opponents get exactly the same physics; only planning changes. */
@@ -76,25 +100,35 @@ export function chooseShot(sim,group='open',difficulty='rookie',random=createRan
  const candidates=candidateShots(sim,group);
  if(candidates.length){
   if(difficulty==='club'){
-   // Evaluate a handful of realistic options rather than a huge search that
-   // stalls budget Android phones. Also try a softer tempo when worthwhile.
+   // Keep evaluation bounded and deterministic on modest devices. Vary
+   // target/pocket before replaying the same narrow cut with many strengths.
+   // Six to eight previews per turn; never run an exhaustive tree.
+   const short=candidates.slice(0,5);
+   const plans=[];
+   for(let i=0;i<short.length;i++){
+    const base=short[i];
+    plans.push({...base});
+    if(i<3)plans.push({...base,power:clamp(base.power*1.2,.24,.95)});
+   }
    let best=null;
-   for(const base of candidates.slice(0,3)){
-    for(const factor of [1,.82]){
-     const plan={...base,power:clamp(base.power*factor,.2,.9)};
-     const score=previewShot(sim,plan,group);
-     if(!best||score>best.score)best={plan,score};
-    }
+   for(const plan of plans){
+    const verdict=assessShot(sim,plan,group);
+    if(!best||verdict.score>best.verdict.score)best={plan,verdict};
+    // A genuinely predicted legal pocket is stronger evidence than trying
+    // more expensive speculative lines. Keep the selected result stable.
+    if(verdict.made&&verdict.score>1120)break;
    }
    const selected=best.plan;
-   return {angle:selected.angle+(random()-.5)*.009,power:selected.power,
-     target:selected.target,pocket:selected.pocket,plan:'preview'};
+   return {angle:selected.angle+(random()-.5)*.004,power:selected.power,
+     target:selected.target,pocket:selected.pocket,
+     predictedLegal:best.verdict.legalFirst,
+     predictedPot:best.verdict.made,plan:'preview'};
   }
-  const range=Math.min(3,candidates.length);
-  // Rookie usually spots easy pots but sometimes selects a harder cut.
+  const range=Math.min(2,candidates.length);
+  // Rookie reads a decent simple angle but remains noticeably imprecise.
   const selected=candidates[Math.floor(random()*range)];
-  return {angle:selected.angle+(random()-.5)*.06,
-    power:clamp(selected.power*(.9+random()*.16),.2,.91),
+  return {angle:selected.angle+(random()-.5)*.035,
+    power:clamp(selected.power*(.92+random()*.15),.23,.92),
     target:selected.target,pocket:selected.pocket,plan:'geometry'};
  }
  // No clean pot: use an unobstructed legal first contact if possible.
