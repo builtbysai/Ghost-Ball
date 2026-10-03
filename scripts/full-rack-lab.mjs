@@ -127,6 +127,10 @@ if(process.argv[1]?.endsWith('/full-rack-lab.mjs')){
    ensure(JSON.stringify(replay.finalSnapshot)===JSON.stringify(run.finalSnapshot),
      `seed ${run.seed}: deterministic physical replay mismatch`);
   }
-  console.log('PASS: full recorded rulings and ball snapshots replay identically');
- }
+  console.error('PASS: full recorded rulings and ball snapshots replay identically');
+  const minLegal=Number(process.env.GHOST_MIN_LEGAL_FINISHES||0);
+ ensure(runs.filter(run=>run.legalEightFinish).length>=minLegal,
+   `Only ${runs.filter(run=>run.legalEightFinish).length} legally finished racks out of ${runs.length}, required ${minLegal}`);
+ if(minLegal)console.error(`PASS: at least ${minLegal} legally cleared 8-ball racks`);
+}
 }
