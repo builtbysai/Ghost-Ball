@@ -3,6 +3,7 @@ import {TABLE} from './physics.js';
 import {paintFrame,paintCloth,paintRailDetails,paintPockets,FINISHES} from './table-finishes.js';
 import {cueGeometry,strokeCharge} from './cue-feel.js';
 import {projectAim} from './aim-guide.js';
+import {cueById} from './cue-catalog.js';
 
 const TAU=Math.PI*2;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -17,7 +18,7 @@ export {halls};
 function polygon(g,vertices){g.beginPath();g.moveTo(...vertices[0]);for(let i=1;i<vertices.length;i++)g.lineTo(...vertices[i]);g.closePath();}
 function hexToRgb(hex){return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
 export class TableRenderer{
- constructor(canvas,{view='perspective',hall=0,cacheStatic=true}={}){this.cacheStatic=cacheStatic;this.surface=null;this.surfaceKey='';this.canvas=canvas;this.g=canvas.getContext('2d');this.view=view;this.projectionBlend=view==='flat'?1:0;this.hall=hall;this.drawCount=0;this.ballTextures=new WeakMap();this.resize();}
+ constructor(canvas,{view='perspective',hall=0,cacheStatic=true}={}){this.cacheStatic=cacheStatic;this.surface=null;this.surfaceKey='';this.canvas=canvas;this.g=canvas.getContext('2d');this.view=view;this.projectionBlend=view==='flat'?1:0;this.hall=hall;this.drawCount=0;this.ballTextures=new WeakMap();this.cueStyle=cueById('house');this.resize();}
  resize(){const box=this.canvas.getBoundingClientRect();this.w=Math.max(1,this.canvas.offsetWidth||box.width);this.h=Math.max(1,this.canvas.offsetHeight||box.height);this.dpr=Math.min(2,window.devicePixelRatio||1);this.canvas.width=Math.round(this.w*this.dpr);this.canvas.height=Math.round(this.h*this.dpr);this.g.setTransform(this.dpr,0,0,this.dpr,0,0);this.geometry();}
  geometry(){
    // An upright table gives portrait phones a much larger aiming surface.
@@ -38,6 +39,8 @@ export class TableRenderer{
  setView(view){this.view=view;this.projectionBlend=view==='flat'?1:0;this.geometry();}
  setBlend(amount){this.projectionBlend=clamp(amount,0,1);this.geometry();}
  setHall(i){this.hall=i;}
+ /** A renderer concern only; never edits the ball simulation or shot input. */
+ setCue(id){this.cueStyle=cueById(id);}
  project(x,y){
    if(this.portrait){const t=x/TABLE.width,k=1-.22*(1-this.blend)*t;
      return [this.w/2+(y/TABLE.height-.5)*this.bh*k,this.center-(t-.5)*this.bw,k];}
@@ -259,23 +262,30 @@ export class TableRenderer{
   }
  }
  drawCue(cue,angle,drawback=0,opacity=1){
-  const g=this.g,{tip,grip,butt}=cueGeometry(cue,angle,drawback);
+  const g=this.g,style=this.cueStyle||cueById('house'),{tip,grip,butt}=cueGeometry(cue,angle,drawback);
   const [tx,ty]=this.project(tip.x,tip.y),[gx,gy]=this.project(grip.x,grip.y),[bx,by]=this.project(butt.x,butt.y);
   const width=clamp(this.bw/560, .56, 1.28);
   g.save();g.globalAlpha=clamp(opacity,0,1);g.lineCap='round';
   // Contact shadows and a slender taper communicate a polished physical cue.
   g.shadowColor='rgba(0,0,0,.64)';g.shadowBlur=5*width;g.shadowOffsetY=2.8*width;
-  g.beginPath();g.moveTo(bx,by);g.lineTo(gx,gy);g.strokeStyle='#2b1a13';g.lineWidth=8.8*width;g.stroke();
+  g.beginPath();g.moveTo(bx,by);g.lineTo(gx,gy);g.strokeStyle=style.butt;g.lineWidth=8.8*width;g.stroke();
   g.shadowBlur=0;g.shadowOffsetY=0;
   const wood=g.createLinearGradient(bx-3,by-4,gx+3,gy+4);
-  wood.addColorStop(0,'#231712');wood.addColorStop(.28,'#925f35');
-  wood.addColorStop(.72,'#b5844e');wood.addColorStop(1,'#3e2419');
+  wood.addColorStop(0,style.butt);wood.addColorStop(.28,style.wrap);
+  wood.addColorStop(.72,style.butt);wood.addColorStop(1,style.accent);
   g.beginPath();g.moveTo(bx,by);g.lineTo(gx,gy);g.strokeStyle=wood;g.lineWidth=6.4*width;g.stroke();
-  g.beginPath();g.moveTo(gx,gy);g.lineTo(tx,ty);g.strokeStyle='#e3c391';g.lineWidth=3.15*width;g.stroke();
+  g.beginPath();g.moveTo(bx+(gx-bx)*.09,by+(gy-by)*.09);
+  g.lineTo(bx+(gx-bx)*.70,by+(gy-by)*.70);
+  g.strokeStyle=style.wrap;g.lineWidth=5.1*width;g.stroke();
+  for(const t of [.1,.15,.2,.25,.3]){
+    const x=bx+(gx-bx)*t,y=by+(gy-by)*t;
+    g.beginPath();g.arc(x,y,1.35*width,0,TAU);g.fillStyle=style.accent;g.fill();
+  }
+  g.beginPath();g.moveTo(gx,gy);g.lineTo(tx,ty);g.strokeStyle=style.shaft;g.lineWidth=3.15*width;g.stroke();
   g.beginPath();g.moveTo(gx,gy);g.lineTo(tx,ty);g.strokeStyle='rgba(255,246,207,.52)';g.lineWidth=.85*width;g.stroke();
   const ring=this.project(cue.x-Math.cos(angle)*(cueGeometry(cue,angle,drawback).reach-92),cue.y-Math.sin(angle)*(cueGeometry(cue,angle,drawback).reach-92));
-  g.beginPath();g.moveTo(gx,gy);g.lineTo(...ring);g.strokeStyle='#ddc693';g.lineWidth=1.8*width;g.stroke();
-  g.beginPath();g.arc(tx,ty,2.3*width,0,TAU);g.fillStyle='#d7e8f0';g.fill();
+  g.beginPath();g.moveTo(gx,gy);g.lineTo(...ring);g.strokeStyle=style.metal;g.lineWidth=1.8*width;g.stroke();
+  g.beginPath();g.arc(tx,ty,2.3*width,0,TAU);g.fillStyle=style.tip;g.fill();
   if(drawback>.03){
     const [cx,cy]=this.project(cue.x,cue.y);
     const v=Math.min(1,drawback);g.beginPath();g.arc(cx,cy,Math.max(5,TABLE.radius*this.bw/1000)*(1.28+.22*v),0,TAU);
