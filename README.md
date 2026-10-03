@@ -2,16 +2,16 @@
 
 An independent, lightweight browser pool game. The Clubhouse rebuild follows the supplied **Clubhouse v3** direction and has a live exhibition playing on the lobby table rather than static decoration.
 
-**Status:** v0.6 table craftsmanship and shot-feel pass. Top-down 2D is the only playable view; the live lobby table rotates and its balls assemble into the match rack. Full WPA tournament rules, other cameras and online play are still planned.
+**Status:** P2 casual referee and opponent-planning pass. Top-down 2D is the only playable view; the live lobby table rotates and its balls assemble into the match rack. Full WPA tournament rules, other cameras and online play are still planned.
 
 ## Available now
 
 - Responsive Clubhouse inspired by the provided mockup: three tables, working room controls, live AI exhibition, Watch, playable Quick Match vs Rookie or Club Pro, local pass-and-play, and free Practice.
 - One active gameplay camera: top-down 2D. The live perspective lobby exhibition becomes that same physical table in a seamless rotation/zoom/rack-assembly transition. The layout works in both device orientations without blocking play.
 - Fixed-step simulation (240 Hz) with independent ball positions, bounded equal-and-opposite collision impulses, a simplified sliding-to-rolling transition, pocket mouths and jaw guards, side spin, approximate follow/draw, event-based audio and impact rings.
-- Landscape-first match screen with two-player HUD, remaining-ball markers, full-length cue and collision guideline. Grab and rotate the **shaft behind the cue ball**, not the guide in front; use the separate fine-aim wheel, two-axis spin and safe pull-down power bar. Cue-ball placement is unchanged.
-- Explicit seeds for reproducible rack / opponent test cases, independent deep-copied simulation snapshots and a minimal committed shot / cue-placement history. Full cinematic replay has not shipped.
-- Arcade 8-ball rules (no called shots). Deliberately disabled unfinished modes; no cosmetic matchmaking or fictional unlocks.
+- Landscape-first match screen with two-player HUD, remaining-ball markers, full-length cue and collision guideline. Grab and rotate the **shaft behind the cue ball**, not the guide in front; use the separate fine-aim wheel, two-axis spin and safe pull-down power bar. Ball-in-hand offers a visible ghost cue ball, tap/confirm or drag placement and keyboard nudging.
+- Explicit seeds for reproducible rack / opponent test cases, deep-copied simulation snapshots, separated casual rulings and append-only shot / placement / ruling history. Full cinematic replay has not shipped.
+- **Casual** 8-ball rules (no called shots) with explainable fouls, snapshotted pre-shot group ownership and protected 8-ball outcomes. Rookie uses geometric selection; Club Pro evaluates a bounded set of full-physics predictions. Tournament rules and unfinished modes remain disabled.
 - Distinctive walnut/sage, smoked oak/blue and dark ash/olive tables with detailed six-pocket rendering, rail sights, cushion seams, subtly textured cloth and cached static surfaces.
 - Camera-lift entrance with a crisp high-resolution board, curved live-ball gathering and moving spotlight; reduced-motion bypass remains available.
 - Highly visible cue recoil during power pull, tension stages and optional brief vibration ticks. The spring-loaded control and power-aware layered contact audio provide shot feedback without screen shake.
@@ -31,7 +31,9 @@ No dependencies or build step. Code is grouped by responsibility:
 
 - `src/physics.js`: fixed-step simulation, snapshots and event stream, no browser APIs.
 - `src/random.js`: small seeded PRNG shared by repeatable racks and CPU shot selection.
-- `src/game.js`: match ownership, transitions, basic geometric AI.
+- `src/game.js`: match ownership, 45-second casual shot clock, rulings and replayable event metadata.
+- `src/casual-rules.js`: browser-free casual referee; a separate tournament referee is a future milestone.
+- `src/ai.js`: seedable geometric Rookie and bounded full-physics predictive Club Pro.
 - `src/render.js`: overhead/pitched 2D table, cached surfaces, aiming and cue animation.
 - `src/table-finishes.js`: shared table construction plus hall-specific materials (visual only; physics unchanged).
 - `src/cue-feel.js`: pure cue travel, contact stroke timing and tactile stage math.
@@ -43,7 +45,7 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/feel.css`: responsive, motion-aware power rail feedback.
 - `src/style.css`: viewport-contained presentation; design tokens.
 
-See [roadmap](docs/ROADMAP.md) and [research](docs/RESEARCH.md). Focused Node regression tests cover input geometry, cue loading and collision physics; Playwright browser smoke checks the live entrance, all three hall palettes, and responsive mouse/touch input. Do not bolt future game modes into `main.js`: extract state machines and provide explicit tests.
+See [roadmap](docs/ROADMAP.md), [P2 rules architecture](docs/P2-RULES-ARCHITECTURE.md) and [research](docs/RESEARCH.md). Focused Node regression tests cover input geometry, cue loading and collision physics; Playwright browser smoke checks the live entrance, all three hall palettes, and responsive mouse/touch input. Do not bolt future game modes into `main.js`: extract state machines and provide explicit tests.
 
 ## Recovery
 

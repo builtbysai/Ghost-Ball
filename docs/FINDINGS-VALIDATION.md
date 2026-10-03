@@ -69,11 +69,18 @@ _Shipped on `main` in [PR #14](https://github.com/builtbysai/Ghost-Ball/pull/14)
 **Exit:** A maximum charged shot cannot be stranded by leaving the rail; interrupted lateral drags remain safe. On fouls, both a deliberate tap-and-confirm and touch drag finish only at a visibly legal spot, without obstructing the table.
 
 ### P2: Rules and opponent confidence
-- Keep casual rules as default. Implement an *explicit* tournament ruleset instead of silently changing casual matches: open-table assignment, break legality, called 8 pocket, scratches, illegal contacts and ending conditions.
-- Break rule state into a rules module. Test every finish path and ball-in-hand permission. Verify pass-and-play prompts for a single shared phone.
-- Profile AI shot legality and shot selection with seeded tables. Differentiate Rookie and Club Pro through shot planning, not hidden physics.
+_In progress: rules/AI foundation in `dev/p2-rules-ai-foundation`. See [P2 design and official-source comparison](P2-RULES-ARCHITECTURE.md)._
 
-**Exit:** Rules, visible turn ownership and the AI agree across full-rack simulations and edge-case fixtures.
+- [x] Extract a pure casual 8-ball resolver with stable foul causes, shot-start group tracking and consistent 8-ball finishes. Preserve casual mode as the default.
+- [x] Collect serializable pocket locations, distinct break-rail contacts, and an append-only ruling record for replay/debugging and a future independent referee.
+- [x] Separate the CPU into a module: Rookie uses imperfect geometric planning; Club Pro predicts a bounded shortlist on the **same** deterministic simulation. Add seeded fixtures for both.
+- [x] Make ball-in-hand ownership and retained-turn notifications explicit for local two-player pass-and-play.
+- [ ] Complete CI, short-viewport screenshots and repeatable match-level integration benchmarks for this phase.
+- [ ] Offer a *separately selectable* tournament ruleset only with its complete pre-shot call UI and break-choice dialogs, never as a silent change to casual matches. Based on the WPA's official 8-ball sections.
+- [ ] Profile full-rack AI legal-contact, rack-clear, scratch and performance rates using seeded tables and real Android hardware; calibrate only after this evidence.
+- [ ] Verify the completed-match/result/rematch flow and both players' pass-and-play touch experience on actual devices.
+
+**Exit:** Rules, visible turn ownership and AI decisions agree across full-rack fixtures. Formal tournament mode has no missing player-choice flows when enabled.
 
 ### P3: Polished club identity
 - Turn/foul event presentation, calmer exhibition discoverability, finished room lighting and carefully measured shot/pocket audio, with reduced-motion and muted equivalents.
