@@ -46,6 +46,9 @@ function tableToast(message,kind='turn'){
 }
 function matchTurn(event){
  if(active!=='game')return;
+ if(event.type==='drill-continue'){
+  tableToast('ONE SHOT LEFT · RECHECK THE ANGLE');return;
+ }
  if(event.type==='drill-end'){
   clearTableToast();
   if(current.kind==='drill'&&current.over&&drillEventId){
@@ -311,6 +314,7 @@ function turnUI(){if(!current)return;
  if(completed){
   const player=current.winner===0?(current.players==='local'?'PLAYER ONE':'YOU'):current.players==='local'?'PLAYER TWO':rival==='club'?'CLUB PRO':'ROOKIE';
   setText('matchResultTitle',drill?current.drillOutcome==='completed'?'DRILL COMPLETE':'TRY AGAIN':practice?'TABLE CLEARED':`${player} WINS`);
+  setText('playAgain',drill?'RETRY DRILL ↻':"RACK 'EM AGAIN ↻");
   const finalReason=current.history.at(-1)?.reason;
   const resultKind=practice?'practice':finalReason==='eight-cleared'?'clean':'foul';
   $('matchResult').dataset.finish=resultKind;
@@ -318,7 +322,8 @@ function turnUI(){if(!current)return;
     const best=progress.drills?.[current.drillId];
     setText('matchResultDetail',current.drillOutcome==='completed'?
      `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · ${best?progressAccess.writable?'SAVED BEST: '+best:'SESSION BEST: '+best:'COMPLETED'}`:
-     'RESET AND TRY THE ANGLE AGAIN');
+     ({scratch:'SCRATCH · RESET AND TRY AGAIN','wrong-pocket':'WRONG POCKET · TRY AGAIN',
+       'out-of-shots':'TWO SHOTS USED · TRY AGAIN'})[current.history.at(-1)?.reason]||'RESET AND TRY AGAIN');
    }else
   setText('matchResultDetail',practice?`${current.shots} SHOTS THIS SESSION`:
      `${current.shots} SHOTS · ${resultKind==='clean'?'CLEAN 8-BALL':'FOUL ON THE 8'}`+
