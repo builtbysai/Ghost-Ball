@@ -97,13 +97,14 @@ export class Simulation{
   }
   strike(angle,power,spin=0){
     const cue=this.cue();if(!Number.isFinite(angle)||!Number.isFinite(power)||!this.atRest()||!cue||cue.pocketed)return false;
-    const speed=clamp(power,.06,1)*PHYSICS.maxSpeed;
-    cue.vx=Math.cos(angle)*speed;cue.vy=Math.sin(angle)*speed;
-    cue.slipX=cue.vx*.65;cue.slipY=cue.vy*.65;
-    // Number signature stays supported for archived replays and regression fixtures.
+    // Validate the complete shot before moving the cue. A rejected spin must
+    // not leave stationary gameplay with a moving ball and no active shot.
     const english=typeof spin==='number'?spin:spin?.x??0;
     const vertical=typeof spin==='number'?0:spin?.y??0;
     if(!Number.isFinite(english)||!Number.isFinite(vertical))return false;
+    const speed=clamp(power,.06,1)*PHYSICS.maxSpeed;
+    cue.vx=Math.cos(angle)*speed;cue.vy=Math.sin(angle)*speed;
+    cue.slipX=cue.vx*.65;cue.slipY=cue.vy*.65;
     cue.spin=clamp(english,-1,1)*speed*.12;
     cue.follow=clamp(vertical,-1,1);cue.aimX=Math.cos(angle);cue.aimY=Math.sin(angle);
     this.lastShot={angle,power,english,vertical};this.moving=true;this.events=[{type:'strike',power}];return true;

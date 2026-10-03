@@ -38,7 +38,11 @@ export class Game {
    if(this.kind!=='match'||this.over||this.sim.moving||this.ballInHand||this.turnShot)return false;
    const offender=this.turn;
    this.history.push({kind:'shot-clock-expired',turn:offender,shot:this.shots+1});
-   this.turn=1-offender;this.foul=true;this.ballInHand=true;this.previewShot=null;
+   this.turn=1-offender;this.foul=true;this.ballInHand=true;
+   // Never resume the expired player's partially evaluated shot when this
+   // seat becomes CPU-controlled again later in the same rack.
+   this.previewShot=null;this.planIterator=null;this.planningPose=null;
+   this.planSettledAt=0;
    this.timer=0;this.shotRemaining=SHOT_CLOCK_SECONDS;this.shotClockKey='';
    this.notify(`Shot clock expired. Player ${this.turn+1} has ball in hand.`);
    this.onTurn({type:'foul',reason:'shot-clock',turn:this.turn,offender});
