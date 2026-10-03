@@ -129,7 +129,7 @@ export function recordLiveDrill(previous,event){
  const drill=skillDrillById(event?.drillId);
  if(!validProgress(previous)||!drill||event?.kind!=='drill'||event.source!=='live'||
   event.completed!==true||typeof event.id!=='string'||!event.id||event.id.length>128||
-  typeof event.at!=='string'||!/^(19|20)\\d\\d-\\d\\d-\\d\\dT/.test(event.at)||
+  typeof event.at!=='string'||!/^(19|20)\d\d-\d\d-\d\dT/.test(event.at)||
   !Number.isInteger(event.shots)||event.shots<1||event.shots>drill.attempts)
   return previous;
  const grade=gradeSkillDrill(event.drillId,{shots:event.shots,shot:event.evidence});
