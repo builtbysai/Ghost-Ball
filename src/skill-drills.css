@@ -36,10 +36,11 @@
 @media(max-height:370px) and (orientation:landscape){
  #app .challenge-panel{gap:4px;padding:7px 10px}
  #app .challenge-heading h2{font-size:21px}
- #app .challenge-card{padding:5px 8px;gap:2px}
- #app .challenge-card-name{font-size:clamp(16px,4.5dvh,19px)}
- #app .challenge-card-tag{font-size:7px}
- #app .challenge-card-rule{font-size:9px;line-height:1.13}
+ #app .challenge-card{padding:4px 8px;gap:2px}
+ #app .challenge-card-name{font-size:clamp(15px,4.5dvh,18px)}
+ #app .challenge-card-tag,#app .challenge-card-rule{font-size:0;line-height:1.12}
+ #app .challenge-card-tag::after{content:attr(data-compact);font:800 8px/1.1 system-ui;display:block}
+ #app .challenge-card-rule::after{content:attr(data-compact);font:750 9px/1.14 system-ui;display:block}
  #app .challenge-card-status{font-size:7px}
  #app .challenge-footnote{font-size:8px}
 }
