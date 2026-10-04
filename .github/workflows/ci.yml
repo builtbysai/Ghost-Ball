@@ -21,6 +21,8 @@ jobs:
         run: |
           find src -name '*.js' -exec node --check {} \;
           node --check scripts/full-rack-lab.mjs
+          node --check scripts/persona-bench.mjs
+          node --check sw.js
       - name: Simulation and rules unit tests
         run: npm test
       - name: Headless full-rack AI and rules baseline
@@ -64,6 +66,11 @@ jobs:
         env:
           CHROMIUM_BIN: /usr/bin/google-chrome
         run: python3 scripts/http-smoke.py
+      - name: Offline service-worker smoke
+        if: github.event_name == 'pull_request'
+        env:
+          CHROMIUM_BIN: /usr/bin/google-chrome
+        run: python3 scripts/offline-smoke.py
       - name: Save viewport screenshots
         if: always() && github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4

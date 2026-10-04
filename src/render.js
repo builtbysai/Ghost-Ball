@@ -55,7 +55,7 @@ export class TableRenderer{
    return {x:clamp(((sx-this.center)/(this.bw*k)+.5)*TABLE.width,0,1000),y:t*TABLE.height};
  }
  clear(){this.g.clearRect(0,0,this.w,this.h);}
- draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[],callPocket=null,targetBall=null}={}){
+ draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[],callPocket=null,callLabel=8,targetBall=null}={}){
   const g=this.g,P=(x,y)=>this.project(x,y);
   this.clear();g.save();
   if(this.cacheStatic&&typeof document!=='undefined'){
@@ -74,7 +74,7 @@ export class TableRenderer{
    g.drawImage(this.surface,0,0,this.w,this.h);
   }else this.paintSurface(g);
   if(placementZone&&!sim.moving)this.drawPlacementZone(sim,placementZone,placement);
-  if(callPocket!==null&&callPocket>=0)this.drawCalledPocket(callPocket);
+  if(callPocket!==null&&callPocket>=0)this.drawCalledPocket(callPocket,callLabel);
   if(targetBall!==null)this.drawTargetBall(sim,targetBall);
   if(interactive&&aim&&!sim.moving&&!sim.cue()?.pocketed)this.drawAim(sim,aim);
   else if(aim?.strike&&aim.strike.progress<1)this.drawStroke(aim.strike);
@@ -244,7 +244,7 @@ export class TableRenderer{
    g.restore();
  }
  // The pocket named for the 8 under "call the 8": a gold ring and numeral at the well.
- drawCalledPocket(index){
+ drawCalledPocket(index,label=8){
    const target=POCKETS[index];if(!target)return;
    const g=this.g,[x,y]=this.project(target[0],target[1]),scale=this.bw/1000,radius=Math.max(11,34*scale);
    // Pull the marker onto the cloth so corner wells (centred off the table) stay visible.
@@ -253,7 +253,7 @@ export class TableRenderer{
    g.beginPath();g.arc(cx,cy,radius,0,TAU);g.fillStyle='rgba(240,205,120,.16)';g.fill();
    g.lineWidth=2;g.strokeStyle='rgba(247,214,138,.95)';g.setLineDash([5,4]);g.stroke();g.setLineDash([]);
    g.fillStyle='rgba(255,236,176,.95)';g.font='800 '+Math.max(9,radius*.62)+'px system-ui,sans-serif';
-   g.textAlign='center';g.textBaseline='middle';g.fillText('8',cx,cy);
+   g.textAlign='center';g.textBaseline='middle';g.fillText(String(label),cx,cy);
    g.restore();
  }
  // Nine-ball: a soft ring marks the lowest ball, the only legal first contact.

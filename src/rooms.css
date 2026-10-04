@@ -115,3 +115,7 @@
 @keyframes dust-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-2%,9vh,0)}}
 @media (prefers-reduced-motion:reduce){#app .room-floor::after{animation:none}}
 #app[data-motion="off"] .room-floor::after{animation:none}
+
+/* --- lobby tabs: coming-soon placeholders never crowd a narrow screen; real tabs are finger-sized --- */
+#app .modes button{min-height:36px}
+@media (max-width:760px){#app .modes button:disabled{display:none}#app .modes{justify-content:flex-start;gap:clamp(14px,5vw,28px)}}

@@ -129,7 +129,7 @@ function matchTurn(event){
     at:new Date().toISOString(),shots:current.shots,winner:current.winner,
     players:current.players,difficulty:current.difficulty,room,
     reason:event.reason,
-    bestRun:current.ruleset==='nine'?nineBestRun(current.history,0):current.players==='local'
+    bestRun:current.rotation?nineBestRun(current.history,0):current.players==='local'
       ?Math.max(bestLegalRun(current.history,0),bestLegalRun(current.history,1))
       :bestLegalRun(current.history,0)
    });
@@ -200,11 +200,12 @@ function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
 function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';$('clockSetting').closest('.setting').hidden=mode==='practice';syncClock();$('gameType').closest('.setting').hidden=mode==='practice';syncGameType();syncRules();show('backdrop');show('setupSheet');$('closeSetup').focus();}
 function closeSetup(){const wasOpen=!$('setupSheet').hidden;hide('setupSheet');if($('settingsSheet').hidden)hide('backdrop');if(wasOpen)$('openSetup').focus();}
 const SETUP_NOTES={eight:'8-ball, casual: no called shots. Call the 8: when you are down to the black, name its pocket first; any other pocket loses the rack.',
- nine:'9-ball, casual: always hit the lowest ball first, pot the 9 to win. No push-out or three-foul rule yet.'};
+ nine:'9-ball: hit the lowest ball first, break hard (pot a ball or four to a cushion), pot the 9 to win. Three fouls in a row lose the rack.',
+ ten:'10-ball: like 9-ball, but the 10 only wins when it is the last ball and you call its pocket. A 10 potted any other way goes back on the table.'};
 function syncGameType(){
  all('#gameType [data-game]').forEach(b=>{const on=b.dataset.game===gameType;b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
- const nine=gameType==='nine';
- $('ruleset').closest('.setting').hidden=nine||mode==='practice';
+ const rotation=gameType==='nine'||gameType==='ten';
+ $('ruleset').closest('.setting').hidden=rotation||mode==='practice';
  setText('setupNote',SETUP_NOTES[gameType]);
 }
 function syncRules(){
@@ -398,7 +399,7 @@ function closeGuide(){
  else{show('clubMenu');$('menuGuide').focus();}
 }
 function openMenu(){show('clubMenu');$('closeMenu').focus();}
-function refreshMenu(){const ball=gameType==='nine'?'9-Ball':'8-Ball';
+function refreshMenu(){const ball=gameType==='nine'?'9-Ball':gameType==='ten'?'10-Ball':'8-Ball';
   setText('matchSummary',mode==='practice'?'Open practice table':(rival==='local'?`${ball} · Two players`:`${ball} vs ${personaFor(rival).name}`)+(rules==='call8'&&gameType==='eight'?' · Call the 8':''));
   setText('playSubtitle',mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`CASUAL ${ball.toUpperCase()} · NO ENTRY FEE`);
   all('.mode[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));}
@@ -406,8 +407,8 @@ function resize(){ambient.resize();table.resize();}
 let rackFlock=null;
 function canAct(){return active==='game'&&current&&!rackFlock&&!current.over&&!current.sim.moving&&!current.isAI()&&!current.ballInHand;}
 function nineBallSlots(container,player){
- const credited=creditedBalls(current.history,player),models=nineSlotModels(credited);
- const wasOpen=container.dataset.game!=='nine';container.dataset.game='nine';container.dataset.group='open';
+ const credited=creditedBalls(current.history,player),models=nineSlotModels(credited,current.topBall);
+ const wasOpen=container.dataset.game!=='nine';container.dataset.game='nine';container.dataset.count=String(models.length);container.dataset.group='open';
  container.replaceChildren(...models.map((ball,index)=>{
   const el=document.createElement('span');el.setAttribute('role','listitem');
   if(ball.ghost){el.className='ball-slot ghost';el.setAttribute('aria-label',`Ball ${ball.slot} not potted by this player`);return el;}
@@ -420,7 +421,7 @@ function nineBallSlots(container,player){
  container.setAttribute('aria-label',credited.length?`Potted: ${credited.join(', ')}`:'No balls potted yet');
 }
 function ballSlots(container,player){
- if(current.ruleset==='nine'){nineBallSlots(container,player);return;}
+ if(current.rotation){nineBallSlots(container,player);return;}
  delete container.dataset.game;
  const group=current.groups[player],pocketed=current.sim.balls.filter(b=>b.pocketed).map(b=>b.id);
  const models=slotModels(current.groups,player,pocketed);
@@ -478,7 +479,7 @@ function turnUI(){if(!current)return;
  setText('turnLabel',current.over?drill?'DRILL FINISHED':'FINISHED':drill?'SKILL DRILL':current.ballInHand?passAndPlay?`P${current.turn+1} PLACING`:current.players==='ai'?`${seatName(current.turn).toUpperCase()} PLACING…`:current.isAI()?`${seatName(1).toUpperCase()} PLACING…`:'BALL IN HAND':current.kind==='practice'?'PRACTICE':current.kind==='attract'?'EXHIBITION':current.break?passAndPlay?`P${current.turn+1} BREAK`:'THE BREAK':passAndPlay?`P${current.turn+1} TURN`:current.players==='ai'?`${seatName(current.turn).toUpperCase()}'S SHOT`:current.turn===0?'YOUR TURN':`${seatName(1).toUpperCase()}'S TURN`);
  $('turnLabel').setAttribute('aria-label',passAndPlay?`Player ${current.turn+1}${current.ballInHand?' placing cue ball':current.break?' breaking':' to shoot'}`:$('turnLabel').textContent);
  const nineLabel=seat=>`${creditedBalls(current.history,seat).length} POTTED`;
- const p1=current.ruleset==='nine'?nineLabel(0):current.groups[0]?.toUpperCase()||'OPEN TABLE',p2=current.ruleset==='nine'?nineLabel(1):current.groups[1]?.toUpperCase()||'OPEN TABLE';
+ const p1=current.rotation?nineLabel(0):current.groups[0]?.toUpperCase()||'OPEN TABLE',p2=current.rotation?nineLabel(1):current.groups[1]?.toUpperCase()||'OPEN TABLE';
  $('playerOne').innerHTML=drill?`YOU <small>${current.shots} / ${drillInfo.attempts} SHOTS · ONE TARGET</small>`:
    practice?`YOU <small>${current.shots} SHOTS · ${current.sim.balls.filter(b=>b.id!==0&&b.pocketed).length} POCKETED</small>`:`${current.players==='ai'?current.personaAt(0).name.toUpperCase():current.players==='local'?'PLAYER ONE':'YOU'} <small>${p1}</small>`;
  $('playerTwo').innerHTML=`${current.players==='ai'?current.personaAt(1).name.toUpperCase():current.players==='local'?'PLAYER TWO':current.persona.name.toUpperCase()} <small>${p2}</small>`;
@@ -492,7 +493,7 @@ function turnUI(){if(!current)return;
   setText('matchResultTitle',drill?current.drillOutcome==='completed'?'DRILL COMPLETE':'TRY AGAIN':practice?'TABLE CLEARED':`${player} ${player==='YOU'?'WIN':'WINS'}`);
   setText('playAgain',drill?'RETRY DRILL ↻':current.players==='ai'?'NEXT EXHIBITION ↻':"RACK 'EM AGAIN ↻");
   const finalReason=current.history.at(-1)?.reason;
-  const resultKind=practice?'practice':finalReason==='eight-cleared'||finalReason==='nine-potted'?'clean':'foul';
+  const resultKind=practice?'practice':finalReason==='eight-cleared'||finalReason==='nine-potted'||finalReason==='ten-potted'?'clean':'foul';
   $('matchResult').dataset.finish=resultKind;
   const last=drill||practice?null:decisiveShot(current.history);
   $('resultLastShot').hidden=!last;
@@ -542,8 +543,8 @@ function turnUI(){if(!current)return;
  $('powerTrack').classList.toggle('is-disabled',toolsDisabled);
  $('powerTrack').setAttribute('aria-disabled',String(!canAct()));$('aimWheel').setAttribute('aria-disabled',String(!canAct()));
  updatePlacementTools();
- const help=drill&&!current.over?drillInfo.brief:callingNeeded()&&!current.ballInHand&&!busy?(calledPocket===null?'CALL THE 8 · TAP A POCKET (OR PRESS C)':`8 CALLED · ${POCKET_LABELS[calledPocket]} · TAP ANOTHER TO CHANGE`):
-  current.ruleset==='nine'&&!current.ballInHand&&!current.over&&!current.isAI()&&!busy?`HIT THE ${current.group.slice(4)} FIRST · POT THE 9 TO WIN`:current.ballInHand&&!current.over&&!current.isAI()?current.kitchen?'BEHIND THE HEAD LINE ONLY · DRAG TO PLACE':'TAP TO PREVIEW · DRAG TO PLACE':'';
+ const help=drill&&!current.over?drillInfo.brief:callingNeeded()&&!current.ballInHand&&!busy?(calledPocket===null?`CALL THE ${callBall()} · TAP A POCKET (OR PRESS C)`:`${callBall()} CALLED · ${POCKET_LABELS[calledPocket]} · TAP ANOTHER TO CHANGE`):
+  current.rotation&&!current.ballInHand&&!current.over&&!current.isAI()&&!busy?`HIT THE ${current.group.slice(4)} FIRST · POT THE ${current.topBall} TO WIN`:current.ballInHand&&!current.over&&!current.isAI()?current.kitchen?'BEHIND THE HEAD LINE ONLY · DRAG TO PLACE':'TAP TO PREVIEW · DRAG TO PLACE':'';
  setText('guideBadge',help);
  $('guideBadge').classList.toggle('is-visible',Boolean(help));
  $('guideBadge').style.opacity=busy?'0':'.95';
@@ -607,7 +608,7 @@ function pauseMatch(){
  const clock=`${String(Math.floor(matchElapsed/60)).padStart(2,'0')}:${String(Math.floor(matchElapsed%60)).padStart(2,'0')}`;
  const opponent=current?.players==='local'?'Two players':current?.players==='ai'?`${current.personaAt(0).name} vs ${current.personaAt(1).name}`:`vs ${personaFor(rival).name}`;
  setText('pauseSummary',current?.kind==='practice'?`Practice table · ${clock}`:current?.kind==='drill'?'Skill challenge':current?.kind==='attract'?'Exhibition table':
-  `${opponent} · ${current?.ruleset==='nine'?'Casual 9-ball':current?.callEight?'Call the 8':'Casual 8-ball'} · ${clock}`);
+  `${opponent} · ${current?.ruleset==='nine'?'Casual 9-ball':current?.ruleset==='ten'?'Ten-ball, call the 10':current?.callEight?'Call the 8':'Casual 8-ball'} · ${clock}`);
  show('pauseMenu');$('resumeMatch').focus();
 }
 function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('gameCanvas').focus({preventScroll:true});turnUI();}
@@ -816,12 +817,13 @@ function setSound(on){
  savePreference('ghostball-sound',on?'on':'off');syncMute();
 }
 // "Call the 8": on the 8 the shooter names a pocket first (tap it, or press C).
-const callingNeeded=()=>Boolean(current?.callEight&&current.group==='eight'&&!current.isAI()&&!current.over);
+const callingNeeded=()=>Boolean(current?.needsCall()&&!current.isAI()&&!current.over);
+const callBall=()=>current?.ruleset==='ten'?10:8;
 function callPocket(index){
  if(!callingNeeded()||!Number.isInteger(index)||index<0||index>=POCKET_LABELS.length)return;
  calledPocket=index;
- notify(`Eight called: ${POCKET_LABELS[index].toLowerCase()} pocket.`);
- tableToast(`8 CALLED · ${POCKET_LABELS[index]}`,'turn');
+ notify(`${callBall()===10?'Ten':'Eight'} called: ${POCKET_LABELS[index].toLowerCase()} pocket.`);
+ tableToast(`${callBall()} CALLED · ${POCKET_LABELS[index]}`,'turn');
  turnUI();
 }
 function nearestPocket(world,reach=95){
@@ -832,8 +834,8 @@ function nearestPocket(world,reach=95){
 function fire(){
  if(!canAct())return;
  if(callingNeeded()&&calledPocket===null){
-  tableToast('CALL A POCKET FOR THE 8 · TAP IT OR PRESS C','hint',2600);
-  notify('Call a pocket for the eight before shooting.');return;
+  tableToast(`CALL A POCKET FOR THE ${callBall()} · TAP IT OR PRESS C`,'hint',2600);
+  notify(`Call a pocket for the ${callBall()===10?'ten':'eight'} before shooting.`);return;
  }
  const strikingCue=current.sim.cue(),strength=power,shotAngle=angle;
  audio.unlock();
@@ -1163,7 +1165,7 @@ window.addEventListener('keyup',e=>{
 window.addEventListener('blur',cancelKeyPull);
 window.addEventListener('pagehide',()=>audio.suspend());
  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelKeyPull();audio.suspend();}else audio.resume();});
- try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';audio.musicOn=localStorage.getItem('ghostball-music')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';const savedAim=localStorage.getItem('ghostball-aim-mode');if(AIM_MODES.includes(savedAim))aimMode=savedAim;rules=localStorage.getItem('ghostball-rules')==='call8'?'call8':'casual';const g=localStorage.getItem('ghostball-guide');if(['full','short','off'].includes(g))guideMode=g;gameType=localStorage.getItem('ghostball-game')==='nine'?'nine':'eight';wheelFine=localStorage.getItem('ghostball-wheel')==='fine';spinKeep=localStorage.getItem('ghostball-spin')==='keep';clockSeconds=localStorage.getItem('ghostball-clock')==='0'?0:45;}catch{}
+ try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';audio.musicOn=localStorage.getItem('ghostball-music')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';const savedAim=localStorage.getItem('ghostball-aim-mode');if(AIM_MODES.includes(savedAim))aimMode=savedAim;rules=localStorage.getItem('ghostball-rules')==='call8'?'call8':'casual';const g=localStorage.getItem('ghostball-guide');if(['full','short','off'].includes(g))guideMode=g;gameType=['nine','ten'].includes(localStorage.getItem('ghostball-game'))?localStorage.getItem('ghostball-game'):'eight';wheelFine=localStorage.getItem('ghostball-wheel')==='fine';spinKeep=localStorage.getItem('ghostball-spin')==='keep';clockSeconds=localStorage.getItem('ghostball-clock')==='0'?0:45;}catch{}
  syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();syncClock();syncRules();syncGameType();syncMute();syncAim();
 syncSpin();syncEquippedCue();
 applyRoom();refreshMenu();hide('gameScreen');
@@ -1195,13 +1197,13 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
    const cpuPose=g.isAI()?g.presentedCue:null;
    const zone=active==='game'&&!g.over&&!g.sim.moving&&!g.isAI()
      ?g.ballInHand?(g.kitchen?'break':'all'):pointerMode==='break-place'?'break':null:null;
-    const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over&&!g.ballInHand&&pointerMode!=='break-place',aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike,marker:liveMarker(now),guideMode},placement,placementZone:zone,fx:motion?g.fx:[],targetBall:g.ruleset==='nine'&&!g.over&&!g.sim.moving&&!g.ballInHand?Number(g.group.slice(4)):null,callPocket:g.callEight&&g.group==='eight'?(g.isAI()?(g.previewShot?.pocket??null):calledPocket):null};
+    const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over&&!g.ballInHand&&pointerMode!=='break-place',aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike,marker:liveMarker(now),guideMode},placement,placementZone:zone,fx:motion?g.fx:[],targetBall:g.rotation&&!g.over&&!g.sim.moving&&!g.ballInHand?Number(g.group.slice(4)):null,callPocket:g.needsCall()?(g.isAI()?(g.previewShot?.pocket??null):calledPocket):null,callLabel:g.ruleset==='ten'?10:8};
    table.draw(g.sim,frame);uiTimer+=elapsed;if(uiTimer>.2){turnUI();uiTimer=0;}}
 }
 requestAnimationFrame(frame);
 new ResizeObserver(resize).observe($('attractCanvas').parentElement);
 new ResizeObserver(resize).observe($('tableArea'));
-// Prior deployments were cache-first; ship a no-cache worker to clear stale copies.
+// Network-first service worker: always fresh online, still opens offline; a new release prompts a reload.
 if ('serviceWorker' in navigator){
  let hadController=Boolean(navigator.serviceWorker.controller);
  navigator.serviceWorker.addEventListener('controllerchange',()=>{

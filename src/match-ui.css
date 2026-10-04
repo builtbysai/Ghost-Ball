@@ -135,7 +135,7 @@
 
 /* The table is focusable for keyboard play; keep its focus mark quiet. */
 #gameScreen #gameCanvas:focus{outline:none}
-#gameScreen #gameCanvas:focus-visible{outline:1px solid #f1d9a14d;outline-offset:-2px}
+#gameScreen #gameCanvas:focus-visible{outline:none}
 
 /* --- Ball return rail: the pocketed balls roll in at the gate and queue along it --- */
 #gameScreen .ball-return{bottom:clamp(0px,.4dvh,4px);width:clamp(230px,50%,540px);height:clamp(17px,3.3dvh,26px);
@@ -160,6 +160,7 @@
 
 /* nine-ball trays: nine slots, no separate 8 */
 #gameScreen .ball-slots[data-game="nine"]{grid-template-columns:repeat(9,minmax(0,1fr));max-width:calc(9 * 23px + 8 * 4px)}
+#gameScreen .ball-slots[data-game="nine"][data-count="10"]{grid-template-columns:repeat(10,minmax(0,1fr));max-width:calc(10 * 21px + 9 * 3px)}
 
 /* A contextual badge replaces the one-time controls hint while it is showing. */
 #gameScreen .table-play-area:has(.guide-badge.is-visible) .controls-hint{display:none}

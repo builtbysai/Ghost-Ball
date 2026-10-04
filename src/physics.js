@@ -45,6 +45,19 @@ export function rackNine(seed=0){
   }));
   return balls;
 }
+/** Ten-ball: a triangle of ten, the 1 at the apex and the 10 in the middle of the third row. */
+export function rackTen(seed=0){
+  const balls=[makeBall(0,252,250)];
+  const rest=[2,3,4,5,6,7,8,9];
+  let state=(seed*2654435761+12345)>>>0;
+  for(let i=rest.length-1;i>0;i--){state=(state*1664525+1013904223)>>>0;const j=state%(i+1);[rest[i],rest[j]]=[rest[j],rest[i]];}
+  const rows=[[1],[rest[0],rest[1]],[rest[2],10,rest[3]],[rest[4],rest[5],rest[6],rest[7]]];
+  const step=TABLE.radius*2+.3;
+  rows.forEach((ids,row)=>ids.forEach((id,col)=>{
+    balls.push(makeBall(id,718+row*step*Math.sqrt(3)/2,250+(col-(ids.length-1)/2)*step));
+  }));
+  return balls;
+}
 /** Radial well capture before cushion response. Mouth guards provide an approach corridor. */
 function pocketFor(ball){
   // A ball creeping slowly over a pocket lip has nothing left to carry it

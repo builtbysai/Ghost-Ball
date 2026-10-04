@@ -1,4 +1,4 @@
-import {Simulation,rack,rackNine,POCKETS,TABLE} from './physics.js';
+import {Simulation,rack,rackNine,rackTen,POCKETS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
 import {resolveCasualEight,resolveNineBall,groupContains,lowestGroup} from './casual-rules.js';
 import {personaFor,moodScale} from './ai-personas.js';
@@ -13,7 +13,7 @@ export const HEAD_STRING=265;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 export class Game {
  constructor({kind='attract',players='cpu',difficulty='rookie',persona=null,seats=null,seed=Date.now(),drillId=null,ruleset='eight',callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
-  this.ruleset=ruleset==='nine'&&(kind==='match'||kind==='attract')?'nine':'eight';
+  this.ruleset=(ruleset==='nine'||ruleset==='ten')&&(kind==='match'||kind==='attract')?ruleset:'eight';
   this.callEight=Boolean(callEight)&&kind==='match'&&this.ruleset==='eight';
   // 0 turns the shot clock off (relaxed games); any positive value is whole seconds per shot.
   this.shotClockSeconds=Number.isFinite(shotClock)&&shotClock>0?Math.round(shotClock):0;
@@ -26,7 +26,7 @@ export class Game {
    this.drillId=kind==='drill'?drillId:null;
   this.onPocket=onPocket;this.onTurn=onTurn;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
  reset(alternate=false){this.rackSeed=this.random()*100000|0;
-   this.sim=new Simulation(this.kind==='drill'?skillDrillBalls(this.drillId):this.ruleset==='nine'?rackNine(this.rackSeed):rack(this.rackSeed));
+   this.sim=new Simulation(this.kind==='drill'?skillDrillBalls(this.drillId):this.ruleset==='nine'?rackNine(this.rackSeed):this.ruleset==='ten'?rackTen(this.rackSeed):rack(this.rackSeed));
    // Rack-again alternates the breaker (the fair casual convention); a restart is a fresh match.
    this.rackCount=alternate?(this.rackCount||0)+1:0;this.turn=this.kind==='match'?this.rackCount%2:0;this.groups=[null,null];this.break=this.kind!=='drill';
    this.foul=false;this.ballInHand=false;this.kitchen=false;this.over=false;this.winner=null;
@@ -35,8 +35,13 @@ export class Game {
   this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';this.foulStreak=[0,0];this.dryTurns=[0,0];
   this.notify('A fresh rack. Take your time.');}
  get group(){
-  if(this.ruleset==='nine')return lowestGroup(this.sim.balls.filter(b=>!b.pocketed).map(b=>b.id));
+  if(this.rotation)return lowestGroup(this.sim.balls.filter(b=>!b.pocketed).map(b=>b.id),this.topBall);
   const group=this.groups[this.turn];if(!group)return 'open';return this.sim.balls.some(b=>!b.pocketed&&(group==='solids'?b.id<8&&b.id>0:b.id>8))?group:'eight';}
+ /** Call the 8 (optional) and the ten-ball last ball both name a pocket first. */
+ needsCall(){return (this.callEight&&this.group==='eight')||(this.ruleset==='ten'&&this.group==='low-10'&&!this.break);}
+ /** Nine- and ten-ball share the rotation referee; only the last ball differs. */
+ get rotation(){return this.ruleset==='nine'||this.ruleset==='ten';}
+ get topBall(){return this.ruleset==='ten'?10:9;}
  isAI(){return this.kind==='attract'||this.players==='ai'||(this.players==='cpu'&&this.turn===1);}
  /** Seconds the CPU spends lining up; personas have their own tempo. */
  thinkTime(){return this.kind==='attract'?2.4:1.35*this.personaAt().think;}
@@ -52,7 +57,7 @@ export class Game {
  }
   /** `call` is the pocket index named for the 8 (-1: none named). Required on the 8 when callEight is on. */
   beginShot(angle,power,spin=0,call=null){
-  const callRequired=this.callEight&&this.group==='eight';
+  const callRequired=this.needsCall();
   if(callRequired&&call===null)return false;
   if(this.over||this.ballInHand||!this.sim.strike(angle,power,spin))return false;
   // Pre-strike state is obtained from the new sim snapshot; the velocities are
@@ -138,7 +143,7 @@ export class Game {
        }
        if(this.ballInHand)return; // no strike while there is no legal site
        if(!this.previewShot){
-         if(this.break)this.previewShot={angle:0,power:this.ruleset==='nine'?1:this.kind==='attract'?.83:.82};
+         if(this.break)this.previewShot={angle:0,power:this.rotation?1:this.kind==='attract'?.83:.82};
          else{
            const attract=this.kind==='attract';
            const group=attract?'open':this.group;
@@ -241,7 +246,7 @@ export class Game {
      if(this.sim.balls.every(b=>b.id===0||b.pocketed)){this.notify('Table cleared. Rack again to replay.');this.over=true;this.onTurn({type:'win',practice:true});}
      return;
    }
-   if(this.ruleset==='nine'){this.resolveNine(shot);return;}
+   if(this.rotation){this.resolveNine(shot);return;}
    const shooter=this.turn,previousGroups=[...this.groups],wasBreak=this.break;
    const result=resolveCasualEight({
      turn:this.turn,breakShot:this.break,groups:this.groups,shot
@@ -291,7 +296,7 @@ export class Game {
  /** Nine-ball ruling. Mirrors resolve() for the eight-ball game: history, notify, onTurn. */
  resolveNine(shot){
    const shooter=this.turn,wasBreak=this.break;
-   const result=resolveNineBall({turn:this.turn,breakShot:this.break,shot,priorFouls:this.foulStreak[this.turn]});
+   const result=resolveNineBall({turn:this.turn,breakShot:this.break,shot,priorFouls:this.foulStreak[this.turn],topBall:this.topBall,callTop:this.ruleset==='ten'});
    this.foulStreak[shooter]=result.foul?this.foulStreak[shooter]+1:0;
    this.history.push({kind:'ruling',shot:this.shots,shooter,result:result.type,
      reason:result.reason,turn:result.turn,groups:[null,null],
@@ -299,12 +304,12 @@ export class Game {
      groupAtStart:shot.groupAtStart,firstContact:shot.first,
      railAfterFirst:!!shot.rail,elapsedSimSeconds:this.sim.elapsed,
      potRecords:[...(shot.potRecords||[])],breakRailBalls:[...(shot.railBalls||[])]});
-   if(result.spotNine)this.spotBall(9);
+   if(result.spotTop)this.spotBall(this.topBall);
    this.dryTurns[shooter]=result.type==='retain'?0:(this.dryTurns[shooter]||0)+1;
    this.break=false;
    if(result.type==='end'){
      this.over=true;this.winner=result.winner;this.foul=false;this.ballInHand=false;
-     this.notify(result.reason==='three-fouls'?`Three fouls in a row. Player ${result.winner+1} wins the rack.`:`Player ${this.turn+1} pots the 9 and wins the rack!`);
+     this.notify(result.reason==='three-fouls'?`Three fouls in a row. Player ${result.winner+1} wins the rack.`:`Player ${this.turn+1} pots the ${this.topBall} and wins the rack!`);
      this.onTurn({type:'win',winner:this.winner,legal:true,reason:result.reason});
    }else{
      this.turn=result.turn;this.ballInHand=result.ballInHand;this.foul=result.foul;
