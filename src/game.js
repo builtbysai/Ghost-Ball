@@ -265,7 +265,8 @@ export class Game {
          const shot=this.previewShot, cue=this.sim.cue();
          // A CPU that cannot plan a pot on the shot after a clean break pushes out.
          const pushOut=this.pushOutAvailable&&!shot.predictedPot;
-         if(cue&&!cue.pocketed&&this.beginShot(shot.angle,shot.power,0,shot.pocket??-1,{pushOut})){
+         if(cue&&!cue.pocketed&&this.beginShot(shot.angle,shot.power,shot.spin||0,shot.pocket??-1,{pushOut})){
+           if(shot.trick&&this.kind==='match')this.onTurn({type:'trick',kind:shot.trick,seat:this.turn,target:shot.target});
            this.activeStroke={cue:{x:cue.x,y:cue.y},angle:shot.angle,power:shot.power,elapsed:0};
            if(this.kind==='match')audio?.play({type:'strike',power:shot.power});
          }

@@ -4,7 +4,7 @@ import {Game} from '../src/game.js';
 import {PERSONAS,PERSONA_ORDER,personaFor,exhibitionPair,moodScale} from '../src/ai-personas.js';
 
 test('personas map to planner tiers and unknown ids fall back to Rookie',()=>{
- assert.deepEqual(PERSONA_ORDER.map(id=>PERSONAS[id].tier),['rookie','rookie','club','club']);
+ assert.deepEqual(PERSONA_ORDER.map(id=>PERSONAS[id].tier),['rookie','rookie','club','club','club']);
  assert.equal(personaFor('nobody').id,'rookie');
  for(const id of PERSONA_ORDER){assert.ok(PERSONAS[id].blurb&&PERSONAS[id].style&&PERSONAS[id].name);}
 });

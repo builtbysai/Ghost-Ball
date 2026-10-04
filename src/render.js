@@ -33,7 +33,7 @@ export class TableRenderer{
      return;
    }
    const ratio=.375+.125*this.blend;
-   const verticalRoom=this.view==='flat'?.82:.88;let bw=Math.min(this.w*.89,(this.h*verticalRoom)/ratio);let bh=bw*ratio;
+   const verticalRoom=this.view==='flat'?.82:.88;let bw=Math.min(this.w*(this.view==="flat"?.89:.91),(this.h*verticalRoom)/ratio);let bh=bw*ratio;
    if(bh>this.h*verticalRoom){bh=this.h*verticalRoom;bw=bh/ratio;}
    this.bw=bw;this.bh=bh;this.top=(this.h-bh)/2;this.center=this.w/2;}
  get blend(){return this.projectionBlend??(this.view==='flat'?1:0);}

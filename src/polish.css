@@ -24,13 +24,6 @@
 #gameScreen .match-arena{min-height:0;min-width:0}
 #gameScreen .table-play-area{overflow:visible;isolation:isolate}
 #gameScreen .tools-rail{justify-content:space-evenly}
-.ball-return{position:absolute;z-index:2;bottom:0;left:50%;transform:translateX(-50%);
- width:clamp(128px,24vw,260px);height:16px;padding:2px 5px;
- display:flex;align-items:center;gap:4px;border:1px solid #ad936b87;border-radius:4px 4px 9px 9px;
- background:linear-gradient(#1c2531,#0d1827 44%,#27364a 45%,#0b1626);
- box-shadow:inset 0 2px 3px #000c,0 2px 5px #0008;pointer-events:none}
-.return-gate{flex:none;font-size:8px;line-height:10px;color:#caab78}
-.collected-balls{display:flex;align-items:center;justify-content:flex-start;gap:2px;min-width:0;flex:1;height:100%}
 .return-ball{position:relative;z-index:3;flex:none;display:grid;place-items:center;
  width:clamp(7px,.72vw,11px);height:clamp(7px,.72vw,11px);border:1px solid #fff9;
  border-radius:50%;font:700 6px/1 Arial,sans-serif;color:#15171c;font-variant-numeric:tabular-nums;
@@ -79,7 +72,7 @@
 @media (max-height:440px) and (orientation:landscape){
  #gameScreen{grid-template-rows:43px minmax(0,1fr)}
  #gameScreen .match-hud{grid-template-columns:29px minmax(0,1fr) 94px minmax(0,1fr)}
- .ball-return{height:13px}.return-ball{width:8px;height:8px}
+ .return-ball{width:8px;height:8px}
 }
 @media (prefers-reduced-motion:reduce){
  #app.leaving-match .masthead,#app.leaving-match .room-details,#app.leaving-match .lobby-panel{animation:none}

@@ -11,12 +11,14 @@ export const PHYSICS = Object.freeze({
 const BALL_COLORS = ['#efece3','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d','#191918','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d'];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const distance=(x,y)=>Math.hypot(x,y);
-const topMouth=x=>x<45||x>955||Math.abs(x-500)<36;
+const topMouth=x=>x<45||x>955||Math.abs(x-500)<46;
 const sideMouth=y=>y<45||y>455;
-// Circular rubber-nose guards discourage balls from clipping through pocket corners.
+// Rubber noses sit exactly on the visible cushion tips (the face line, not out on the cloth), so a ball only
+// ever meets something it can see. A ball centre touches a nose at TABLE.radius + JAW_RADIUS.
+export const JAW_RADIUS=4;
 export const JAWS = Object.freeze([
-  [43,12],[12,43],[957,12],[988,43], [43,488],[12,457],[957,488],[988,457],
-  [461,12],[539,12],[461,488],[539,488],
+  [45,0],[0,45],[955,0],[1000,45], [45,500],[0,455],[955,500],[1000,455],
+  [454,0],[546,0],[454,500],[546,500],
 ]);
 export function makeBall(id,x,y){return {id,x,y,vx:0,vy:0,spin:0,follow:0,aimX:1,aimY:0,slipX:0,slipY:0,pocketed:false,color:BALL_COLORS[id],rotation:0,orientation:[1,0,0,0]};}
 /** Standard triangular layout: opposite groups in the rear corners; eight in the center. */
@@ -91,7 +93,10 @@ function pocketFor(ball){
   const lip=distance(ball.vx,ball.vy)<70?9:0;
   for(let i=0;i<POCKETS.length;i++){
     const [px,py]=POCKETS[i],side=i===1||i===4;
-    if(distance(ball.x-px,ball.y-py)<(side?26:32)+lip)return i;
+    const d=distance(ball.x-px,ball.y-py);
+    if(d<(side?26:32)+lip)return i;
+    // A ball whose centre has rolled past the cloth edge inside a mouth is hanging over the hole and drops.
+    if(d<50&&(ball.x<0||ball.x>1000||ball.y<0||ball.y>500))return i;
   }
   return -1;
 }
@@ -120,7 +125,7 @@ function nearestWell(x,y){
   return best;
 }
 function jawHit(ball,jx,jy,events){
-  const dx=ball.x-jx,dy=ball.y-jy,r=TABLE.radius+4,d2=dx*dx+dy*dy;
+  const dx=ball.x-jx,dy=ball.y-jy,r=TABLE.radius+JAW_RADIUS,d2=dx*dx+dy*dy;
   if(d2>=r*r)return;
   const d=Math.sqrt(d2)||.001,nx=dx/d,ny=dy/d;
   ball.x+=nx*(r-d+.05);ball.y+=ny*(r-d+.05);

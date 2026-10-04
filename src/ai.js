@@ -1,5 +1,6 @@
 import {PERSONAS} from './ai-personas.js';
-import {Simulation,POCKETS,JAWS,TABLE} from './physics.js';
+import {Simulation,POCKETS,JAWS,JAW_RADIUS,TABLE} from './physics.js';
+import {trickCandidates,spinVariants,TRICK_LABELS} from './trick-shots.js';
 import {createRandom} from './random.js';
 import {groupContains} from './casual-rules.js';
 import {initialCuePlacement} from './placement-guide.js';
@@ -22,7 +23,7 @@ function clearPath(from,to,balls,excluded){
  * nose with a small margin. Pocket centres lie outside the cloth, so a naive
  * line to the centre often clips a jaw and rebounds into the table. */
 function jawClear(from,to,margin=.5){
- const dx=to.x-from.x,dy=to.y-from.y,den=dx*dx+dy*dy||1,reach=TABLE.radius+4+margin;
+ const dx=to.x-from.x,dy=to.y-from.y,den=dx*dx+dy*dy||1,reach=TABLE.radius+JAW_RADIUS+margin;
  return JAWS.every(([jx,jy])=>{
   const t=clamp(((jx-from.x)*dx+(jy-from.y)*dy)/den,0,1);
   return Math.hypot(jx-from.x-t*dx,jy-from.y-t*dy)>reach;
@@ -81,7 +82,7 @@ export function candidateShots(sim,group='open'){
  */
 function* simulateAssessment(sim,candidate,group='open',{maxSteps=960,callEight=false,ownPocket,oppPocket}={}){
  const predicted=new Simulation(sim.snapshot().balls);
- if(!predicted.strike(candidate.angle,candidate.power)){
+ if(!predicted.strike(candidate.angle,candidate.power,candidate.spin||0)){
    return {score:-Infinity,targetPocket:false,legalFirst:false,scratch:false,complete:false};
  }
  // Rotation games and straight pool ('any') score every ball the same way and have no special 8.
@@ -130,8 +131,9 @@ function* simulateAssessment(sim,candidate,group='open',{maxSteps=960,callEight=
    -(!legalFirst?950:0)
    -(complete&&!anyPocket&&!railAfterContact?420:0)
    -candidate.cost*.25-candidate.power*25;
+ const end=predicted.cue();
  return {score,targetPocket,legalFirst,scratch,earlyEight,first,
-   complete,railAfterContact,foul,made};
+   complete,railAfterContact,foul,made,cueEnd:end&&!end.pocketed?{x:end.x,y:end.y}:null};
 }
 function drain(generator){
  let state=generator.next();
@@ -264,6 +266,13 @@ export function* createShotPlanner(sim,group='open',difficulty='rookie',random=c
  const targets=sim.balls.filter(ball=>!ball.pocketed&&groupContains(ball.id,group))
    .map(ball=>({ball,range:distance(cue,ball)}))
    .sort((a,b)=>a.range-b.range||a.ball.id-b.ball.id);
+ // Showmen (and now and then a patient club player) go for a bank, a combination or a draw / follow shot,
+ // but only one the real physics has just proved will drop. A miss from the wobble is still possible.
+ const flair=persona.flair||0;
+ if(flair>0&&targets.length&&stalled<3&&random()<(candidates.length?flair:Math.min(1,flair*2+.15))){
+  const show=yield* trickPlan(sim,group,candidates,assess,{ownPocket,looseness,random,persona});
+  if(show)return show;
+ }
  if(candidates.length){
   if(difficulty==='club'){
    const short=candidates.slice(0,5),plans=[];
@@ -333,6 +342,29 @@ export function* createShotPlanner(sim,group='open',difficulty='rookie',random=c
  const target=targets[0].ball;
  return {angle:Math.atan2(target.y-cue.y,target.x-cue.x)+(random()-.5)*.06,
    power:.52,target:target.id,plan:'contact'};
+}
+/** Search banks, combinations and draw/follow variants; return the most spectacular one that provably pots. */
+function* trickPlan(sim,group,direct,assess,{ownPocket,looseness,random,persona}){
+ const tools={groupContains,clearPath,pocketAimPoint:(ball,pocket)=>pocketAimPoints(ball,pocket)[0],ownPocket};
+ const shown=trickCandidates(sim,group,tools);
+ const banks=shown.filter(c=>c.kind==='bank').slice(0,2),combos=shown.filter(c=>c.kind==='combo').slice(0,2);
+ const spins=spinVariants(direct.slice(0,2));
+ const pool=[...combos,...banks,...spins];
+ const cue=sim.cue();let best=null;
+ for(const plan of pool){
+  const verdict=yield* assess(plan);
+  if(!verdict.made||verdict.foul||verdict.scratch)continue;
+  // Draw and follow only count as a show when the cue ball visibly travels afterwards.
+  if(plan.spin&&!(verdict.cueEnd&&Math.hypot(verdict.cueEnd.x-cue.x,verdict.cueEnd.y-cue.y)>170))continue;
+  const flourish={combo:320,bank:260,draw:130,follow:90}[plan.kind]||0;
+  const rank=verdict.score+flourish-plan.cost*.1;
+  if(!best||rank>best.rank)best={plan,verdict,rank};
+ }
+ if(!best)return null;
+ const p=best.plan;
+ return {angle:p.angle+(random()-.5)*.006*looseness,power:clamp(p.power*persona.power,.2,.95),spin:p.spin||0,
+  target:p.target,pocket:p.pocket,predictedLegal:true,predictedPot:true,predictedComplete:best.verdict.complete,
+  plan:'trick',trick:p.kind};
 }
 /** Synchronous convenience for tests and batch matches, sharing every
  * decision with the frame-sliced live match generator. */
