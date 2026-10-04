@@ -1094,6 +1094,18 @@ function cancelTablePointer(e){
 }
 $('gameCanvas').addEventListener('pointercancel',cancelTablePointer);
 $('gameCanvas').addEventListener('lostpointercapture',cancelTablePointer);
+// Modal sheets trap Tab: focus cycles inside the open dialog instead of leaking to the page behind.
+window.addEventListener('keydown',e=>{
+ if(e.key!=='Tab')return;
+ const dialogs=all('[role="dialog"]').filter(d=>!d.hidden&&getComputedStyle(d).display!=='none');
+ const dialog=dialogs.at(-1);if(!dialog)return;
+ const focusable=[...dialog.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')]
+  .filter(el=>!el.disabled&&el.tabIndex>=0&&!el.closest('[hidden]')&&el.getClientRects().length>0);
+ if(!focusable.length)return;
+ const first=focusable[0],last=focusable.at(-1),inside=dialog.contains(document.activeElement);
+ if(!inside||(e.shiftKey&&document.activeElement===first)){e.preventDefault();(e.shiftKey?last:first).focus();}
+ else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+},true);
 window.addEventListener('keydown',e=>{
  if(replay&&(e.key==='Escape'||e.key===' '||e.key==='Enter')){e.preventDefault();endReplay();return;}
   if(!$('guideSheet').hidden){

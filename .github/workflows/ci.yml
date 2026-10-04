@@ -71,6 +71,11 @@ jobs:
         env:
           CHROMIUM_BIN: /usr/bin/google-chrome
         run: python3 scripts/offline-smoke.py
+      - name: Keyboard accessibility smoke
+        if: github.event_name == 'pull_request'
+        env:
+          CHROMIUM_BIN: /usr/bin/google-chrome
+        run: python3 scripts/a11y-smoke.py
       - name: Save viewport screenshots
         if: always() && github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
