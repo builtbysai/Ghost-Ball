@@ -70,11 +70,13 @@ with sync_playwright() as p:
         page.locator('#nextRoom').click()
         assert page.locator('#roomArt').inner_text() == 'THE WINTERGARDEN'
         assert page.locator('#roomPlaque').inner_text() == '1938'
-        assert page.locator('#roomMastery').is_hidden(),'unauthored hall must not claim mastery'
+        assert page.locator('#roomMastery').is_visible(),'Wintergarden has an authored mastery path'
+        assert page.locator('#roomMasteryNext').inner_text().endswith('GLASS ANGLE')
         if width in (1280,568):
             page.screenshot(path=str((root / 'screenshots' / f'wintergarden-{width}x{height}.png').resolve()))
         page.locator('#nextRoom').click()
         assert page.locator('#roomArt').inner_text() == 'THE AFTERHOURS'
+        assert page.locator('#roomMasteryNext').inner_text().endswith('MIDNIGHT BANK')
         assert page.locator('#roomPlaque').inner_text() == '1964'
         if width in (1280,568):
             page.screenshot(path=str((root / 'screenshots' / f'afterhours-{width}x{height}.png').resolve()))
@@ -98,11 +100,14 @@ with sync_playwright() as p:
         page.locator('#menuBtn').click()
         assert page.locator('#clubMenu').is_visible()
         page.locator('#menuChallenges').click()
-        assert page.locator('#challengeSheet').is_visible() and page.locator('#challengeCards button').count()==3
+        assert page.locator('#challengeSheet').is_visible() and page.locator('#challengeCards button').count()==5
         cpanel=page.locator('.challenge-panel').bounding_box()
         assert inside_viewport(cpanel,width,height),f'{width}x{height}: challenge picker clipped'
         assert page.locator('.challenge-panel').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'challenge panel overflow'
         assert page.locator('#challengeCards').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'skill cards clipped'
+        for card in page.locator('#challengeCards button').all():
+            assert inside_viewport(card.bounding_box(),width,height),'authored skill card outside viewport'
+            assert card.evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'),'skill card text clipped'
         page.screenshot(path=str((root/'screenshots'/f'skill-drills-{width}x{height}.png').resolve()))
         page.keyboard.press('Escape')
         assert page.locator('#challengeSheet').is_hidden() and page.locator('#clubMenu').is_visible()
