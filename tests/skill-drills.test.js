@@ -19,8 +19,8 @@ function takeShot(id,angle,power){
  assert.equal(g.history[0].shot,1);
  return {g,before,announcements,steps};
 }
-test('three original drill layouts have valid distinct cues, pockets and rules',()=>{
- assert.equal(SKILL_DRILLS.length,3);
+test('five original drill layouts have valid distinct cues, pockets and rules',()=>{
+ assert.equal(SKILL_DRILLS.length,5);
  assert.equal(new Set(SKILL_DRILLS.map(d=>d.id)).size,3);
  for(const drill of SKILL_DRILLS){
   assert.equal(skillDrillById(drill.id),drill);
@@ -91,6 +91,29 @@ test('bank rejects direct pots and jaw-only evidence before saving a completion'
  assert.equal(earned.drills[bank.id],1);
  assert.ok(earned.achievements.includes('drill-rail-return'));
  assert.equal(earned.matchesPlayed,0);
+});
+test('upper-bank awards Afterhours only after actual non-jaw target rebound',()=>{
+ const upper=skillDrillById('midnight-bank');
+ const evidence={pots:[5],potRecords:[{id:5,pocket:4}]};
+ assert.equal(upper.room,4);
+ for(const falsified of [evidence,{...evidence,railBalls:[5]},
+  {...evidence,cushionBalls:[0]}]){
+  assert.equal(gradeSkillDrill(upper.id,{shots:1,shot:falsified}).status,'failed');
+  const before=freshProgress();assert.equal(recordLiveDrill(before,result(upper.id,falsified)),before);
+ }
+ const accepted=recordLiveDrill(freshProgress(),result(upper.id,{...evidence,cushionBalls:[5]}));
+ assert.equal(accepted.drills[upper.id],1);
+ assert.equal(accepted.roomMastery[4]&1,1);
+ assert.equal(accepted.matchesPlayed,0);
+});
+test('lower-corner angle cannot be credited for a different pocket',()=>{
+ const angle=skillDrillById('glass-angle');
+ const proof={pots:[4],potRecords:[{id:4,pocket:5}]};
+ assert.equal(angle.room,3);
+ assert.equal(gradeSkillDrill(angle.id,{shots:1,shot:{...proof,potRecords:[{id:4,pocket:2}]}}).status,'failed');
+ const actual=recordLiveDrill(freshProgress(),result(angle.id,proof));
+ assert.equal(actual.drills[angle.id],1);
+ assert.equal(actual.roomMastery[3]&1,1);
 });
 test('verified personal best and achievement persist but never inflate match stats',()=>{
  const proof={pots:[1],potRecords:[{id:1,pocket:1}]};
