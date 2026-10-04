@@ -63,14 +63,20 @@ export function resolveCasualEight({turn,breakShot,groups,shot}){
  * @param {{turn:number,breakShot:boolean,shot:{first:number|null,pots:number[],rail:boolean,
  *   groupAtStart:string}}} input
  */
-export function resolveNineBall({turn,breakShot,shot}){
+export function resolveNineBall({turn,breakShot,shot,priorFouls=0}){
  if(!shot||![0,1].includes(turn))throw new TypeError('Invalid nine-ball shot');
  const next=1-turn,pots=shot.pots||[];
  const lowest=Number((shot.groupAtStart||'low-1').slice(4));
  const scratch=pots.includes(0),nine=pots.includes(9);
+ // WPA break: pot a ball or drive at least four object balls to a cushion.
+ const railBalls=new Set((shot.railBalls||[]).filter(id=>id>0)).size;
+ const brokeLegally=!breakShot||pots.some(id=>id>0)||railBalls>=4;
  const reason=scratch?'scratch':shot.first===null?'no-contact':shot.first!==lowest?'wrong-ball-first':
-  !shot.rail&&!pots.some(id=>id>0)?'no-rail':null;
+  !brokeLegally?'illegal-break':!shot.rail&&!pots.some(id=>id>0)?'no-rail':null;
  const foul=reason!==null;
+ // Three fouls in a row lose the rack, and warning is given at two.
+ if(foul&&priorFouls>=2)return {type:'end',winner:next,legal:false,reason:'three-fouls',spotNine:false,
+  groups:[null,null],turn:next,ballInHand:false,foul:true};
  if(nine&&!foul)return {type:'end',winner:turn,legal:true,reason:'nine-potted',spotNine:false,
   groups:[null,null],turn,ballInHand:false,foul:false};
  const potted=pots.some(id=>id>0&&id!==9);

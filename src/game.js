@@ -31,7 +31,7 @@ export class Game {
    this.foul=false;this.ballInHand=false;this.kitchen=false;this.over=false;this.winner=null;
    this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;this.drillOutcome=null;
   this.history=[];this.previewShot=null;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.activeStroke=null;
-  this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';this.dryTurns=[0,0];
+  this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';this.foulStreak=[0,0];this.dryTurns=[0,0];
   this.notify('A fresh rack. Take your time.');}
  get group(){
   if(this.ruleset==='nine')return lowestGroup(this.sim.balls.filter(b=>!b.pocketed).map(b=>b.id));
@@ -137,7 +137,7 @@ export class Game {
        }
        if(this.ballInHand)return; // no strike while there is no legal site
        if(!this.previewShot){
-         if(this.break)this.previewShot={angle:0,power:this.kind==='attract'?.83:.82};
+         if(this.break)this.previewShot={angle:0,power:this.ruleset==='nine'?1:this.kind==='attract'?.83:.82};
          else{
            const attract=this.kind==='attract';
            const group=attract?'open':this.group;
@@ -290,7 +290,8 @@ export class Game {
  /** Nine-ball ruling. Mirrors resolve() for the eight-ball game: history, notify, onTurn. */
  resolveNine(shot){
    const shooter=this.turn,wasBreak=this.break;
-   const result=resolveNineBall({turn:this.turn,breakShot:this.break,shot});
+   const result=resolveNineBall({turn:this.turn,breakShot:this.break,shot,priorFouls:this.foulStreak[this.turn]});
+   this.foulStreak[shooter]=result.foul?this.foulStreak[shooter]+1:0;
    this.history.push({kind:'ruling',shot:this.shots,shooter,result:result.type,
      reason:result.reason,turn:result.turn,groups:[null,null],
      ballInHand:result.ballInHand,winner:result.winner,
@@ -302,7 +303,7 @@ export class Game {
    this.break=false;
    if(result.type==='end'){
      this.over=true;this.winner=result.winner;this.foul=false;this.ballInHand=false;
-     this.notify(`Player ${this.turn+1} pots the 9 and wins the rack!`);
+     this.notify(result.reason==='three-fouls'?`Three fouls in a row. Player ${result.winner+1} wins the rack.`:`Player ${this.turn+1} pots the 9 and wins the rack!`);
      this.onTurn({type:'win',winner:this.winner,legal:true,reason:result.reason});
    }else{
      this.turn=result.turn;this.ballInHand=result.ballInHand;this.foul=result.foul;
@@ -310,13 +311,14 @@ export class Game {
      if(result.type==='foul'){
        const messages={scratch:'Scratch. Opponent has ball in hand.','no-contact':'No contact. Opponent has ball in hand.',
          'wrong-ball-first':'Wrong ball first: hit the lowest ball. Opponent has ball in hand.',
-         'no-rail':'No rail after contact. Opponent has ball in hand.'};
+         'no-rail':'No rail after contact. Opponent has ball in hand.','illegal-break':'Illegal break: pot a ball or drive four to a cushion. Opponent has ball in hand.'};
        this.notify(messages[result.reason]||'Foul. Opponent has ball in hand.');
      }else this.notify(result.type==='retain'?`Player ${this.turn+1} keeps the table.`:`Player ${this.turn+1} to shoot.`);
      this.onTurn({type:result.type==='foul'?'foul':'turn',turn:this.turn,shooter,
        potted:shot.pots.filter(id=>id>0),scratched:shot.pots.includes(0),
        ballInHand:this.ballInHand,kitchen:this.kitchen,reason:result.reason,
-       retain:result.type==='retain',assignment:null,spotted:result.spotNine});
+       retain:result.type==='retain',assignment:null,spotted:result.spotNine,
+       foulWarning:result.foul&&this.foulStreak[shooter]===2?'three-fouls':null});
    }
    this.timer=0;
  }
