@@ -1,7 +1,7 @@
 import {slotModels,eightSlotModel,nineSlotModels,creditedBalls} from './score-slots.js';
 import {Game} from './game.js';
 import {TableRenderer,halls} from './render.js';
-import {TABLE,POCKETS} from './physics.js';
+import {TABLE,POCKETS,Simulation} from './physics.js';
 import {Audio} from './audio.js';
 import {bindPower,bindAimWheel,spinFromPoint,cueShaftHit,rearAimAngle,wrapAngle,aimStep,keyPullAmount,KEY_PULL_MIN_HOLD} from './touch-controls.js';
 import {TAP_SLOP,leadFor,tapAim,bearingTo,classifyPress,AIM_MODES} from './aim-gestures.js';
@@ -405,7 +405,21 @@ function refreshMenu(){const ball=gameType==='nine'?'9-Ball':gameType==='ten'?'1
   all('.mode[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));}
 function resize(){ambient.resize();table.resize();}
 let rackFlock=null;
-function canAct(){return active==='game'&&current&&!rackFlock&&!current.over&&!current.sim.moving&&!current.isAI()&&!current.ballInHand;}
+// Last-shot replay: the pre-stroke table is re-struck on a throwaway game. Physics is
+// deterministic, so it is exactly the shot that was played. The live match stays frozen,
+// including the shot clock, until the replay ends.
+let replay=null;
+function startReplay(){
+ const shot=current?.lastShot;
+ if(!shot||replay||active!=='game'||current.sim.moving||rackFlock||current.kind==='drill')return;
+ const game=new Game({kind:'practice',seed:1});
+ game.sim=new Simulation(shot.balls);game.fx=[];game.ballInHand=false;
+ if(!game.beginShot(shot.angle,shot.power,shot.spin))return;
+ replay={game,settledFor:0,acc:0};
+ cancelKeyPull();clearTurnBanner();tableToast('REPLAY · TAP ANYWHERE TO SKIP','hint',2400);turnUI();
+}
+function endReplay(){if(!replay)return;replay=null;clearTableToast();turnUI();}
+function canAct(){return active==='game'&&current&&!rackFlock&&!replay&&!current.over&&!current.sim.moving&&!current.isAI()&&!current.ballInHand;}
 function nineBallSlots(container,player){
  const credited=creditedBalls(current.history,player),models=nineSlotModels(credited,current.topBall);
  const wasOpen=container.dataset.game!=='nine';container.dataset.game='nine';container.dataset.count=String(models.length);container.dataset.group='open';
@@ -538,6 +552,8 @@ function turnUI(){if(!current)return;
  if(current.kind!=='match')setRecap('');
  else $('turnRecap').hidden=!$('turnRecap').textContent;
  $('oneCard').classList.toggle('playing',current.turn===0);$('twoCard').classList.toggle('playing',current.turn===1);
+ $('replayButton').hidden=!current.lastShot||current.kind==='drill'||current.sim.moving||active!=='game';
+ $('replayButton').classList.toggle('on',Boolean(replay));
  const toolsDisabled=!canAct();
  for(const id of ['spinButton','aimLeft','aimRight'])$(id).disabled=toolsDisabled;
  $('powerTrack').classList.toggle('is-disabled',toolsDisabled);
@@ -887,6 +903,7 @@ $('lockerGrid').onclick=event=>{const card=event.target.closest('[data-cue]');
  if(!card)return;lockerSelected=card.dataset.cue;renderLocker();card.focus();};
 $('pauseButton').onclick=pauseMatch;$('resumeMatch').onclick=resumeMatch;
 $('pauseSettings').onclick=openSettings;$('rerack').onclick=()=>{resetMatch();resumeMatch();};$('quitMatch').onclick=quitToLobby;
+$('replayButton').onclick=()=>{if(replay)endReplay();else startReplay();};
 $('playAgain').onclick=()=>{if(active==='game'&&current?.over){resetMatch(true);$('gameCanvas').focus();}};
 $('resultMenu').onclick=quitToLobby;
 $('closeSettings').onclick=closeSettings;
@@ -1000,6 +1017,7 @@ function finishPointAim(clientX,clientY){
 $('placeCueConfirm').onclick=()=>commitPlacement();
 $('placeCueReset').onclick=()=>resetPlacement();
 $('gameCanvas').addEventListener('pointerdown',e=>{
+ if(replay){endReplay();e.preventDefault();return;}
  if(!canAct()&&!(active==='game'&&current?.ballInHand&&!current?.isAI()))return;
  if(pointerId!==null||e.pointerType==='mouse'&&e.button!==0||e.isPrimary===false)return;
  const cue=current.sim.cue(),pt=cuePoint(e.clientX,e.clientY);
@@ -1074,6 +1092,7 @@ function cancelTablePointer(e){
 $('gameCanvas').addEventListener('pointercancel',cancelTablePointer);
 $('gameCanvas').addEventListener('lostpointercapture',cancelTablePointer);
 window.addEventListener('keydown',e=>{
+ if(replay&&(e.key==='Escape'||e.key===' '||e.key==='Enter')){e.preventDefault();endReplay();return;}
   if(!$('guideSheet').hidden){
    if(e.key==='Escape'){e.preventDefault();closeGuide();return;}
    const tabs=[...$('guideSheet').querySelectorAll('[data-guide-tab]')],index=tabs.findIndex(t=>t===document.activeElement);
@@ -1184,6 +1203,14 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
      {interactive:false,aim:null,placement:null,fx:[],callPocket:null});
     updateClocks(elapsed);return;
    }
+  }
+  if(replay&&active==='game'){
+   const rg=replay.game;replay.acc+=elapsed;let steps=0;
+   while(replay.acc>=TABLE.step&&steps++<14){rg.step({audio,haptics:false});replay.acc-=TABLE.step;}
+   rg.update(elapsed,{audio,haptics:false});
+   table.draw(rg.sim,{interactive:false,aim:null,placement:null,fx:motion?rg.fx:[]});
+   if(!rg.sim.moving&&!rg.turnShot){replay.settledFor+=elapsed;if(replay.settledFor>.9)endReplay();}
+   return;
   }
   acc+=elapsed;let iterations=0;
   // Avoid spiral of death after tab suspension or background throttling.

@@ -32,7 +32,7 @@ export class Game {
    this.foul=false;this.ballInHand=false;this.kitchen=false;this.over=false;this.winner=null;
    this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;this.drillOutcome=null;
   this.history=[];this.previewShot=null;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.activeStroke=null;
-  this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';this.foulStreak=[0,0];this.dryTurns=[0,0];
+  this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';this.lastShot=null;this.foulStreak=[0,0];this.dryTurns=[0,0];
   this.notify('A fresh rack. Take your time.');}
  get group(){
   if(this.rotation)return lowestGroup(this.sim.balls.filter(b=>!b.pocketed).map(b=>b.id),this.topBall);
@@ -59,7 +59,10 @@ export class Game {
   beginShot(angle,power,spin=0,call=null){
   const callRequired=this.needsCall();
   if(callRequired&&call===null)return false;
+  // The pre-stroke table is kept so the shot can be replayed exactly: physics is deterministic.
+  const before=this.sim.snapshot().balls;
   if(this.over||this.ballInHand||!this.sim.strike(angle,power,spin))return false;
+  this.lastShot={balls:before,angle,power,spin:typeof spin==='number'?{x:spin,y:0}:{...spin},turn:this.turn,shot:this.shots+1};
   // Pre-strike state is obtained from the new sim snapshot; the velocities are
   // replaced by zeros for deterministic playback/bug reports without a giant log.
   this.history.push({angle,power,spin:typeof spin==='number'?{x:spin,y:0}:{...spin},turn:this.turn,shot:this.shots+1,...(callRequired?{call}:{})});

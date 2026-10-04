@@ -77,7 +77,8 @@
       <article><h3>Aim</h3><ul>
        <li><b>Tap or drag the table</b> and the cue points at that spot. Tap a ball to line up straight through it.</li>
        <li><b>Grab the cue</b> behind the white ball and turn it. Hold it far from the ball for finer control.</li>
-       <li><b>Fine aim wheel</b> or the − / + buttons: 2° a step, Shift for ¼°. Double-tap the wheel to recall your last aim.</li>
+       <li><b>Fine aim wheel</b> or the − / + buttons: ½° a step, Shift for 0.1°. Arrow keys turn 2° (Shift ¼°). Double-tap the wheel to recall your last aim.</li>
+       <li><b>Replay</b> (the ↺ button beside Pause) replays the last shot exactly, with the clock held.</li>
        <li>Prefer the old way? Preferences → Table touch → <i>Stick only</i>.</li></ul></article>
       <article><h3>Shoot</h3><ul>
        <li><b>Pull the power bar</b> down and let go. Pull to the very end for full power.</li>
@@ -193,7 +194,7 @@
  </section>
  <section class="game-screen" id="gameScreen" aria-label="Landscape pool game" hidden>
    <header class="match-hud">
-      <div class="hud-controls"><button id="pauseButton" class="hud-menu" aria-label="Pause match" aria-haspopup="dialog">Ⅱ</button><button id="muteButton" class="hud-menu hud-mute" type="button" aria-label="Mute sound" title="Mute sound (M)" data-muted="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="mute-body" d="M4 9.5h3.6L12 5.8v12.4l-4.4-3.7H4z"/><path class="mute-waves" d="M15.2 8.8a4.6 4.6 0 0 1 0 6.4M17.7 6.3a8.2 8.2 0 0 1 0 11.4"/><path class="mute-slash" d="M15 9.2l5.6 5.6M20.6 9.2L15 14.8"/></svg></button></div>
+      <div class="hud-controls"><button id="pauseButton" class="hud-menu" aria-label="Pause match" aria-haspopup="dialog">Ⅱ</button><button id="muteButton" class="hud-menu hud-mute" type="button" aria-label="Mute sound" title="Mute sound (M)" data-muted="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="mute-body" d="M4 9.5h3.6L12 5.8v12.4l-4.4-3.7H4z"/><path class="mute-waves" d="M15.2 8.8a4.6 4.6 0 0 1 0 6.4M17.7 6.3a8.2 8.2 0 0 1 0 11.4"/><path class="mute-slash" d="M15 9.2l5.6 5.6M20.6 9.2L15 14.8"/></svg></button><button id="replayButton" class="hud-menu hud-replay" type="button" aria-label="Replay the last shot" title="Replay last shot" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12a7 7 0 1 0 2.2-5.1M5 5v4h4"/></svg></button></div>
       <div class="opponent-card" id="oneCard"><div class="player-token">1</div><div class="player-info"><strong id="playerOne">PLAYER ONE <small>OPEN TABLE</small></strong><div class="ball-slots" id="ballsOne" aria-label="Player one balls"></div></div></div>
       <div class="match-center"><div class="center-text"><small id="roundLabel">THE PARLOR</small><strong id="turnLabel">YOUR BREAK</strong><span class="match-time" id="matchTime" role="timer" aria-label="Elapsed match time">00:00</span></div><span class="shot-clock" id="shotClock" role="timer" aria-label="Shot clock seconds remaining" hidden>45</span></div>
       <div class="opponent-card right" id="twoCard"><div class="player-info"><strong id="playerTwo">ROOKIE <small>OPEN TABLE</small></strong><div class="ball-slots" id="ballsTwo" aria-label="Player two balls"></div></div><div class="player-token">2</div></div>

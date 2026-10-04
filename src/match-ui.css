@@ -178,3 +178,8 @@
 
 /* the turn chip and the placement hint share the top edge; the hint waits its turn */
 #gameScreen .table-play-area:has(.turn-banner:not([hidden])) .guide-badge{display:none!important}
+
+/* last-shot replay button sits with pause and mute */
+#gameScreen .hud-replay svg{width:62%;height:62%;fill:none;stroke:#c9f0dc;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#gameScreen .hud-replay[hidden]{display:none}
+#gameScreen .hud-replay.on{box-shadow:0 0 0 2px #f1d9a1aa,0 3px 10px #0008}
