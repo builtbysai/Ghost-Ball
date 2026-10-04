@@ -119,3 +119,6 @@
 /* --- lobby tabs: coming-soon placeholders never crowd a narrow screen; real tabs are finger-sized --- */
 #app .modes button{min-height:36px}
 @media (max-width:760px){#app .modes button:disabled{display:none}#app .modes{justify-content:flex-start;gap:clamp(14px,5vw,28px)}}
+
+/* tablets held upright: the room caption sits below the table, not across its front rail */
+@media (orientation:portrait) and (min-width:600px){#app .room-details{top:63%}}
