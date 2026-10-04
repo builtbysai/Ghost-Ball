@@ -1,8 +1,10 @@
 /** All five tables share physical geometry, not the same paint job.
  * All detail is visual: no changes to cushion or pocket collision coordinates.
  */
-import {POCKETS,TABLE} from './physics.js';
+import {POCKETS,JAWS,TABLE} from './physics.js';
 const C=(n,a,b)=>Math.max(a,Math.min(b,n));
+const mix=(hex,target,amount)=>{const n=parseInt(hex.slice(1),16),c=[n>>16&255,n>>8&255,n&255].map(v=>Math.round(v+(target-v)*amount));return `rgb(${c[0]},${c[1]},${c[2]})`;};
+const lighten=(hex,amount)=>mix(hex,255,amount),darken=(hex,amount)=>mix(hex,0,amount);
 const path=(g,points)=>{g.beginPath();g.moveTo(points[0][0],points[0][1]);for(const p of points.slice(1))g.lineTo(p[0],p[1]);g.closePath();};
 const line=(g,a,b)=>{g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();};
 let weave=null;
@@ -159,5 +161,20 @@ export function paintPockets(g,{P,finish,bw,blend}){
    g.beginPath();g.arc(-r*.08,-r*.12,r*1.02,Math.PI*1.1,Math.PI*1.75);
    g.strokeStyle=finish.inlay;g.globalAlpha=.45;g.lineWidth=C(r*.13,.75,2);
    g.stroke();g.restore();
+ }
+ // The rubber noses that guard each pocket mouth are real collision geometry
+ // (physics JAWS, radius 4 around a 12-unit ball), so they must be visible:
+ // a ball that rebounds from a nub should visibly meet something.
+ for(const [jx,jy] of JAWS){
+   const [sx,sy,k]=P(jx,C(jy,0,500)),r=Math.max(2.2,4.6*u*k);
+   g.save();g.translate(sx,sy);g.scale(1,.77+.23*blend);
+   g.shadowColor='#000b';g.shadowBlur=C(r*.9,2,6);g.shadowOffsetY=1.4;
+   const rubber=g.createRadialGradient(-r*.35,-r*.4,.4,0,0,r*1.15);
+   // Same rubber as the cushion it caps, with a darker, glossy nose.
+   rubber.addColorStop(0,lighten(finish.cushion,.5));rubber.addColorStop(.5,finish.cushion);rubber.addColorStop(1,darken(finish.cushion,.55));
+   g.beginPath();g.arc(0,0,r,0,Math.PI*2);g.fillStyle=rubber;g.fill();
+   g.shadowBlur=0;g.shadowOffsetY=0;
+   g.beginPath();g.arc(0,0,r,0,Math.PI*2);g.strokeStyle=finish.trim;g.globalAlpha=.55;g.lineWidth=C(r*.2,.7,1.6);g.stroke();
+   g.restore();
  }
 }

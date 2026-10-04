@@ -90,7 +90,7 @@ export class Game {
      power:shot.power,drawback:(.09+ready*.46)*(this.kind==='attract'?1:.65),showGuide:false};
  }
  update(dt,{audio=null,haptics=false}={}){
-   this.fx=this.fx.filter(effect=>(effect.life-=dt*(effect.type==='pocket'?5:effect.type==='impact'?4.2:3.2))>0);
+   this.fx=this.fx.filter(effect=>(effect.life-=dt*(effect.type==='pocket'?3.1:effect.type==='impact'?4.2:3.2))>0);
    if(this.activeStroke){this.activeStroke.elapsed+=dt;
      if(this.activeStroke.elapsed>=.18)this.activeStroke=null;}
    if(!this.sim.moving){this.timer+=dt;
@@ -183,7 +183,8 @@ export class Game {
      if(event.type==='pocket'&&this.turnShot){this.turnShot.pots.push(event.id);
        (this.turnShot.potRecords??=[]).push({id:event.id,pocket:event.pocket});
        const [px,py]=POCKETS[event.pocket],ball=this.sim.balls.find(b=>b.id===event.id);
-       this.fx.push({type:'pocket',x:px,y:py,sourceX:ball?.x??px,sourceY:ball?.y??py,color:ball?.color,life:1});
+       this.fx.push({type:'pocket',x:px,y:py,sourceX:ball?.x??px,sourceY:ball?.y??py,color:ball?.color,id:event.id,
+         orientation:ball?.orientation?[...ball.orientation]:undefined,life:1});
        if(haptics&&this.kind!=='attract')navigator.vibrate?.(12);}
      if(event.type==='settled'&&this.turnShot){this.resolve();}
      if(event.type!=='settled'&&this.kind!=='attract')audio?.play(event);

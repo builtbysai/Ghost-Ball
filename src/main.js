@@ -25,7 +25,7 @@ const newMatchId=()=>globalThis.crypto?.randomUUID?.()||
 let matchEventId=null,drillEventId=null,lockerSelected='house',newlyEarnedCueCount=0;
 let room=clamp(progress.selectedRoom,0,halls.length-1),mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
 let current=null,active='lobby',motion=true,placement=null,pointerMode=null,placeGesture=null;
-let settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',rules='casual',calledPocket=null,guideMode='full',wheelFine=false,clockSeconds=45;
+let settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',rules='casual',calledPocket=null,guideMode='full',wheelFine=false,clockSeconds=45,spinKeep=false;
 let matchElapsed=0,lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let previousShotAngles=[0,0],toastTimeout=null;
@@ -190,6 +190,9 @@ function syncGuideMode(){
  all('[data-guide-mode]').forEach(b=>{const on=b.dataset.guideMode===guideMode;b.setAttribute('aria-pressed',String(on));b.classList.toggle('selected',on);});
  all('[data-wheel]').forEach(b=>{const on=(b.dataset.wheel==='fine')===wheelFine;b.setAttribute('aria-pressed',String(on));b.classList.toggle('selected',on);});
 }
+function syncSpinKeep(){
+ all('[data-spin-keep]').forEach(b=>{const on=(b.dataset.spinKeep==='keep')===spinKeep;b.setAttribute('aria-pressed',String(on));b.classList.toggle('selected',on);});
+}
 function syncClock(){
  all('#clockSetting [data-clock]').forEach(b=>{const on=Number(b.dataset.clock)===clockSeconds;b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
 }
@@ -200,7 +203,7 @@ function syncPowerSide(){
  $('gameScreen').classList.toggle('power-right',powerSide==='right');
  all('[data-power-side]').forEach(b=>{const pressed=b.dataset.powerSide===powerSide;b.setAttribute('aria-pressed',String(pressed));b.classList.toggle('selected',pressed);});
 }
-function openSettings(){syncPowerSide();syncAimMode();syncGuideMode();settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('motionToggle').checked=motion;$('closeSettings').focus();}
+function openSettings(){syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('motionToggle').checked=motion;$('closeSettings').focus();}
 function closeSettings(){if($('settingsSheet').hidden)return;hide('settingsSheet');hide('backdrop');if(settingsOrigin==='menu'&&active==='lobby'){show('clubMenu');$('menuSettings').focus();}else if(active==='paused')$('pauseSettings').focus();else if(active==='lobby')$('menuBtn').focus();}
 function ensureLockerCards(){
  if($('lockerGrid').children.length)return;
@@ -547,7 +550,10 @@ function quitToLobby(){
 }
 function pauseMatch(){
  if(active!=='game')return;cancelKeyPull();active='paused';clearTableToast();clearTurnBanner();hide('spinSheet');hide('spinShade');hide('settingsSheet');hide('backdrop');
- setText('pauseSummary',current?.kind==='practice'?'Practice table':current?.kind==='drill'?'Skill challenge':current?.kind==='attract'?'Exhibition table':'Your match is on hold');
+ const clock=`${String(Math.floor(matchElapsed/60)).padStart(2,'0')}:${String(Math.floor(matchElapsed%60)).padStart(2,'0')}`;
+ const opponent=current?.players==='local'?'Two players':rival==='club'?'vs Club Pro':'vs Rookie';
+ setText('pauseSummary',current?.kind==='practice'?`Practice table · ${clock}`:current?.kind==='drill'?'Skill challenge':current?.kind==='attract'?'Exhibition table':
+  `${opponent} · ${current?.callEight?'Call the 8':'Casual 8-ball'} · ${clock}`);
  show('pauseMenu');$('resumeMatch').focus();
 }
 function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('gameCanvas').focus({preventScroll:true});turnUI();}
@@ -560,6 +566,7 @@ function resetMatch(){
  setPower(50);powerControl.reset();$('powerTrack').classList.remove('impact');turnUI();
 }
 const pocketColors=['#f4f3e9','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d','#191918','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d'];
+const POCKET_DROP_MS=300; // the ball sinks on the table first (see Renderer pocket fx)
 function animatePocket(event){
  if(active!=='game'||!current)return;
  const dock=$('collectedBalls'),ball=document.createElement('span');ball.className='return-ball'+(event.id>=9?' striped':'');
@@ -567,15 +574,17 @@ function animatePocket(event){
  ball.dataset.ball=String(event.id);
  ball.style.setProperty('--ball-color',pocketColors[event.id]);ball.textContent=event.id||'';
  ball.setAttribute('aria-label',event.id?'Ball '+event.id+' pocketed':'Cue ball scratched');dock.append(ball);
- const [px,py]=POCKETS[event.pocket],[x,y]=table.project(px,py),canvasBox=$('gameCanvas').getBoundingClientRect(),end=ball.getBoundingClientRect();
- const source=mobileLandscape()?{x:canvasBox.right-y,y:canvasBox.top+x}:{x:canvasBox.left+x,y:canvasBox.top+y};
- const dx=source.x-(end.left+end.width/2),dy=source.y-(end.top+end.height/2);
+ // After the drop the ball comes out of the gate at the far end of the return
+ // rail and rolls along it to the next free place. Local layout units only, so
+ // the rotated portrait layout behaves the same.
+ const rail=$('ballReturn'),travel=Math.max(0,rail.clientWidth-18-(ball.offsetLeft+ball.offsetWidth));
  if(motion&&ball.animate&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+  const roll=travel/(Math.PI*Math.max(6,ball.offsetWidth))*360;
   const flight=ball.animate([
-   {transform:`translate(${dx}px,${dy}px) scale(1.1)`,opacity:1,offset:0},
-   {transform:`translate(${dx*.4}px,${dy*.23}px) scale(.9)`,opacity:1,offset:.65},
-   {transform:'translate(0,0) scale(1)',opacity:1,offset:1}
-  ],{duration:600,easing:'cubic-bezier(.15,.78,.2,1)'});
+   {transform:`translateX(${travel}px) rotate(${roll}deg) scale(.6)`,opacity:0,offset:0},
+   {transform:`translateX(${travel*.92}px) rotate(${roll*.92}deg) scale(1)`,opacity:1,offset:.1},
+   {transform:'translateX(0) rotate(0deg) scale(1)',opacity:1,offset:1}
+  ],{duration:420+travel*1.15,delay:POCKET_DROP_MS,easing:'cubic-bezier(.25,.75,.3,1)',fill:'backwards'});
   if(event.id===0)flight.onfinish=()=>ball.remove();
  }else if(event.id===0)ball.remove();
 }
@@ -758,6 +767,8 @@ function fire(){
  audio.unlock();
  if(current.beginShot(shotAngle,strength,spin,callingNeeded()?calledPocket:null)){
   calledPocket=null;
+  // Each shot starts from the centre ball unless the player chose to keep their spin.
+  if(!spinKeep&&(spin.x||spin.y)){spin={x:0,y:0};syncSpin();}
   previousShotAngles[current.turn]=shotAngle;
   powerControl.reset();$('powerTrack').classList.remove('held');
   if(!$('controlsHint').hidden){hide('controlsHint');savePreference('ghostball-controls-taught','yes');}
@@ -815,6 +826,7 @@ $('cancelRecordReset').onclick=()=>{
 };
 $('confirmRecordReset').onclick=confirmLocalReset;
  all('[data-power-side]').forEach(b=>b.onclick=()=>{powerSide=b.dataset.powerSide;savePreference('ghostball-power-side',powerSide);syncPowerSide();});
+all('[data-spin-keep]').forEach(b=>b.onclick=()=>{spinKeep=b.dataset.spinKeep==='keep';savePreference('ghostball-spin',spinKeep?'keep':'reset');syncSpinKeep();});
 all('[data-guide-mode]').forEach(b=>b.onclick=()=>{guideMode=b.dataset.guideMode;savePreference('ghostball-guide',guideMode);syncGuideMode();});
 all('[data-wheel]').forEach(b=>b.onclick=()=>{wheelFine=b.dataset.wheel==='fine';savePreference('ghostball-wheel',wheelFine?'fine':'normal');syncGuideMode();});
 all('#clockSetting [data-clock]').forEach(b=>b.onclick=()=>{clockSeconds=Number(b.dataset.clock);savePreference('ghostball-clock',String(clockSeconds));syncClock();});
@@ -1074,8 +1086,8 @@ window.addEventListener('keyup',e=>{
 window.addEventListener('blur',cancelKeyPull);
 window.addEventListener('pagehide',()=>audio.suspend());
  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelKeyPull();audio.suspend();}else audio.resume();});
- try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';const savedAim=localStorage.getItem('ghostball-aim-mode');if(AIM_MODES.includes(savedAim))aimMode=savedAim;rules=localStorage.getItem('ghostball-rules')==='call8'?'call8':'casual';const g=localStorage.getItem('ghostball-guide');if(['full','short','off'].includes(g))guideMode=g;wheelFine=localStorage.getItem('ghostball-wheel')==='fine';clockSeconds=localStorage.getItem('ghostball-clock')==='0'?0:45;}catch{}
- syncPowerSide();syncAimMode();syncGuideMode();syncClock();syncRules();syncMute();syncAim();
+ try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';const savedAim=localStorage.getItem('ghostball-aim-mode');if(AIM_MODES.includes(savedAim))aimMode=savedAim;rules=localStorage.getItem('ghostball-rules')==='call8'?'call8':'casual';const g=localStorage.getItem('ghostball-guide');if(['full','short','off'].includes(g))guideMode=g;wheelFine=localStorage.getItem('ghostball-wheel')==='fine';spinKeep=localStorage.getItem('ghostball-spin')==='keep';clockSeconds=localStorage.getItem('ghostball-clock')==='0'?0:45;}catch{}
+ syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();syncClock();syncRules();syncMute();syncAim();
 syncSpin();syncEquippedCue();
 applyRoom();refreshMenu();hide('gameScreen');
 let previous=performance.now(),acc=0,uiTimer=0;

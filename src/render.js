@@ -129,13 +129,25 @@ export class TableRenderer{
       g.restore();
     }else if(effect.type==='pocket'){
       const t=1-effect.life;
-      const [px,py]=P(effect.sourceX,effect.sourceY);
-      const x=px+(sx-px)*t,y=py+(sy-py)*t,r=Math.max(0,TABLE.radius*this.bw/1000*(1-.93*t));
-      g.save();g.shadowColor='#080d0a';g.shadowBlur=9*t;
-      g.beginPath();g.arc(x,y,r,0,TAU);g.fillStyle=effect.color||'#eee5d8';g.fill();
-      g.restore();
-      g.beginPath();g.arc(sx,sy,Math.max(1,t*25),0,TAU);
-      g.strokeStyle=`rgba(239,207,139,${effect.life*.35})`;g.lineWidth=1.6;g.stroke();
+      if(effect.id!==undefined){
+        // The real numbered ball rolls over the lip, sinks and darkens into
+        // the well, rather than a flat dot teleporting to the pocket centre.
+        const e=t*t*(3-2*t),slide=Math.min(1,t*1.25);
+        const wx=effect.sourceX+(effect.x-effect.sourceX)*(slide*slide*(3-2*slide));
+        const wy=effect.sourceY+(effect.y-effect.sourceY)*(slide*slide*(3-2*slide));
+        this.drawBall({id:effect.id,color:effect.color,x:wx,y:wy,rotation:0,
+          orientation:effect.orientation||[1,0,0,0],opacity:Math.max(0,1-.55*e*e)},1-.46*e,Math.min(.96,e*1.1));
+        g.save();g.beginPath();g.arc(sx,sy,Math.max(1,6+t*26),0,TAU);
+        g.strokeStyle=`rgba(239,207,139,${effect.life*.28})`;g.lineWidth=1.4;g.stroke();g.restore();
+      }else{
+        const [px,py]=P(effect.sourceX,effect.sourceY);
+        const x=px+(sx-px)*t,y=py+(sy-py)*t,r=Math.max(0,TABLE.radius*this.bw/1000*(1-.93*t));
+        g.save();g.shadowColor='#080d0a';g.shadowBlur=9*t;
+        g.beginPath();g.arc(x,y,r,0,TAU);g.fillStyle=effect.color||'#eee5d8';g.fill();
+        g.restore();
+        g.beginPath();g.arc(sx,sy,Math.max(1,t*25),0,TAU);
+        g.strokeStyle=`rgba(239,207,139,${effect.life*.35})`;g.lineWidth=1.6;g.stroke();
+      }
     }else{
       g.beginPath();g.arc(sx,sy,(1-effect.life)*28,0,TAU);
       g.strokeStyle=`rgba(239,207,139,${effect.life*.65})`;g.lineWidth=2;g.stroke();
@@ -168,8 +180,8 @@ export class TableRenderer{
   this.ballTextures.set(ball,{canvas,rotation:ball.rotation||0});
   return canvas;
  }
- drawBall(ball){
-  const g=this.g,[sx,sy,k]=this.project(ball.x,ball.y),r=Math.max(3,TABLE.radius*this.bw/1000*k);
+ drawBall(ball,scale=1,dark=0){
+  const g=this.g,[sx,sy,k]=this.project(ball.x,ball.y),r=Math.max(3,TABLE.radius*this.bw/1000*k)*scale;
   if(ball.trail&&ball.trail.opacity>.005){
    const [px,py]=this.project(ball.trail.x,ball.trail.y);
    g.save();g.lineCap='round';const sheen=g.createLinearGradient(px,py,sx,sy);
@@ -204,6 +216,7 @@ export class TableRenderer{
    }
    g.restore();
   }
+  if(dark>0){g.fillStyle=`rgba(3,5,5,${Math.min(1,dark)})`;g.fillRect(-r,-r,r*2,r*2);}
   g.restore();
  }
 

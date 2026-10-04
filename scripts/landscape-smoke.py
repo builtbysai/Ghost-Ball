@@ -19,7 +19,7 @@ def module_data(name, cache=None):
 
 def html_source():
     doc = (root / 'index.html').read_text()
-    for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css', 'responsive-ui.css', 'match-ui.css', 'guide.css', 'cue-locker.css', 'local-record.css', 'skill-drills.css']:
+    for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css', 'responsive-ui.css', 'match-ui.css', 'sheets.css', 'cue-locker.css', 'local-record.css', 'skill-drills.css']:
         doc = re.sub(fr'<link rel="stylesheet" href="src/{re.escape(name)}(?:\?[^"]*)?">',
                      f'<style>{(root / "src" / name).read_text()}</style>', doc)
     doc = doc.replace('<link rel="manifest" href="manifest.webmanifest">', '')
@@ -100,6 +100,7 @@ with sync_playwright() as p:
         page.locator('#menuBtn').click()
         assert page.locator('#clubMenu').is_visible()
         page.locator('#menuChallenges').click()
+        page.wait_for_timeout(450)
         assert page.locator('#challengeSheet').is_visible() and page.locator('#challengeCards button').count()==5
         cpanel=page.locator('.challenge-panel').bounding_box()
         assert inside_viewport(cpanel,width,height),f'{width}x{height}: challenge picker clipped'
@@ -114,6 +115,7 @@ with sync_playwright() as p:
         assert page.locator('#challengeSheet').is_hidden() and page.locator('#clubMenu').is_visible()
         assert page.evaluate('document.activeElement.id')=='menuChallenges','skill picker focus not restored'
         page.locator('#menuLocker').click()
+        page.wait_for_timeout(450)
         assert page.locator('#lockerSheet').is_visible(), 'Cue Locker failed to open'
         assert page.locator('#lockerGrid [data-cue]').count()==6, 'six original cues not rendered'
         assert page.locator('#lockerEquip').is_disabled(), 'already equipped starter should not re-equip'
@@ -136,6 +138,7 @@ with sync_playwright() as p:
         assert page.locator('#lockerSheet').is_hidden() and page.locator('#clubMenu').is_visible()
         assert page.evaluate('document.activeElement.id')=='menuLocker', 'Locker focus not restored'
         page.locator('#menuLocker').click()
+        page.wait_for_timeout(450)
         assert page.locator('[data-cue="smoke"]').get_attribute('aria-label').endswith('equipped'), 'equipment did not survive reopen'
         page.locator('#closeLocker').click()
         page.locator('#closeMenu').click()
@@ -186,6 +189,7 @@ with sync_playwright() as p:
         assert page.locator('#muteButton').is_visible(), 'in-match mute control missing'
         page.screenshot(path=str((root / 'screenshots' / f'match-{width}x{height}.png').resolve()))
         page.locator('#pauseButton').click()
+        page.wait_for_timeout(450)  # sheet entrance animation settles
         assert page.locator('#pauseMenu').is_visible(), 'pause panel missing'
         pause=page.locator('.pause-card').bounding_box()
         within(pause,page.locator('#pauseMenu').bounding_box(),f'{width}x{height}: pause panel')
@@ -193,11 +197,13 @@ with sync_playwright() as p:
         for b in page.locator('.pause-actions button').all(): within(b.bounding_box(),pause,f'{width}x{height}: pause action')
         page.screenshot(path=str((root/'screenshots'/f'pause-{width}x{height}.png').resolve()))
         page.locator('#pauseSettings').click()
+        page.wait_for_timeout(450)
         assert page.locator('#settingsSheet').is_visible(), 'pause preferences missing'
         prefs=page.locator('.prefs-panel').bounding_box()
         assert inside_viewport(prefs,width,height), f'preferences clipped: {prefs}'
         assert page.locator('.prefs-panel').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'preferences have internal overflow'
         page.locator('#openRecord').click()
+        page.wait_for_timeout(450)
         assert page.locator('#recordSheet').is_visible() and page.locator('#settingsSheet').is_hidden(), 'private record panel failed to open'
         assert page.locator('#recordMatches').inner_text()=='0', 'new record should have no fake matches'
         record=page.locator('.record-panel').bounding_box()

@@ -84,6 +84,7 @@ test('pocket effects use event ball color and disappear quickly',()=>{
  game.sim=table([[11,11]]);game.turnShot={first:null,pots:[],rail:false};
  game.sim.moving=true;game.step();
  assert.ok(game.fx.some(effect=>effect.type==='pocket'&&effect.color));
- game.update(.25);
+ assert.equal(game.fx.find(effect=>effect.type==='pocket').id,1,'the sinking ball keeps its number');
+ game.update(.4);
  assert.ok(game.fx.every(effect=>effect.type!=='pocket'));
 });

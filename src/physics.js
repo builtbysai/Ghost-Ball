@@ -6,7 +6,7 @@ export const POCKETS = Object.freeze([[-7,-7],[500,-13],[1007,-7],[-7,507],[500,
 export const PHYSICS = Object.freeze({
   slideDeceleration: 760, rollingDeceleration: 135, rollingSpeedDrag: .10,
   ballRestitution: .94, railRestitution: .84, railFriction: .14,
-  spinDecay: 1.25, jawRestitution: .58, maxSpeed: 2050,
+  spinDecay: 1.25, jawRestitution: .5, jawFunnel: .2, jawFunnelReach: 62, maxSpeed: 2050,
 });
 const BALL_COLORS = ['#efece3','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d','#191918','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d'];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -61,6 +61,11 @@ function slowBall(ball,dt){
   }
   const decay=Math.max(0,1-PHYSICS.spinDecay*dt);ball.spin*=decay;
 }
+function nearestWell(x,y){
+  let best=null,bestD=PHYSICS.jawFunnelReach**2;
+  for(const w of POCKETS){const d=(w[0]-x)**2+(w[1]-y)**2;if(d<bestD){bestD=d;best=w;}}
+  return best;
+}
 function jawHit(ball,jx,jy,events){
   const dx=ball.x-jx,dy=ball.y-jy,r=TABLE.radius+4,d2=dx*dx+dy*dy;
   if(d2>=r*r)return;
@@ -68,8 +73,24 @@ function jawHit(ball,jx,jy,events){
   ball.x+=nx*(r-d+.05);ball.y+=ny*(r-d+.05);
   const normal=ball.vx*nx+ball.vy*ny;
   if(normal>=0)return;
-  ball.vx-=(1+PHYSICS.jawRestitution)*normal*nx;
-  ball.vy-=(1+PHYSICS.jawRestitution)*normal*ny;
+  // Real pocket facings are angled into the throat: tilt the rebound normal
+  // toward the nearest well so a glancing nose contact funnels the ball in
+  // instead of spitting it back across the table.
+  let hx=nx,hy=ny;
+  const well=nearestWell(ball.x,ball.y);
+  if(well){
+   const wx=well[0]-ball.x,wy=well[1]-ball.y,wd=Math.hypot(wx,wy)||1;
+   hx=nx*(1-PHYSICS.jawFunnel)+wx/wd*PHYSICS.jawFunnel;hy=ny*(1-PHYSICS.jawFunnel)+wy/wd*PHYSICS.jawFunnel;
+   const hn=Math.hypot(hx,hy)||1;hx/=hn;hy/=hn;
+  }
+  const hit=ball.vx*hx+ball.vy*hy;
+  if(hit<0){
+   ball.vx-=(1+PHYSICS.jawRestitution)*hit*hx;
+   ball.vy-=(1+PHYSICS.jawRestitution)*hit*hy;
+  }else{
+   ball.vx-=(1+PHYSICS.jawRestitution)*normal*nx;
+   ball.vy-=(1+PHYSICS.jawRestitution)*normal*ny;
+  }
   ball.spin*=.65;ball.slipX=ball.vx*.16;ball.slipY=ball.vy*.16;
   if(-normal>60)events.push({type:'rail',id:ball.id,speed:-normal,jaw:true});
 }

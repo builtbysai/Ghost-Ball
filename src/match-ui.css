@@ -142,16 +142,15 @@
 #gameScreen #gameCanvas:focus{outline:none}
 #gameScreen #gameCanvas:focus-visible{outline:1px solid #f1d9a14d;outline-offset:-2px}
 
-/* Preferences: label and segmented choice share a row. */
-#app .prefs-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:clamp(4px,1dvh,8px)}
-#app .prefs-row .prefs-label{flex:none;margin:0}
-#app .prefs-row .prefs-segment{flex:1 1 auto;min-width:0;max-width:62%}
-#app .prefs-row .prefs-segment button{padding-inline:6px;white-space:nowrap}
-#app .prefs-row .prefs-segment{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px}
-@media (max-height:440px){
- #app .prefs-row{margin-top:3px}
- #app .prefs-row .prefs-segment button{min-height:24px;height:auto;padding:3px 4px;font-size:9px;line-height:1.1}
- #app .prefs-row .prefs-segment{max-width:66%}
- #app .prefs-block .prefs-description{font-size:7.5px;line-height:1.25;margin:4px 0 0}
- #app .prefs-block legend{font-size:14px}
-}
+/* --- Ball return rail: the pocketed balls roll in at the gate and queue along it --- */
+#gameScreen .ball-return{bottom:clamp(0px,.4dvh,4px);width:clamp(230px,50%,540px);height:clamp(17px,3.3dvh,26px);
+ padding:0 clamp(5px,.8vw,9px);gap:clamp(1px,.25vw,3px);border:0;border-radius:99px;overflow:hidden;
+ background:linear-gradient(#0a121b,#162636 38%,#0c1722 62%,#1b2c3c);
+ box-shadow:inset 0 3px 5px #000d,inset 0 -1px 2px #fff1,0 1px 0 #d7bd8a66,0 5px 12px #0008}
+#gameScreen .ball-return::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+ box-shadow:inset 0 0 0 1px #c9ad7a55;background:linear-gradient(90deg,transparent 88%,#d9bd8a1f)}
+#gameScreen .return-gate{order:2;position:absolute;right:0;top:0;bottom:0;width:clamp(16px,2.4vw,24px);display:grid;place-items:center;
+ border-left:1px solid #c9ad7a66;background:linear-gradient(90deg,#08111a00,#090f17);color:#d9bd8a;font-size:clamp(8px,1.2vw,11px)}
+#gameScreen .collected-balls{order:1;gap:clamp(1px,.22vw,3px);padding-right:clamp(16px,2.4vw,24px)}
+#gameScreen .return-ball{width:clamp(10px,2.4dvh,18px);height:clamp(10px,2.4dvh,18px);font-size:clamp(5px,1.1dvh,8px);
+ border-color:#fffc;box-shadow:0 1px 2px #000b,inset -1px -2px 3px #0005}
