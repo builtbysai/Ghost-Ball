@@ -13,12 +13,12 @@ export const HEAD_STRING=265;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 const nowMs=()=>typeof performance!=='undefined'?performance.now():Date.now();
 export class Game {
- constructor({kind='attract',players='cpu',difficulty='rookie',persona=null,seats=null,seed=Date.now(),drillId=null,ruleset='eight',callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
+ constructor({kind='attract',players='cpu',difficulty='rookie',persona=null,seats=null,fixedRack=false,seed=Date.now(),drillId=null,ruleset='eight',callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
   this.ruleset=(ruleset==='nine'||ruleset==='ten')&&(kind==='match'||kind==='attract')?ruleset:'eight';
   this.callEight=Boolean(callEight)&&kind==='match'&&this.ruleset==='eight';
   // 0 turns the shot clock off (relaxed games); any positive value is whole seconds per shot.
   this.shotClockSeconds=Number.isFinite(shotClock)&&shotClock>0?Math.round(shotClock):0;
-  this.kind=kind;this.players=players;
+  this.kind=kind;this.players=players;this.fixedRack=fixedRack;
   // `persona` picks the named CPU; `difficulty` stays the planner tier that records and unlocks see.
   // An exhibition (players:'ai') seats two personas and plays a fully refereed match with no human.
   this.persona=personaFor(persona||difficulty);this.seatPersonas=seats?seats.map(personaFor):null;
@@ -26,7 +26,7 @@ export class Game {
    if(kind==='drill'&&!skillDrillById(drillId))throw new RangeError('Unknown skill drill');
    this.drillId=kind==='drill'?drillId:null;
   this.onPocket=onPocket;this.onTurn=onTurn;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
- reset(alternate=false){this.rackSeed=this.random()*100000|0;
+ reset(alternate=false){this.rackSeed=this.fixedRack?this.seed%100000:this.random()*100000|0;
    this.sim=new Simulation(this.kind==='drill'?skillDrillBalls(this.drillId):this.ruleset==='nine'?rackNine(this.rackSeed):this.ruleset==='ten'?rackTen(this.rackSeed):rack(this.rackSeed));
    // Rack-again alternates the breaker (the fair casual convention); a restart is a fresh match.
    this.rackCount=alternate?(this.rackCount||0)+1:0;this.turn=this.kind==='match'?this.rackCount%2:0;this.groups=[null,null];this.break=this.kind!=='drill';

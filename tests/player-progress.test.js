@@ -102,3 +102,27 @@ test('ledger caps stored match history while retaining accumulated statistics',(
  assert.equal(state.records.length,80);
  assert.equal(state.records[0].id,'event-86');
 });
+
+import {dayKey,dailySeed,recordDaily,dailySummary} from '../src/player-progress.js';
+import {Game as DailyGame} from '../src/game.js';
+test('the daily rack: stable per-day seed, best shots kept, streak counted',()=>{
+ assert.equal(dailySeed('2026-10-04'),dailySeed('2026-10-04'));
+ assert.notEqual(dailySeed('2026-10-04'),dailySeed('2026-10-05'));
+ assert.equal(dayKey(new Date(2026,9,4)),'2026-10-04');
+ let p=freshProgress();
+ p=recordDaily(p,{date:'2026-10-04',shots:19});p=recordDaily(p,{date:'2026-10-04',shots:12});p=recordDaily(p,{date:'2026-10-04',shots:15});
+ assert.equal(p.daily['2026-10-04'],12,'only the best is kept');
+ p=recordDaily(p,{date:'2026-10-03',shots:20});p=recordDaily(p,{date:'2026-10-01',shots:9});
+ assert.deepEqual(dailySummary(p,'2026-10-04'),{today:12,streak:2,total:3});
+ assert.equal(dailySummary(p,'2026-10-05').streak,2,'yesterday still counts until today is missed');
+ assert.equal(dailySummary(p,'2026-10-07').streak,0);
+ assert.equal(recordDaily(p,{date:'nonsense',shots:5}),p);assert.equal(recordDaily(p,{date:'2026-10-04',shots:0}),p);
+ const store=memoryStorage();assert.ok(writeLocalProgress(p,()=>store));
+ assert.deepEqual(readLocalProgress(()=>store).progress.daily,p.daily,'the daily ledger survives a reload');
+});
+test('two games on the same daily seed deal the same rack and a rerack replays it',()=>{
+ const a=new DailyGame({kind:'practice',seed:dailySeed('2026-10-04'),fixedRack:true}),b=new DailyGame({kind:'practice',seed:dailySeed('2026-10-04'),fixedRack:true});
+ const layout=g=>g.sim.balls.map(x=>[x.id,x.x,x.y]);
+ assert.deepEqual(layout(a),layout(b));
+ a.reset();assert.deepEqual(layout(a),layout(b));
+});

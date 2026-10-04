@@ -8,7 +8,7 @@ import {awardRoomMatch,awardRoomDrill} from './room-mastery.js';
 
 export const PROGRESS_KEY='ghostball-progress-v1';
 export const PROGRESS_VERSION=1;
-const RECORD_LIMIT=80;
+const RECORD_LIMIT=80,DAILY_LIMIT=60,DAY_KEY=/^\d{4}-\d\d-\d\d$/;
 const FINISH_REASONS=new Set(['eight-cleared','early-eight','scratch-on-eight','wrong-ball-first','wrong-pocket','nine-potted','ten-potted','three-fouls']);
 
 export function freshProgress(){
@@ -34,6 +34,8 @@ function validProgress(p){
   (p.roomMastery===undefined||(p.roomMastery&&typeof p.roomMastery==='object'&&
    !Array.isArray(p.roomMastery)&&Object.entries(p.roomMastery).every(([room,mask])=>
     ['0','1','2','3','4'].includes(room)&&Number.isInteger(mask)&&mask>=0&&mask<=7)))&&
+  (p.daily===undefined||(p.daily&&typeof p.daily==='object'&&!Array.isArray(p.daily)&&Object.keys(p.daily).length<=DAILY_LIMIT&&
+   Object.entries(p.daily).every(([day,shots])=>DAY_KEY.test(day)&&Number.isSafeInteger(shots)&&shots>=1&&shots<=400)))&&
   Array.isArray(p.records)&&p.records.length<=RECORD_LIMIT&&
   p.records.every(e=>e&&typeof e.id==='string'&&e.id.length<=128);
 }
@@ -160,4 +162,33 @@ export function exportLocalProgress(progress){
 export function resetLocalProgress(storage=()=>globalThis.localStorage){
  try{const store=storage();if(!store||typeof store.removeItem!=='function')return false;
   store.removeItem(PROGRESS_KEY);return true;}catch{return false;}
+}
+
+/** The local calendar day, as the key the Daily Rack is stored under. */
+export function dayKey(date=new Date()){
+ const two=n=>String(n).padStart(2,'0');
+ return `${date.getFullYear()}-${two(date.getMonth()+1)}-${two(date.getDate())}`;
+}
+/** Everyone gets the same rack on the same day: a stable seed from the day key. */
+export function dailySeed(key){
+ let h=2166136261;
+ for(const ch of String(key)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0;}
+ return h%900000+1;
+}
+/** Keep the fewest shots a player needed to clear the day's rack (local, private, descriptive only). */
+export function recordDaily(previous,{date,shots}={}){
+ if(!validProgress(previous)||!DAY_KEY.test(String(date))||!Number.isSafeInteger(shots)||shots<1||shots>400)return previous;
+ const daily={...(previous.daily||{})};
+ daily[date]=Math.min(daily[date]??Infinity,shots);
+ const days=Object.keys(daily).sort();
+ for(const old of days.slice(0,Math.max(0,days.length-DAILY_LIMIT)))delete daily[old];
+ return {...previous,daily};
+}
+/** Today's best, how many days in a row ending today (or yesterday) have a cleared rack, and the lifetime count. */
+export function dailySummary(progress,today=dayKey()){
+ const daily=validProgress(progress)&&progress.daily?progress.daily:{};
+ const previousDay=key=>{const [y,m,d]=key.split('-').map(Number);return dayKey(new Date(y,m-1,d-1));};
+ let streak=0,cursor=daily[today]!==undefined?today:previousDay(today);
+ while(daily[cursor]!==undefined){streak++;cursor=previousDay(cursor);}
+ return {today:daily[today]??null,streak,total:Object.keys(daily).length};
 }
