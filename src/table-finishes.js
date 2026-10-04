@@ -92,6 +92,20 @@ export function paintCloth(g,{P,h,finish,bw,blend}){
  bloom.addColorStop(0,'rgba(255,246,208,.14)');bloom.addColorStop(.42,'rgba(226,235,199,.043)');
  bloom.addColorStop(1,'rgba(0,0,0,.20)');g.fillStyle=bloom;g.fillRect(0,0,g.canvas.width,g.canvas.height);
  const pattern=feltWeave();if(pattern){g.globalAlpha=.29;g.fillStyle=g.createPattern(pattern,'repeat');g.fillRect(0,0,g.canvas.width,g.canvas.height);g.globalAlpha=1;}
+ // Real tables are marked: the head string, and spots for the head, centre and foot (the
+ // rack's apex). Faint ink only, with no effect on play.
+ if(blend>.55){
+  const mark=C((blend-.55)/.3,0,1);
+  g.globalAlpha=mark;
+  const top=P(265,22),bottom=P(265,478);
+  g.beginPath();g.moveTo(top[0],top[1]);g.lineTo(bottom[0],bottom[1]);
+  g.strokeStyle='rgba(235,245,238,.16)';g.lineWidth=C(bw/700,.8,1.8);g.stroke();
+  for(const [x,y] of [[265,250],[500,250],[718,250]]){
+   const [sx,sy]=P(x,y);g.beginPath();g.arc(sx,sy,C(bw/330,1.6,3.4),0,Math.PI*2);
+   g.fillStyle='rgba(235,245,238,.2)';g.fill();
+  }
+  g.globalAlpha=1;
+ }
  // The dark cloth seam never crosses the openings; pocket mouths are drawn last.
  g.restore();
 }

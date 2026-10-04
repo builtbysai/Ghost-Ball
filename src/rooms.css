@@ -1,0 +1,104 @@
+/* Five distinct halls. Each room has its own wall, panelling, floor, lamp and
+   light, set by #app[data-hall]. The table is the same physical object in all of them. */
+#app{--lamp-a:#f5da98;--lamp-b:#b58943;--lamp-glow:#e1ad5140;--beam:#d1bc6e18;--wall-glow:#2b4a37}
+#app .room-wall{background:
+ radial-gradient(70% 90% at 50% 105%,var(--wall-glow),transparent 70%),
+ repeating-linear-gradient(90deg,rgba(255,255,255,.02) 0 1px,transparent 1px 20%),
+ linear-gradient(#0b1711,#12251a 75%,#06100b)}
+#app .room-lamp{background:linear-gradient(var(--lamp-a) 0 16%,var(--lamp-b) 17% 60%,#241c12 61%);box-shadow:0 6px 20px #0008,0 25px 65px 20px var(--lamp-glow)}
+#app .light-beam{background:linear-gradient(var(--beam),transparent)}
+#app .room-wall::before,#app .room-wall::after{content:'';position:absolute;pointer-events:none}
+#app .art{transition:filter .4s}
+
+/* ---- 0 · The Parlor (1893): green damask, walnut panelling, oxblood rug ---- */
+#app[data-hall="0"],#app:not([data-hall]){--wall-glow:#33573f;--lamp-glow:#e8b05a44}
+#app[data-hall="0"] .room-wall,#app:not([data-hall]) .room-wall{background:
+ radial-gradient(70% 90% at 50% 105%,#33573f,transparent 70%),
+ radial-gradient(circle at 50% 50%,#d9c08a14 0 2px,transparent 3px) 0 0/44px 44px,
+ radial-gradient(circle at 0 0,#d9c08a0d 0 7px,transparent 8px) 0 0/44px 44px,
+ radial-gradient(circle at 100% 100%,#d9c08a0d 0 7px,transparent 8px) 0 0/44px 44px,
+ repeating-linear-gradient(90deg,#00000022 0 2px,transparent 2px 88px),
+ linear-gradient(#0d1e15,#14291c 72%,#07110b)}
+#app[data-hall="0"] .wainscot,#app:not([data-hall]) .wainscot{border-top:3px solid #6d4e2c;background:
+ repeating-linear-gradient(90deg,transparent 0 9%,#00000066 9.1% 9.4%,#ffe0a210 9.5% 9.7%,transparent 9.8% 16.6%),
+ linear-gradient(#3a2415,#241408 88%,#150c05)}
+#app[data-hall="0"] .room-floor,#app:not([data-hall]) .room-floor{background:
+ linear-gradient(90deg,transparent 18%,#6b1f2655 18.2% 81.8%,transparent 82%),
+ repeating-linear-gradient(90deg,transparent 0 5%,#0006 5.1% 5.3%),
+ linear-gradient(110deg,#2a1a0f,#0b0805)}
+
+/* ---- 1 · The Observatory (1911): star chart, brass dome, herringbone ---- */
+#app[data-hall="1"]{--wall-glow:#2a5078;--lamp-a:#e8f1fb;--lamp-b:#7b93ad;--lamp-glow:#8fb8e844;--beam:#9fc4ee16}
+#app[data-hall="1"] .room-wall{background:
+ radial-gradient(1.5px 1.5px at 12% 18%,#fff9,transparent),radial-gradient(1px 1px at 22% 42%,#cfe3ff99,transparent),
+ radial-gradient(1.5px 1.5px at 33% 12%,#fff8,transparent),radial-gradient(1px 1px at 47% 30%,#fff7,transparent),
+ radial-gradient(2px 2px at 58% 16%,#fffc,transparent),radial-gradient(1px 1px at 69% 38%,#cfe3ff88,transparent),
+ radial-gradient(1.5px 1.5px at 81% 22%,#fff9,transparent),radial-gradient(1px 1px at 90% 46%,#fff7,transparent),
+ radial-gradient(1px 1px at 8% 56%,#cfe3ff77,transparent),radial-gradient(1.5px 1.5px at 74% 8%,#fff8,transparent),
+ radial-gradient(60% 85% at 50% 108%,#2d5a8a,transparent 70%),
+ repeating-radial-gradient(circle at 50% 120%,transparent 0 46px,#9cc1ec10 47px 48px),
+ linear-gradient(#070d1a,#0d1a30 70%,#050a14)}
+#app[data-hall="1"] .room-wall::before{inset:-10% 18% 0;border:2px solid #b9a06a40;border-bottom:0;border-radius:50% 50% 0 0/80% 80% 0 0;
+ background:radial-gradient(ellipse at 50% 100%,#8fb8e826,transparent 65%)}
+#app[data-hall="1"] .wainscot{border-top:3px solid #9a8456;background:
+ repeating-linear-gradient(90deg,transparent 0 6%,#d8c48e1c 6.1% 6.3%,transparent 6.4% 12%),linear-gradient(#17263a,#0e1a2b)}
+#app[data-hall="1"] .room-floor{background:
+ repeating-linear-gradient(45deg,#ffffff07 0 2px,transparent 2px 22px),repeating-linear-gradient(-45deg,#00000040 0 2px,transparent 2px 22px),
+ linear-gradient(110deg,#1c2430,#06090e)}
+
+/* ---- 2 · The Foundry (1927): brick, steel, copper light, concrete ---- */
+#app[data-hall="2"]{--wall-glow:#6b4a2c;--lamp-a:#ffcf94;--lamp-b:#c46d2d;--lamp-glow:#ff8a3a4d;--beam:#ffb36e18}
+#app[data-hall="2"] .room-wall{background:
+ radial-gradient(70% 90% at 50% 108%,#7a4f2a88,transparent 70%),
+ repeating-linear-gradient(0deg,#0000003d 0 2px,transparent 2px 22px),
+ repeating-linear-gradient(90deg,transparent 0 56px,#0000003a 56px 58px),
+ linear-gradient(90deg,#2b231e,#332920 30%,#2a211b 62%,#352a21),
+ linear-gradient(#26201a,#1b1612)}
+#app[data-hall="2"] .room-wall::before{left:0;right:0;top:12%;height:12px;background:linear-gradient(#5a5048,#2b2622 70%,#14110f);box-shadow:0 8px 18px #0008}
+#app[data-hall="2"] .room-wall::after{left:8%;top:0;bottom:0;width:14px;background:linear-gradient(90deg,#14110f,#4d443c 40%,#1c1815);box-shadow:0 0 0 1px #0006}
+#app[data-hall="2"] .wainscot{border-top:3px solid #8a5a2e;background:
+ repeating-linear-gradient(90deg,transparent 0 7%,#00000055 7.1% 7.3%,#d38a4c18 7.4% 7.5%,transparent 7.6% 14%),linear-gradient(#2b2724,#1b1816)}
+#app[data-hall="2"] .room-floor{background:
+ repeating-linear-gradient(90deg,transparent 0 12%,#ffffff0a 12.1% 12.3%),repeating-linear-gradient(0deg,transparent 0 25%,#ffffff08 25.1% 25.3%),
+ linear-gradient(90deg,transparent 46%,#d8a93a14 46% 47%,transparent 47% 53%,#d8a93a14 53% 54%,transparent 54%),
+ linear-gradient(110deg,#34302c,#0d0c0b)}
+
+/* ---- 3 · The Wintergarden (1938): glasshouse, daylight, tile ---- */
+#app[data-hall="3"]{--wall-glow:#6fb8a4;--lamp-a:#fff4cf;--lamp-b:#c7a45e;--lamp-glow:#ffe9a640;--beam:#e6f6dd1c}
+#app[data-hall="3"] .room-wall{background:
+ repeating-linear-gradient(90deg,transparent 0 11.2%,#d9efe466 11.2% 11.7%),
+ repeating-linear-gradient(0deg,transparent 0 33%,#d9efe455 33% 33.8%),
+ radial-gradient(80% 60% at 50% 0%,#cdeed833,transparent 70%),
+ radial-gradient(45% 70% at 18% 110%,#1a4b2fcc,transparent 70%),radial-gradient(40% 65% at 84% 110%,#1c5535cc,transparent 70%),
+ linear-gradient(#1c4a45,#2d6a5d 58%,#123b34)}
+#app[data-hall="3"] .room-wall::before{inset:0;background:radial-gradient(1.2px 1.2px at 22% 28%,#fff6,transparent),radial-gradient(1.2px 1.2px at 71% 40%,#fff5,transparent),
+ linear-gradient(115deg,transparent 30%,#ffffff12 36%,transparent 44%)}
+#app[data-hall="3"] .wainscot{border-top:3px solid #d8c18a;background:
+ repeating-linear-gradient(90deg,transparent 0 8%,#ffffff1c 8.1% 8.3%,transparent 8.4% 16%),linear-gradient(#2f5a4e,#1f4036)}
+#app[data-hall="3"] .room-floor{background:
+ conic-gradient(#8a9b86 25%,#5b7064 0 50%,#8a9b86 0 75%,#5b7064 0) 0 0/14% 28%,linear-gradient(#6d8272,#34493f)}
+
+/* ---- 4 · The Afterhours (1964): velvet, neon, black and white tile ---- */
+#app[data-hall="4"]{--wall-glow:#8a2f7a;--lamp-a:#ffd2f2;--lamp-b:#b04a96;--lamp-glow:#ff4fd04a;--beam:#ff7be616}
+#app[data-hall="4"] .room-wall{background:
+ radial-gradient(60% 80% at 50% 108%,#7a2f6e88,transparent 70%),
+ repeating-linear-gradient(90deg,#1a0b22 0 26px,#2d1236 34px 42px,#1c0c25 54px 80px),
+ linear-gradient(#1b0c24,#10071a)}
+#app[data-hall="4"] .room-wall::before{left:50%;top:6%;width:min(34%,360px);height:46px;transform:translateX(-50%);border-radius:30px;
+ border:2px solid #ff6fd8;box-shadow:0 0 12px #ff3fcf,0 0 34px #ff3fcf77,inset 0 0 12px #ff3fcf88;opacity:.75}
+#app[data-hall="4"] .room-wall::after{left:auto;right:7%;top:24%;width:12%;height:2px;background:#5ff0ff;box-shadow:0 0 10px #38e8ff,0 0 26px #38e8ff55;opacity:.45}
+#app[data-hall="4"] .wainscot{border-top:3px solid #c89ad8;background:
+ repeating-linear-gradient(90deg,transparent 0 9%,#ffffff12 9.1% 9.25%),linear-gradient(#26112f,#150a1d)}
+#app[data-hall="4"] .room-floor{background:
+ conic-gradient(#4a3a55 25%,#150b1c 0 50%,#4a3a55 0 75%,#150b1c 0) 0 0/16% 32%,linear-gradient(#2b2030,#0c0710)}
+
+/* framed art matches each hall */
+#app[data-hall="1"] .art{border-color:#9a8456;background:radial-gradient(at 45% 32%,#2f4f78,#0b1426 72%);color:#cfd9e8}
+#app[data-hall="2"] .art{border-color:#8a5a2e;background:radial-gradient(at 45% 32%,#6a4a32,#1b1410 72%);color:#e3c7a4}
+#app[data-hall="3"] .art{border-color:#d8c18a;background:radial-gradient(at 45% 32%,#b8d6c4,#3f7a68 72%);color:#f4f1e2}
+#app[data-hall="4"] .art{border-color:#c89ad8;background:radial-gradient(at 45% 32%,#a2459b,#1b0c24 72%);color:#f6dcf3}
+
+/* walking between halls: a short crossfade instead of a hard cut */
+#app.room-shift .room{animation:room-shift .5s ease-out}
+@keyframes room-shift{0%{opacity:.35;filter:blur(3px) brightness(.7)}100%{opacity:1;filter:none}}
+@media (prefers-reduced-motion:reduce){#app.room-shift .room{animation:none}}

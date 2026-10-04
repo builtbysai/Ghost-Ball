@@ -37,7 +37,7 @@ window.__ghostRules={
 
 def html_source():
     doc=(root/'index.html').read_text()
-    for name in ['style.css','landscape.css','transition.css','feel.css','polish.css','responsive-ui.css','match-ui.css','sheets.css']:
+    for name in ['style.css','landscape.css','transition.css','feel.css','polish.css','responsive-ui.css','match-ui.css','sheets.css', 'rooms.css']:
         doc=re.sub(fr'<link rel="stylesheet" href="src/{re.escape(name)}(?:\?[^"]*)?">',
                f'<style>{(root/"src"/name).read_text()}</style>',doc)
     doc=doc.replace('<link rel="manifest" href="manifest.webmanifest">','')

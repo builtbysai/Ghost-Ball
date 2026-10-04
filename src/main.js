@@ -169,7 +169,14 @@ function renderRoomMastery(){
  badge.setAttribute('aria-label',halls[room].name+' mastery: '+model.count+' of 3. '+model.next);
  badge.title=model.steps.map(step=>(step.done?'✓ ':'○ ')+step.label).join('\n');
 }
+let shiftTimer=null;
 function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(room);
+ const appEl=$('app');
+ if(appEl.dataset.hall!==undefined&&appEl.dataset.hall!==String(room)&&active==='lobby'){
+  appEl.classList.remove('room-shift');void appEl.offsetWidth;appEl.classList.add('room-shift');
+  clearTimeout(shiftTimer);shiftTimer=setTimeout(()=>appEl.classList.remove('room-shift'),560);
+ }
+ appEl.dataset.hall=String(room);document.documentElement.style.setProperty('--room-wall',h.wall);
  const selected=chooseRoom(progress,room,halls.length);
  if(selected!==progress){
   progress=selected;

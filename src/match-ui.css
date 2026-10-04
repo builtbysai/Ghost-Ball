@@ -154,3 +154,11 @@
 #gameScreen .collected-balls{order:1;gap:clamp(1px,.22vw,3px);padding-right:clamp(16px,2.4vw,24px)}
 #gameScreen .return-ball{width:clamp(10px,2.4dvh,18px);height:clamp(10px,2.4dvh,18px);font-size:clamp(5px,1.1dvh,8px);
  border-color:#fffc;box-shadow:0 1px 2px #000b,inset -1px -2px 3px #0005}
+
+/* --- the match room takes its colour from the hall --- */
+#gameScreen.game-screen,#gameScreen.game-screen.entering::before{background:
+ radial-gradient(ellipse 66% 62% at 48% 52%,var(--room-aura,#25456b) 0%,transparent 78%),
+ radial-gradient(ellipse 130% 80% at 50% 118%,#00000066,transparent 70%),
+ linear-gradient(180deg,var(--room-wall,#101a2a),#070b12 135%)}
+#gameScreen.game-screen::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+ background:radial-gradient(ellipse 90% 80% at 50% 50%,transparent 55%,#00000066 100%)}
