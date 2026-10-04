@@ -17,9 +17,10 @@
  <section class="backdrop" id="backdrop" hidden></section>
  <section class="sheet" id="setupSheet" aria-label="Match setup" role="dialog" aria-modal="true" hidden><div class="grab"></div><header><span><small>MATCH SETUP</small><h2>Choose the frame.</h2></span><button id="closeSetup" class="close-sheet">DONE</button></header>
   <div class="setting"><label>GAME</label><div class="choice-row"><button class="selected">8-BALL</button><button disabled>9-BALL <small>SOON</small></button><button disabled>STRAIGHT <small>SOON</small></button></div></div>
+  <div class="setting"><label>RULES</label><div class="choice-row" id="ruleset"><button class="selected" data-rules="casual">CASUAL</button><button data-rules="call8">CALL THE 8</button></div></div>
   <div class="setting"><label>OPPONENT</label><div class="choice-row" id="rivals"><button class="selected" data-rival="rookie">ROOKIE</button><button data-rival="club">CLUB PRO</button><button data-rival="local">2 PLAYERS</button></div></div>
 
-  <p class="footnote">Casual 8-ball is the first playable ruleset. Tournament called-shot rules and more formats are on the roadmap.</p>
+  <p class="footnote">Casual: no called shots. Call the 8: when you are down to the black, name its pocket first; any other pocket loses the rack. Full tournament rules are on the roadmap.</p>
  </section>
  <section class="club-menu" id="clubMenu" aria-label="Club menu" hidden><header><div><small>GHOST BALL</small><h2>The Clubhouse</h2></div><button id="closeMenu" aria-label="Close menu" class="round">×</button></header><div class="menu-items"><button id="menuPractice"><span>◌</span> Practice <small>WORKSHOP</small></button><button id="menuChallenges" aria-haspopup="dialog"><span>✧</span> Skill Drills <small>5 PLAYABLE</small></button><button id="menuLocker" aria-haspopup="dialog"><span>◎</span> Cue Locker <small>YOUR EQUIPMENT</small></button><button id="menuSettings"><span>⚙</span> Settings <small>CONTROLS & AUDIO</small></button></div></section>
  <section class="locker-sheet" id="lockerSheet" role="dialog" aria-modal="true" aria-label="Cue Locker" aria-labelledby="lockerTitle" hidden>
@@ -53,7 +54,9 @@
      <fieldset class="prefs-block"><legend>Controls</legend>
        <span class="prefs-label">Power rail</span>
        <div class="prefs-segment" role="group" aria-label="Power bar position"><button type="button" data-power-side="left" aria-pressed="true">Left</button><button type="button" data-power-side="right" aria-pressed="false">Right</button></div>
-       <p class="prefs-description">Grab the cue to aim. Pull the power bar and release to shoot. Keyboard: ←/→ aim (Shift for fine), hold Space to pull and release to shoot, Esc cancels, M mutes.</p>
+       <span class="prefs-label">Table touch</span>
+       <div class="prefs-segment" role="group" aria-label="Table touch aiming"><button type="button" data-aim-mode="smart" aria-pressed="true">Smart</button><button type="button" data-aim-mode="stick" aria-pressed="false">Stick only</button></div>
+       <p class="prefs-description">Smart: tap or drag the table to aim there, or grab the cue to turn it. Stick only: only the cue turns. Tap a ball to aim through it. Pull the power bar and release to shoot. Keyboard: ←/→ aim (Shift for fine), hold Space to pull and release to shoot, Esc cancels, M mutes.</p>
      </fieldset>
      <div class="prefs-block prefs-readonly"><h3>Table view</h3><div class="prefs-readonly-line"><span>Top-down 2D</span><strong>ACTIVE</strong></div></div>
     </div>
@@ -111,8 +114,8 @@
         </div>
         <output id="powerValue" class="power-readout">PULL ↓</output>
       </aside>
-      <div class="table-play-area" id="tableArea"><canvas id="gameCanvas" tabindex="0" aria-label="Pool table. Grab the cue stick behind the white ball to aim, or use the left and right arrow keys. Hold Space to pull back and release to shoot. After a foul, tap to preview or drag to place; with the table focused, arrows nudge the position and Enter confirms."></canvas><div class="guide-badge" id="guideBadge">DRAG THE CUE TO AIM</div>
-       <div id="controlsHint" class="controls-hint" role="status" hidden>GRAB THE CUE TO AIM · PULL THE POWER BAR DOWN AND RELEASE · OR HOLD SPACE, RELEASE TO SHOOT</div>
+      <div class="table-play-area" id="tableArea"><canvas id="gameCanvas" tabindex="0" aria-label="Pool table. Tap or drag the table to aim there, tap a ball to aim through it, grab the cue stick behind the white ball to turn it, or use the left and right arrow keys. Hold Space to pull back and release to shoot. After a foul, tap to preview or drag to place; with the table focused, arrows nudge the position and Enter confirms."></canvas><div class="guide-badge" id="guideBadge">TAP THE TABLE OR DRAG THE CUE TO AIM</div>
+       <div id="controlsHint" class="controls-hint" role="status" hidden>TAP THE TABLE TO AIM · OR GRAB THE CUE TO TURN IT · PULL THE POWER BAR DOWN AND RELEASE TO SHOOT</div>
        <div id="tableToast" class="table-toast" aria-hidden="true" hidden></div>
        <div id="turnBanner" class="turn-banner" aria-hidden="true" hidden><small id="turnBannerKicker"></small><strong id="turnBannerTitle"></strong></div>
        <section id="matchResult" class="match-result" role="status" aria-live="polite" hidden>

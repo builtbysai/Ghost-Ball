@@ -11,7 +11,8 @@ export const groupContains=(id,group)=>group==='solids'?id>=1&&id<=7:group==='st
 
 /**
  * @param {{turn:number,breakShot:boolean,groups:(string|null)[],shot:
- * {first:number|null,pots:number[],rail:boolean,groupAtStart:string}}} input
+ * {first:number|null,pots:number[],rail:boolean,groupAtStart:string,
+ * callRequired?:boolean,call?:number,potRecords?:{id:number,pocket:number}[]}}} input
  * @returns {object} resolved turn, foul, and winner state. No world mutations.
  */
 export function resolveCasualEight({turn,breakShot,groups,shot}){
@@ -20,9 +21,12 @@ export function resolveCasualEight({turn,breakShot,groups,shot}){
  const scratch=pots.includes(0),eight=pots.includes(8);
  const group=shot.groupAtStart||'open';
  if(eight&&!breakShot){
-   const legal=group==='eight'&&!scratch&&shot.first===8;
+   // Optional "call the 8": the eight must drop in the pocket the shooter named.
+   const dropped=(shot.potRecords||[]).find(record=>record?.id===8);
+   const pocketOk=!shot.callRequired||dropped?.pocket===shot.call;
+   const legal=group==='eight'&&!scratch&&shot.first===8&&pocketOk;
    return {type:'end',winner:legal?turn:next,legal,reason:legal?'eight-cleared':
-     scratch?'scratch-on-eight':group!=='eight'?'early-eight':'wrong-ball-first',
+     scratch?'scratch-on-eight':group!=='eight'?'early-eight':shot.first!==8?'wrong-ball-first':'wrong-pocket',
      spotEight:false,groups:[...groups],turn,ballInHand:false,foul:false};
  }
  // On the first shot the actual object group is irrelevant. Casual mode

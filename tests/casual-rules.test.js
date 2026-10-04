@@ -99,6 +99,6 @@ test('foul notifications expose the actual reason to UI',()=>{
  g.break=false;g.groups=['solids','stripes'];
  g.turnShot={first:9,pots:[],rail:true,groupAtStart:'solids'};
  g.resolve();
- assert.deepEqual(events,[{type:'foul',turn:1,shooter:0,potted:[],scratched:false,ballInHand:true,reason:'wrong-ball-first',retain:false,assignment:null}]);
+ assert.deepEqual(events,[{type:'foul',turn:1,shooter:0,potted:[],scratched:false,ballInHand:true,kitchen:false,reason:'wrong-ball-first',retain:false,assignment:null}]);
  assert.equal(g.ballInHand,true);
 });
