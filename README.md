@@ -6,7 +6,7 @@ An independent, lightweight browser pool game. The Clubhouse rebuild follows the
 
 ## Available now
 
-- Responsive Clubhouse inspired by the provided mockup: five playable tables, working room controls, live AI exhibition, Watch, playable Quick Match vs Rookie or Club Pro, local pass-and-play, and free Practice.
+- Responsive Clubhouse inspired by the provided mockup: five playable tables, working room controls, live AI exhibition, Watch, playable Quick Match vs Rookie, Dex, Vera or Club Pro, local pass-and-play, and free Practice.
 - One active gameplay camera: top-down 2D. The live perspective lobby exhibition becomes that same physical table in a seamless rotation/zoom/rack-assembly transition. The layout works in both device orientations without blocking play.
 - Fixed-step simulation (240 Hz) with independent ball positions, bounded equal-and-opposite collision impulses, a simplified sliding-to-rolling transition, pocket mouths and jaw guards, side spin, approximate follow/draw, event-based audio and impact rings.
 - Landscape-first match screen with two-player HUD, remaining-ball markers, full-length cue and collision guideline. Grab and rotate the **shaft behind the cue ball**, not the guide in front; use the separate fine-aim wheel, two-axis spin and safe pull-down power bar. Ball-in-hand offers a visible ghost cue ball, tap/confirm or drag placement and keyboard nudging.
@@ -33,7 +33,8 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/random.js`: small seeded PRNG shared by repeatable racks and CPU shot selection.
 - `src/game.js`: match ownership, 45-second casual shot clock, rulings and replayable event metadata.
 - `src/casual-rules.js`: browser-free casual referee; a separate tournament referee is a future milestone.
-- `src/ai.js`: seedable geometric Rookie and bounded full-physics predictive Club Pro.
+- `src/ai.js`: seedable geometric Rookie and bounded full-physics predictive Club Pro. `src/ai-personas.js` layers named personas (Rookie, Dex, Vera, Club Pro) and the dynamic-difficulty nudge on top; `scripts/persona-bench.mjs` measures them.
+- `src/music.js`: generative lounge music per hall (no audio files). `src/cue-art.js`: the shared 3D cue painter.
 - `src/render.js`: overhead/pitched 2D table, cached surfaces, aiming and cue animation.
 - `src/table-finishes.js`: shared table construction plus hall-specific materials (visual only; physics unchanged).
 - `src/cue-feel.js`: pure cue travel, contact stroke timing and tactile stage math.
@@ -129,3 +130,6 @@ Gameplay ships only with the 2D top-down renderer. The lobby retains a lightweig
 Gameplay uses separate coarse shaft dragging and fine aim. Node tests cover rear-only cue acquisition, shot-power safety, physics and animated rack positions. The optional browser smoke checks cover portrait and landscape fit and core shot interactions, but physical Android touch and visual timing still require device review. The orientation blocker and legacy view switcher are no longer part of the interface.
 
 See [interaction research and copy boundaries](docs/REFERENCE-CONTROLS.md). Keep the **original** Ghost Ball identity. Similarity is about discoverable mechanics and touch ergonomics, not copying Miniclip's protected graphics, avatars, icons or monetization.
+
+## Second pass 2026-10-04: flow, personas, exhibitions, aim guide, music
+See `docs/FLOW-AND-AUDIO-RESEARCH-2026-10.md`. Turn changes are a slim chip above the table, fine aim is much finer, no dots over pockets, circular player tokens with the shot clock as the ring, a two-line aim guide (object ball and a short cue-ball deflection), four named CPU personas, watched AI-vs-AI exhibitions, lounge music, and nine-ball legal-break and three-foul rules.

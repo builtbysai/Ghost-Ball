@@ -34,7 +34,7 @@ export function runRack(seed,{maxShots=120,tiers=['rookie','club'],ruleset='eigh
   const tier=tiers[game.turn]||'rookie',before=sig(game),group=game.group;
   const metrics=tierStats(tier);counts.shots++;metrics.shots++;
   const now=performance.now();
-  const plan=game.break?{angle:0,power:.82,plan:'break'}:
+  const plan=game.break?{angle:0,power:ruleset==='nine'?1:.82,plan:'break'}:
      chooseShot(game.sim,group,tier,game.random);
   const decisionMs=performance.now()-now;
   decisionTotal+=decisionMs;

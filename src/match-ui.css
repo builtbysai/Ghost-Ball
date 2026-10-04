@@ -56,29 +56,26 @@
 #gameScreen .turn-recap[data-tone="foul"]{color:#ffd9c2}
 @keyframes recap-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 
-/* --- unmissable turn banner -------------------------------------------- */
-#gameScreen .turn-banner{position:absolute;z-index:9;left:50%;top:20%;transform:translate(-50%,0);
- display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none;
- padding:clamp(7px,1.6dvh,14px) clamp(18px,3.4vw,40px);border-radius:14px;text-align:center;
- background:linear-gradient(160deg,#16314af2,#0b1727f5);border:1.5px solid #cdb783;
- box-shadow:0 14px 44px #000b,inset 0 1px #ffffff26;max-width:92%}
+/* --- turn chip: a slim pill docked above the table. It never covers play. --- */
+#gameScreen .turn-banner{position:absolute;z-index:9;left:50%;top:0;transform:translate(-50%,0);
+ display:flex;flex-direction:row;align-items:center;gap:8px;pointer-events:none;white-space:nowrap;
+ padding:3px 12px;border-radius:99px;max-width:92%;
+ background:#0b1727d9;border:1px solid #cdb78388;box-shadow:0 4px 14px #0007}
 #gameScreen .turn-banner[hidden]{display:none}
-#gameScreen .turn-banner strong{font:700 clamp(19px,5.2dvh,38px)/1.05 Georgia,serif;letter-spacing:.04em;color:var(--hud-ink);white-space:nowrap}
-#gameScreen .turn-banner small{font:850 clamp(8px,1.25dvh,12px) system-ui;letter-spacing:.16em;color:var(--hud-gold)}
-#gameScreen .turn-banner[data-side="you"]{border-color:#7fdcae}
+#gameScreen .turn-banner strong{font:800 clamp(10px,1.7dvh,13px)/1.1 system-ui,sans-serif;letter-spacing:.1em;color:var(--hud-ink)}
+#gameScreen .turn-banner small{font:800 clamp(8px,1.3dvh,10px) system-ui;letter-spacing:.14em;color:var(--hud-gold);order:2}
+#gameScreen .turn-banner[data-side="you"]{border-color:#7fdcae99}
 #gameScreen .turn-banner[data-side="you"] small{color:var(--hud-you)}
-#gameScreen .turn-banner[data-side="rival"]{border-color:#8eb9ec}
+#gameScreen .turn-banner[data-side="rival"]{border-color:#8eb9ec99}
 #gameScreen .turn-banner[data-side="rival"] small{color:var(--hud-rival)}
 #gameScreen .turn-banner[data-kind="foul"] small{color:var(--hud-warn)}
-#gameScreen .turn-banner.is-in{animation:banner-life 2.8s cubic-bezier(.2,.8,.2,1) both}
+#gameScreen .turn-banner.is-in{animation:banner-life 1.9s cubic-bezier(.2,.8,.2,1) both}
 @keyframes banner-life{
- 0%{opacity:0;transform:translate(-50%,-14px) scale(.94)}
- 9%{opacity:1;transform:translate(-50%,0) scale(1)}
- 90%{opacity:1;transform:translate(-50%,0) scale(1)}
- 100%{opacity:0;transform:translate(-50%,-6px) scale(.98)}
+ 0%{opacity:0;transform:translate(-50%,-8px)}
+ 12%{opacity:1;transform:translate(-50%,0)}
+ 82%{opacity:1;transform:translate(-50%,0)}
+ 100%{opacity:0;transform:translate(-50%,-4px)}
 }
-/* A banner owns the top of the table while it shows; the placement hint waits. */
-#gameScreen .table-play-area:has(.turn-banner:not([hidden])) .guide-badge{display:none!important}
 #gameScreen .table-toast[data-kind="hint"]{background:#10283eef;border-color:#b9d8ef99;color:#e8f4ff;max-width:min(94%,520px);letter-spacing:.05em}
 
 /* --- ball trays: neutral open state, real groups, a home for the 8 ----- */
@@ -123,8 +120,6 @@
  #gameScreen .hud-controls .hud-menu{width:30px;height:30px}
  #gameScreen .shot-clock{height:30px;min-width:38px;font-size:19px;border-radius:8px}
  #gameScreen .turn-recap{font-size:9px;padding:1px 10px;margin:0}
- #gameScreen .turn-banner{top:12%;padding:6px 16px}
- #gameScreen .turn-banner strong{font-size:19px}
  #gameScreen .aim-readout{font-size:8px}
 }
 @media (max-height:350px){
@@ -168,3 +163,17 @@
 
 /* A contextual badge replaces the one-time controls hint while it is showing. */
 #gameScreen .table-play-area:has(.guide-badge.is-visible) .controls-hint{display:none}
+
+/* --- player tokens are circles; the ring around the active one is its shot clock --- */
+#gameScreen .player-token{border-radius:50%;border-width:2px;
+ box-shadow:0 3px 10px #0008,inset 0 -5px 8px #0004,inset 0 2px 3px #fff6}
+#gameScreen .opponent-card.playing .player-token::after{inset:-6px;border-radius:50%;
+ -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3.5px));
+ mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3.5px))}
+#gameScreen .opponent-card:not(.playing) .player-token{filter:saturate(.7) brightness(.82)}
+
+/* watching an exhibition: the player's controls step back so the table is the show */
+#gameScreen[data-exhibition="true"] .shot-rail,#gameScreen[data-exhibition="true"] .tools-rail{opacity:.2;pointer-events:none;filter:saturate(.5)}
+
+/* the turn chip and the placement hint share the top edge; the hint waits its turn */
+#gameScreen .table-play-area:has(.turn-banner:not([hidden])) .guide-badge{display:none!important}

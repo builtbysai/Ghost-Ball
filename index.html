@@ -20,7 +20,8 @@
    <header class="sheet-head"><div><small class="eyebrow">MATCH SETUP</small><h2 id="setupTitle">Choose the frame</h2></div><button id="closeSetup" class="sheet-done" type="button">Done <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></header>
    <div class="sheet-body"><div class="set-group">
     <div class="setting set-row"><div class="set-text"><b>Game</b><small>Which rack to play</small></div><div class="seg" id="gameType" role="group" aria-label="Game"><button class="selected" data-game="eight" aria-pressed="true">8-Ball</button><button data-game="nine" aria-pressed="false">9-Ball</button><button disabled>Straight <small>soon</small></button></div></div>
-    <div class="setting set-row"><div class="set-text"><b>Opponent</b><small>Who you are playing</small></div><div class="seg" id="rivals" role="group" aria-label="Opponent"><button class="selected" data-rival="rookie">Rookie</button><button data-rival="club">Club Pro</button><button data-rival="local">2 Players</button></div></div>
+    <div class="setting set-row"><div class="set-text"><b>Opponent</b><small>Who you are playing</small></div><div class="seg" id="rivals" role="group" aria-label="Opponent"><button class="selected" data-rival="rookie">Rookie</button><button data-rival="dex">Dex</button><button data-rival="vera">Vera</button><button data-rival="club">Club Pro</button><button data-rival="local">2 Players</button></div></div>
+    <p class="rival-blurb" id="rivalBlurb">Steady. Friendly and still learning. Misses honestly, finishes racks.</p>
     <div class="setting set-row"><div class="set-text"><b>Shot clock</b><small>Time for each shot</small></div><div class="seg" id="clockSetting" role="group" aria-label="Shot clock"><button class="selected" data-clock="45">45 sec</button><button data-clock="0">Off</button></div></div>
     <div class="setting set-row"><div class="set-text"><b>Rules</b><small>8-ball only</small></div><div class="seg" id="ruleset" role="group" aria-label="Eight-ball rules"><button class="selected" data-rules="casual">Casual</button><button data-rules="call8">Call the 8</button></div></div>
    </div></div>
@@ -114,11 +115,12 @@
        <li>Nine balls, racked in a diamond with the 1 at the front and the 9 in the middle.</li>
        <li>Always hit the <b>lowest ball</b> on the table first. A ring marks it.</li>
        <li>Pot any ball and shoot again. <b>Pot the 9 legally to win</b>, even on the break or off a combination.</li>
-       <li>Fouls give ball in hand. A 9 potted on a foul goes back on the table.</li></ul></article>
+       <li>The break must pot a ball or drive <b>four balls to a cushion</b>, so hit it hard. A weak break is a foul.</li>
+       <li>Fouls give ball in hand. A 9 potted on a foul goes back on the table. <b>Three fouls in a row lose the rack.</b></li></ul></article>
       <article><h3>Casual vs the official game</h3><ul>
        <li><b>Casual</b> (default) has no called shots, like most phone pool.</li>
        <li><b>Call the 8</b> asks you to name the 8-ball's pocket, as in WPA rules and Miniclip's game.</li>
-       <li>Full WPA call-shot play, break options and push-outs are on the roadmap.</li></ul></article>
+       <li>Full WPA call-shot play and push-outs are on the roadmap.</li></ul></article>
      </div>
     </section>
     <section id="guideHistory" role="tabpanel" aria-labelledby="tabHistory" data-guide-panel="history" tabindex="0" hidden>
@@ -148,6 +150,7 @@
     <div class="set-stack">
      <section class="set-group" aria-labelledby="grpFeel"><h3 id="grpFeel">Audio &amp; feel</h3>
       <label class="set-row"><span class="set-text"><b>Sound effects</b><small>Impacts, pockets and turn cues</small></span><span class="switch"><input id="soundToggle" type="checkbox" checked><i aria-hidden="true"></i></span></label>
+      <label class="set-row"><span class="set-text"><b>Lounge music</b><small>A quiet generative jazz loop that follows the room</small></span><span class="switch"><input id="musicToggle" type="checkbox" checked><i aria-hidden="true"></i></span></label>
       <label class="set-row"><span class="set-text"><b>Impact feedback</b><small>Vibration and cue recoil</small></span><span class="switch"><input id="motionToggle" type="checkbox" checked><i aria-hidden="true"></i></span></label>
      </section>
      <section class="set-group" aria-labelledby="grpKeys"><h3 id="grpKeys">Keyboard</h3>
@@ -188,9 +191,9 @@
  <section class="game-screen" id="gameScreen" aria-label="Landscape pool game" hidden>
    <header class="match-hud">
       <div class="hud-controls"><button id="pauseButton" class="hud-menu" aria-label="Pause match" aria-haspopup="dialog">Ⅱ</button><button id="muteButton" class="hud-menu hud-mute" type="button" aria-label="Mute sound" title="Mute sound (M)" data-muted="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="mute-body" d="M4 9.5h3.6L12 5.8v12.4l-4.4-3.7H4z"/><path class="mute-waves" d="M15.2 8.8a4.6 4.6 0 0 1 0 6.4M17.7 6.3a8.2 8.2 0 0 1 0 11.4"/><path class="mute-slash" d="M15 9.2l5.6 5.6M20.6 9.2L15 14.8"/></svg></button></div>
-      <div class="opponent-card" id="oneCard"><div class="player-token">1<span class="shot-countdown" id="clockOne" role="timer" aria-label="Shot clock seconds remaining">45</span></div><div class="player-info"><strong id="playerOne">PLAYER ONE <small>OPEN TABLE</small></strong><div class="ball-slots" id="ballsOne" aria-label="Player one balls"></div></div></div>
+      <div class="opponent-card" id="oneCard"><div class="player-token">1</div><div class="player-info"><strong id="playerOne">PLAYER ONE <small>OPEN TABLE</small></strong><div class="ball-slots" id="ballsOne" aria-label="Player one balls"></div></div></div>
       <div class="match-center"><div class="center-text"><small id="roundLabel">THE PARLOR</small><strong id="turnLabel">YOUR BREAK</strong><span class="match-time" id="matchTime" role="timer" aria-label="Elapsed match time">00:00</span></div><span class="shot-clock" id="shotClock" role="timer" aria-label="Shot clock seconds remaining" hidden>45</span></div>
-      <div class="opponent-card right" id="twoCard"><div class="player-info"><strong id="playerTwo">ROOKIE <small>OPEN TABLE</small></strong><div class="ball-slots" id="ballsTwo" aria-label="Player two balls"></div></div><div class="player-token">2<span class="shot-countdown" id="clockTwo" role="timer" aria-label="Shot clock seconds remaining">45</span></div></div>
+      <div class="opponent-card right" id="twoCard"><div class="player-info"><strong id="playerTwo">ROOKIE <small>OPEN TABLE</small></strong><div class="ball-slots" id="ballsTwo" aria-label="Player two balls"></div></div><div class="player-token">2</div></div>
    </header>
    <div id="turnRecap" class="turn-recap" role="status" aria-live="off" hidden></div>
    <div class="match-arena">
@@ -220,7 +223,7 @@
          </div>
          <button class="cueball-button" id="spinButton" aria-label="Adjust cue ball spin"><span class="cueball-face"><i id="spinPreview"></i></span><small>SPIN</small></button>
 
-         <div class="aim-wheel-control"><span>FINE AIM</span><output id="aimReadout" class="aim-readout" for="aimWheel">0°</output><button id="aimLeft" aria-label="Aim counterclockwise 2 degrees (Shift for 0.25)" title="Left: 2° · Shift: 0.25°">−</button><div id="aimWheel" class="aim-wheel" role="slider" tabindex="0" aria-label="Fine aiming wheel: drag, or use arrow keys for 2 degree steps and Shift plus arrows for quarter degree steps. Double tap, Home or Backspace to recall your previous shot direction" title="Double-tap to recall previous shot aim" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" aria-orientation="vertical"><div class="wheel-grip"></div></div><button id="aimRight" aria-label="Aim clockwise 2 degrees (Shift for 0.25)" title="Right: 2° · Shift: 0.25°">+</button><input id="aimRange" type="range" min="-180" max="180" step=".25" value="0" tabindex="-1" aria-hidden="true"></div>
+         <div class="aim-wheel-control"><span>FINE AIM</span><output id="aimReadout" class="aim-readout" for="aimWheel">0°</output><button id="aimLeft" aria-label="Aim counterclockwise half a degree (Shift for 0.1)" title="Nudge 0.5° · Shift: 0.1°">−</button><div id="aimWheel" class="aim-wheel" role="slider" tabindex="0" aria-label="Fine aiming wheel: drag, or use arrow keys for 2 degree steps and Shift plus arrows for quarter degree steps. Double tap, Home or Backspace to recall your previous shot direction" title="Double-tap to recall previous shot aim" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" aria-orientation="vertical"><div class="wheel-grip"></div></div><button id="aimRight" aria-label="Aim clockwise half a degree (Shift for 0.1)" title="Nudge 0.5° · Shift: 0.1°">+</button><input id="aimRange" type="range" min="-180" max="180" step=".25" value="0" tabindex="-1" aria-hidden="true"></div>
       </aside>
    </div>
    <div id="matchAnnouncements" class="sr-only" role="status" aria-live="polite"></div>

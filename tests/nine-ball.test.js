@@ -84,3 +84,18 @@ test('the CPU can play whole nine-ball racks to a legal finish',()=>{
  }
  assert.ok(finished>=2,`only ${finished}/3 nine-ball racks finished`);
 });
+
+test('a break must pot a ball or drive four object balls to a cushion',()=>{
+ const base={turn:0,breakShot:true};
+ const weak=resolveNineBall({...base,shot:{first:1,pots:[],rail:true,railBalls:[1,2],groupAtStart:'low-1'}});
+ assert.equal(weak.type,'foul');assert.equal(weak.reason,'illegal-break');assert.equal(weak.ballInHand,true);
+ assert.equal(resolveNineBall({...base,shot:{first:1,pots:[],rail:true,railBalls:[1,2,3,4],groupAtStart:'low-1'}}).foul,false);
+ assert.equal(resolveNineBall({...base,shot:{first:1,pots:[3],rail:true,railBalls:[],groupAtStart:'low-1'}}).foul,false);
+ assert.equal(resolveNineBall({turn:0,breakShot:false,shot:{first:1,pots:[],rail:true,railBalls:[],groupAtStart:'low-1'}}).foul,false,'the rule applies to the break only');
+});
+test('three fouls in a row lose the rack',()=>{
+ const foulShot={first:2,pots:[],rail:true,groupAtStart:'low-1'};
+ assert.equal(resolveNineBall({turn:0,breakShot:false,shot:foulShot,priorFouls:1}).type,'foul');
+ const loss=resolveNineBall({turn:0,breakShot:false,shot:foulShot,priorFouls:2});
+ assert.equal(loss.type,'end');assert.equal(loss.winner,1);assert.equal(loss.reason,'three-fouls');
+});

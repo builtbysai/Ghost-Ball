@@ -1,3 +1,4 @@
+import {PERSONAS,moodScale} from '../src/ai-personas.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Simulation,makeBall} from '../src/physics.js';
@@ -132,7 +133,7 @@ test('Club Pro live opponent yields frames while building the exact same shot',(
    game.turn=1;game.break=false;game.groups=['stripes','solids'];
    game.sim=sparse();
  }
- const synchronous=chooseShot(b.sim,'solids','club',b.random);
+ const synchronous=chooseShot(b.sim,'solids','club',b.random,{persona:PERSONAS.club,mood:moodScale(b.moodLead())});
  a.update(.016);
  assert.ok(a.planIterator,'live opponent should keep partial planning in progress');
  assert.equal(a.previewShot,null,'do not advertise an unfinished predicted shot');

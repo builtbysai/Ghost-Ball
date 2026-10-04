@@ -270,20 +270,33 @@ export class TableRenderer{
    if(aim.showGuide===false){this.drawCue(cue,angle,aim.drawback||0);return;}
    const guideMode=aim.guideMode||'full';
    if(guideMode==='off'){this.drawCue(cue,angle,aim.drawback||0);if(aim.marker)this.drawAimMarker(aim.marker);return;}
-   const guide=projectAim(sim.balls,cue,angle,guideMode==='short'?{maxObjectLength:60,maxCueLength:230}:{});if(!guide)return;
+   const guide=projectAim(sim.balls,cue,angle,guideMode==='short'?{maxObjectLength:60,maxCueLength:230,maxDeflectLength:40}:{});if(!guide)return;
    const [sx,sy]=this.project(cue.x,cue.y),[ex,ey]=this.project(guide.cueEnd.x,guide.cueEnd.y);
-   const scale=this.bw/1000;
+   const scale=this.bw/1000,ballR=Math.max(5,TABLE.radius*scale);
    g.save();g.lineCap='round';
+   // 1. The cue ball's path to contact: a clean line that fades in from the ball.
+   const path=g.createLinearGradient(sx,sy,ex,ey);
+   path.addColorStop(0,'rgba(253,254,252,.28)');path.addColorStop(.35,'rgba(253,254,252,.9)');path.addColorStop(1,'rgba(253,254,252,.95)');
    g.beginPath();g.moveTo(sx,sy);g.lineTo(ex,ey);
-   g.lineWidth=Math.max(1.2,1.8*scale);g.strokeStyle='rgba(253,254,252,.95)';g.stroke();
-   g.beginPath();g.arc(ex,ey,Math.max(5,TABLE.radius*scale),0,TAU);
-   g.lineWidth=1.1;g.strokeStyle='rgba(242,217,160,.65)';g.stroke();
+   g.lineWidth=Math.max(1.2,1.7*scale);g.strokeStyle=path;g.stroke();
+   // 2. The ghost ball: where the cue ball will be when it touches.
+   g.beginPath();g.arc(ex,ey,ballR,0,TAU);
+   g.fillStyle='rgba(255,255,255,.1)';g.fill();g.lineWidth=1.3;g.strokeStyle='rgba(255,255,255,.7)';g.stroke();
    if(guide.target&&guide.objectEnd){
-     const [tx,ty]=this.project(guide.target.x,guide.target.y);
-     const [ox,oy]=this.project(guide.objectEnd.x,guide.objectEnd.y);
-     g.beginPath();g.moveTo(tx,ty);g.lineTo(ox,oy);
-     g.setLineDash([Math.max(3,4*scale),Math.max(4,6*scale)]);
-     g.strokeStyle='rgba(245,219,156,.85)';g.lineWidth=Math.max(1.15,1.9*scale);g.stroke();g.setLineDash([]);
+     const [tx,ty]=this.project(guide.target.x,guide.target.y),[ox,oy]=this.project(guide.objectEnd.x,guide.objectEnd.y);
+     // 3. The struck ball's route: warm gold, solid, fading with distance, with a tip dot.
+     const hit=g.createLinearGradient(tx,ty,ox,oy);
+     hit.addColorStop(0,'rgba(255,214,120,.95)');hit.addColorStop(1,'rgba(255,214,120,.18)');
+     g.beginPath();g.moveTo(tx,ty);g.lineTo(ox,oy);g.lineWidth=Math.max(1.6,2.4*scale);g.strokeStyle=hit;g.stroke();
+     g.beginPath();g.arc(ox,oy,Math.max(1.6,2.2*scale),0,TAU);g.fillStyle='rgba(255,214,120,.5)';g.fill();
+     // 4. The cue ball after contact: a short, thin, cool line off the tangent.
+     if(guide.cueAfter){
+       const [cx,cy]=this.project(guide.cueAfter.x,guide.cueAfter.y);
+       const cut=g.createLinearGradient(ex,ey,cx,cy);
+       cut.addColorStop(0,'rgba(170,222,255,.9)');cut.addColorStop(1,'rgba(170,222,255,.1)');
+       g.beginPath();g.moveTo(ex,ey);g.lineTo(cx,cy);g.setLineDash([Math.max(3,4*scale),Math.max(3,4*scale)]);
+       g.lineWidth=Math.max(1.2,1.7*scale);g.strokeStyle=cut;g.stroke();g.setLineDash([]);
+     }
    }
    if(aim.marker)this.drawAimMarker(aim.marker,scale);
    g.restore();

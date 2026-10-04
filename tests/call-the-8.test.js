@@ -30,7 +30,7 @@ test('a match on call-the-8 refuses an uncalled shot only when the shooter is on
  g.break=false;g.groups=['solids','stripes'];
  assert.equal(g.group,'solids');
  assert.equal(g.beginShot(0.2,.3),true,'no call is needed while shooting at the group');
- g.reset();g.break=false;g.groups=['solids','stripes'];
+ g.reset();g.turn=0;g.break=false;g.groups=['solids','stripes'];
  g.sim.balls.forEach(b=>{if(b.id>0&&b.id<8)b.pocketed=true;});
  assert.equal(g.group,'eight');
  assert.equal(g.beginShot(0.2,.3),false,'on the 8 a pocket must be called');
