@@ -16,6 +16,7 @@ import {readLocalProgress,writeLocalProgress,recordLiveMatch,bestLegalRun,choose
  freshProgress,exportLocalProgress,resetLocalProgress,recordLiveDrill,dayKey,dailySeed,recordDaily,dailySummary,
  CIRCUIT,circuitState,recordCircuitResult} from './player-progress.js';
 import {SKILL_DRILLS,skillDrillById} from './skill-drills.js';
+import {encodeShot,decodeShot,addHighlight} from './highlights.js';
 import {recordSummary} from './record-summary.js';
 import {decisiveShot,POCKET_LABELS} from './match-finish.js';
 import {roomMastery} from './room-mastery.js';
@@ -29,7 +30,7 @@ const newMatchId=()=>globalThis.crypto?.randomUUID?.()||
 let matchEventId=null,drillEventId=null,lockerSelected='house',newlyEarnedCueCount=0;
 let room=clamp(progress.selectedRoom,0,halls.length-1),mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
 let current=null,active='lobby',motion=true,placement=null,pointerMode=null,placeGesture=null;
-let pushOutArmed=false,safetyArmed=false,callManual=false,lastTurnSeen=-1,settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',rules='casual',calledPocket=null,guideMode='full',wheelFine=false,clockSeconds=45,spinKeep=false,gameType='eight';
+let pendingHighlight=null,highlightRun=false,pushOutArmed=false,safetyArmed=false,callManual=false,lastTurnSeen=-1,settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',rules='casual',calledPocket=null,guideMode='full',wheelFine=false,clockSeconds=45,spinKeep=false,gameType='eight';
 let matchElapsed=0,lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let previousShotAngles=[0,0],toastTimeout=null;
@@ -149,6 +150,10 @@ function matchTurn(event){
    });
    // Matches discarded via quit, restart, replay or exhibition can never
    // mint achievements; a finished match is recorded at most once.
+   if(current.bestShot&&(current.bestShot.turn===0||current.players==='local')){
+    saveProgress(addHighlight(progress,{id:matchEventId,at:new Date().toISOString(),pots:current.bestShot.pots,ruleset:current.ruleset,room,
+     shot:encodeShot({balls:current.bestShot.balls,angle:current.bestShot.angle,power:current.bestShot.power,spin:current.bestShot.spin,room,ruleset:current.ruleset,pots:current.bestShot.pots})}));
+   }
    matchEventId=null;
    newlyEarnedCueCount=CUES.filter(cue=>cueUnlocked(updated,cue)&&!previouslyOwned.includes(cue.id)).length;
    saveProgress(updated);
@@ -305,6 +310,35 @@ function closeLocker(){
  if($('lockerSheet').hidden)return;
  hide('lockerSheet');show('clubMenu');$('menuLocker').focus();
 }
+function showHighlights(){
+ const list=progress.highlights||[];
+ setText('recordHighlightCount',String(list.length));
+ const rows=list.map(item=>{
+  const row=document.createElement('div');row.className='record-hl';row.setAttribute('role','listitem');
+  const text=document.createElement('span');
+  const mode=({eight:'8-BALL',nine:'9-BALL',ten:'10-BALL',straight:'STRAIGHT',onepocket:'ONE-POCKET'})[item.ruleset]||'POOL';
+  text.textContent=`${item.pots} balls in one shot`;
+  const sub=document.createElement('small');sub.textContent=`${mode} · ${halls[item.room]?.name||'THE PARLOR'} · ${String(item.at).slice(0,10)}`;text.append(sub);
+  const play=document.createElement('button');play.type='button';play.className='go';play.textContent='REPLAY';play.onclick=()=>playHighlight(item.shot);
+  const copy=document.createElement('button');copy.type='button';copy.textContent='COPY CODE';copy.onclick=()=>copyShotCode(item.shot);
+  row.append(text,play,copy);return row;
+ });
+ if(rows.length)$('recordHighlights').replaceChildren(...rows);
+ else $('recordHighlights').textContent='Pot two or more balls in one shot and your best shot of the match is saved here.';
+}
+async function copyShotCode(code){
+ try{await navigator.clipboard.writeText(code);setText('recordMessage','Shot code copied. Anyone can paste it under Highlights to watch it.');}
+ catch{$('shotCode').value=code;$('shotCode').select();setText('recordMessage','Copy the code from the box below.');}
+}
+/** Replay a saved or pasted shot: a practice table opens, the stored position is re-struck, then it returns to the lobby. */
+function playHighlight(code){
+ const shot=decodeShot(code);
+ if(!shot){setText('recordMessage','That is not a valid shot code.');return;}
+ if(active!=='lobby'){setText('recordMessage','Go back to the lobby to watch a highlight.');return;}
+ hide('recordSheet');hide('settingsSheet');hide('backdrop');
+ pendingHighlight={...shot,turn:0,shot:1};
+ begin('practice');
+}
 function showRecord(){
  const summary=recordSummary(progress);
  setText('recordMatches',String(summary.matches));
@@ -323,6 +357,7 @@ function showRecord(){
   rows.push(empty);
  }
  $('recordHistory').replaceChildren(...rows);
+ showHighlights();
  let label='THIS DEVICE ONLY',reason='';
  if(!progressAccess.writable){
   label=progressAccess.reason==='unsupported-version'?'NEWER SAVED FORMAT':
@@ -456,9 +491,9 @@ function startReplay(){
  game.sim=new Simulation(shot.balls);game.fx=[];game.ballInHand=false;
  if(!game.beginShot(shot.angle,shot.power,shot.spin))return;
  replay={game,settledFor:0,acc:0};
- cancelKeyPull();clearTurnBanner();tableToast('REPLAY · TAP ANYWHERE TO SKIP','hint',2400);turnUI();
+ cancelKeyPull();clearTurnBanner();tableToast(highlightRun?'HIGHLIGHT · TAP ANYWHERE TO SKIP':'REPLAY · TAP ANYWHERE TO SKIP','hint',2400);turnUI();
 }
-function endReplay(){if(!replay)return;replay=null;clearTableToast();turnUI();}
+function endReplay(){if(!replay)return;replay=null;clearTableToast();turnUI();if(highlightRun){highlightRun=false;setTimeout(()=>{if(active==='game'&&current?.kind==='practice')quitToLobby();},250);}}
 function canAct(){return active==='game'&&current&&!rackFlock&&!replay&&!current.pendingChoice&&!current.over&&!current.sim.moving&&!current.isAI()&&!current.ballInHand;}
 function nineBallSlots(container,player){
  const credited=creditedBalls(current.history,player),models=nineSlotModels(credited,current.topBall);
@@ -657,6 +692,7 @@ function begin(kind,drillId=null){
   // Focus leaves the lobby button so Space / Enter / arrows drive the table at once.
   $('gameCanvas').focus({preventScroll:true});
   turnUI();
+  if(pendingHighlight){current.lastShot=pendingHighlight;pendingHighlight=null;highlightRun=true;startReplay();}
  };
  try{flyTable({app:$('app'),source:$('attractCanvas'),target:$('tableArea'),
    from:attract.sim,to:current.sim,hall:room,gameRenderer:table,endBlend:elevatedNow()?0:1,done:finish,isActive:()=>active==='transition'});}
@@ -1011,6 +1047,7 @@ $('pushOutButton').onclick=()=>{if(!current?.pushOutAvailable||!canAct())return;
 const answerChoice=(a)=>{const kind=current?.pendingChoice?.kind;if(!kind)return;current.choose(kind==='break'?(a?'accept':'rerack'):(a?'shoot':'pass'));$('choicePrompt').hidden=true;turnUI();$('gameCanvas').focus({preventScroll:true});};
 $('choiceA').onclick=()=>answerChoice(true);$('choiceB').onclick=()=>answerChoice(false);
 $('replayButton').onclick=()=>{if(replay)endReplay();else startReplay();};
+$('playShotCode').onclick=()=>playHighlight($('shotCode').value);
 $('playAgain').onclick=()=>{if(active==='game'&&current?.over){resetMatch(true);$('gameCanvas').focus();}};
 $('resultMenu').onclick=quitToLobby;
 $('closeSettings').onclick=closeSettings;

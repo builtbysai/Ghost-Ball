@@ -2,6 +2,7 @@
  * No telemetry, account, currency or faux achievements. A newer/corrupt
  * record is never silently replaced by this version of the game.
  */
+import {validHighlights} from './highlights.js';
 import {groupContains} from './casual-rules.js';
 import {skillDrillById,gradeSkillDrill} from './skill-drills.js';
 import {awardRoomMatch,awardRoomDrill} from './room-mastery.js';
@@ -40,6 +41,7 @@ function validProgress(p){
    Object.entries(p.daily).every(([day,shots])=>DAY_KEY.test(day)&&Number.isSafeInteger(shots)&&shots>=1&&shots<=400)))&&
   (p.circuit===undefined||(p.circuit&&typeof p.circuit==='object'&&Number.isInteger(p.circuit.stage)&&p.circuit.stage>=0&&p.circuit.stage<CIRCUIT.length&&
    Number.isSafeInteger(p.circuit.champion)&&p.circuit.champion>=0&&p.circuit.champion<=999))&&
+  validHighlights(p.highlights)&&
   Array.isArray(p.records)&&p.records.length<=RECORD_LIMIT&&
   p.records.every(e=>e&&typeof e.id==='string'&&e.id.length<=128);
 }

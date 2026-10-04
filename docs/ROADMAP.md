@@ -30,6 +30,7 @@
 - [x] **Daily Rack**: a Practice table dealt from today's date (same rack for everyone, replayed on re-rack), fewest shots kept per day, a descriptive days-running count, all local and private. Plus focus-trapped modal sheets with an accessibility smoke test, an installable manifest (512 and maskable icons), and persona initials on the rival token.
 - [x] **Club Circuit**: the lobby tab that was a placeholder is now a four-round ladder (Rookie, Dex, Vera, Club Pro). A win advances, a loss replays the round, the last win crowns a champion count, all local.
 - [x] **Straight pool** (a race to 30, a pocket called on every shot, one point per called-pocket ball, foul -1 and -16 on the third in a row, the 14-ball re-rack around the last ball) and **one-pocket** (own corner pocket each, first to eight, rival-pocket balls count for them, strays are spotted, a foul costs a ball). Both have referee tests, CPU play and stress coverage.
+- [x] **Highlights**: the best multi-ball shot of each finished match is saved locally (best twelve kept) and replays exactly from the stored table plus stroke. Local record lists them with REPLAY and COPY CODE, and any shot code can be pasted to watch it, so sharing needs no server. Codes are validated and bounded.
 - [x] In-game **How to play** sheet (controls, rules, short history) reachable from the Clubhouse menu and the pause menu.
 
 **Currently playable:** only overhead **2D** gameplay. The live lobby has a decorative perspective rendering. Do not revive discarded experimental elevated/3D views or make their settings clickable before new working implementations exist.
@@ -90,7 +91,7 @@
 - [x] Expand 3-stage mastery to the last two halls with new authored physics challenges. Add Circuit/Workshop only after real underlying states exist. Use curated challenges, then bounded procedural variation if playtests justify it.
 - [ ] Add optional achievements/crests and a private local match ledger (streak is descriptive only, never an attendance obligation). Consider short “one perfect shot” challenges and sharable compact seed challenges once replays are trustworthy.
 - [x] (first slice shipped: four personas with distinct selection, miss style and tempo) Improve opponent identity: distinguish named rivals by legal shot selection, positional play, mistakes, safety tactics and shot cadence. Profile every change so Rookie still offers hope and Club Pro still makes humanly plausible mistakes.
-- [ ] Introduce the full replay browser and selectable highlights only when reliable event-based recording, replay-state visuals, finite storage and share/privacy controls work together.
+- [x] (the highlights list, replay and shareable shot codes are in; whole-match replays remain out of scope) Introduce the full replay browser and selectable highlights only when reliable event-based recording, replay-state visuals, finite storage and share/privacy controls work together.
 
 **Exit:** five distinct learnable short challenges and each genuine room milestone have replayable acceptance tests; earning gear demonstrates something accomplished rather than simply elapsed time.
 

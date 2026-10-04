@@ -39,7 +39,7 @@ export class Game {
    this.foul=false;this.ballInHand=false;this.kitchen=false;this.over=false;this.winner=null;
    this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;this.drillOutcome=null;
   this.history=[];this.previewShot=null;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.activeStroke=null;
-  this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';this.points=[0,0];this.credit=new Map();this.pendingChoice=null;this.pushOutAvailable=false;this.lastShot=null;this.foulStreak=[0,0];this.dryTurns=[0,0];
+  this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';this.bestShot=null;this.points=[0,0];this.credit=new Map();this.pendingChoice=null;this.pushOutAvailable=false;this.lastShot=null;this.foulStreak=[0,0];this.dryTurns=[0,0];
   this.notify('A fresh rack. Take your time.');}
  get group(){
   if(this.ruleset==='straight'||this.ruleset==='onepocket')return 'any';
@@ -279,7 +279,10 @@ export class Game {
      if(event.type!=='settled'&&this.kind!=='attract')audio?.play(event);
    }
  }
- resolve(){const shot=this.turnShot;if(!shot)return;this.turnShot=null;this.planIterator=null;if(this.kind==='attract'){this.turn=1-this.turn;this.timer=0;this.break=false;this.previewShot=null;return;}
+ resolve(){const shot=this.turnShot;if(!shot)return;this.turnShot=null;
+   // Remember the best multi-ball shot of the match; the player's best is saved as a highlight at the end.
+   const potted=shot.pots.filter(id=>id>0).length;
+   if(this.kind==='match'&&potted>=2&&this.lastShot&&potted>(this.bestShot?.pots||0))this.bestShot={...this.lastShot,pots:potted};this.planIterator=null;if(this.kind==='attract'){this.turn=1-this.turn;this.timer=0;this.break=false;this.previewShot=null;return;}
    if(this.kind==='drill'){
      const grade=gradeSkillDrill(this.drillId,{shots:this.shots,shot});
      this.history.push({kind:'drill-ruling',drillId:this.drillId,shot:this.shots,
