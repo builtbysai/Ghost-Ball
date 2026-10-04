@@ -16,12 +16,12 @@ const check=(game,label)=>{
  for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++)
   if(Math.hypot(live[i].x-live[j].x,live[i].y-live[j].y)<TABLE.radius*2-1.5)problems.push(`${label}: overlap ${live[i].id}/${live[j].id}`);
 };
-for(const mode of ['eight','official','nine','ten'])for(let i=0;i<racks;i++){
+for(const mode of ['eight','official','nine','ten','straight','onepocket'])for(let i=0;i<racks;i++){
  const ruleset=mode==='official'?'eight':mode;
  const rnd=createRandom(9000+i),ids=[PERSONA_ORDER[rnd()*4|0],PERSONA_ORDER[rnd()*4|0]],label=`${mode}#${i}`;
- const game=new Game({kind:'match',players:'local',seed:700+i,ruleset,official:mode==='official',callEight:mode==='eight'&&i%3===0});
+ const game=new Game({kind:'match',players:'local',seed:700+i,ruleset,target:12,official:mode==='official',callEight:mode==='eight'&&i%3===0});
  let n=0;
- for(;n<260&&!game.over;n++){
+ for(;n<(mode==='onepocket'?900:260)&&!game.over;n++){
   if(game.pendingChoice){game.autoChoose();continue;}
   const persona=PERSONAS[ids[game.turn]];
   if(game.ballInHand){
@@ -31,7 +31,7 @@ for(const mode of ['eight','official','nine','ten'])for(let i=0;i<racks;i++){
   }
   // one shot in five is a wild human stroke
   const wild=rnd()<.2;
-  const plan=game.break?{angle:(rnd()-.5)*.02,power:mode==='eight'||mode==='official'?.85:1}:wild?{angle:rnd()*Math.PI*2,power:.15+rnd()*.85}:chooseShot(game.sim,game.group,persona.tier,game.random,{persona});
+  const plan=game.break?{angle:(rnd()-.5)*.02,power:mode==='eight'||mode==='official'||mode==='straight'?.85:1}:wild?{angle:rnd()*Math.PI*2,power:.15+rnd()*.85}:chooseShot(game.sim,game.group,persona.tier,game.random,{persona});
   const call=game.callsEveryShot||game.needsCall()?(plan.pocket??(rnd()<.5?-1:rnd()*6|0)):null;
   if(!game.beginShot(plan.angle,plan.power,wild?{x:rnd()-.5,y:rnd()-.5}:0,call)){problems.push(`${label}: strike rejected`);break;}
   let k=0;while(game.turnShot&&k++<12000)game.step();

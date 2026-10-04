@@ -22,6 +22,8 @@ export function decisiveShot(history){
    return {label:pocket===null?'NINE':'NINE · '+POCKET_LABELS[pocket],pocket,clean:true};
   case 'ten-potted':
    return {label:pocket===null?'TEN':'TEN · '+POCKET_LABELS[pocket],pocket,clean:true};
+  case 'race-won':
+   return {label:'RACE WON',pocket:null,clean:true};
   case 'three-fouls':
    return {label:'THREE FOULS IN A ROW',pocket:null,clean:false};
   case 'wrong-pocket':

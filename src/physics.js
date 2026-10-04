@@ -58,6 +58,32 @@ export function rackTen(seed=0){
   }));
   return balls;
 }
+/** Straight pool: put the pocketed object balls back into the triangle around whatever is still on the
+ * table (the apex stays open when nothing blocks the rack). Mutates the given balls; returns how many returned. */
+export function reRackStraight(balls){
+  const slots=rack(0).filter(b=>b.id>0).map(b=>({x:b.x,y:b.y,used:false}));
+  const live=balls.filter(b=>b.id>0&&!b.pocketed);
+  // A survivor already sitting in the rack area becomes part of the rack: it snaps to its nearest slot.
+  for(const ball of live){
+    let best=null,bestD=Infinity;
+    for(const slot of slots){const d=Math.hypot(ball.x-slot.x,ball.y-slot.y);if(!slot.used&&d<bestD){best=slot;bestD=d;}}
+    if(best&&bestD<TABLE.radius*3){best.used=true;ball.x=best.x;ball.y=best.y;ball.vx=ball.vy=0;}
+  }
+  const cue=balls.find(b=>b.id===0&&!b.pocketed);
+  const slotFree=(slot,blockers)=>!slot.used&&blockers.every(b=>Math.hypot(b.x-slot.x,b.y-slot.y)>=TABLE.radius*2-.01);
+  const need=balls.filter(b=>b.id>0&&b.pocketed).length;
+  let free=slots.filter(slot=>slotFree(slot,cue?[...live,cue]:live));
+  // A cue ball parked in the rack area would block slots: it goes back to the head spot instead.
+  if(cue&&free.length<need){cue.x=252;cue.y=250;cue.vx=cue.vy=0;free=slots.filter(slot=>slotFree(slot,live));}
+  const usable=free.length>need?free.slice(free.length-need):free;
+  let placed=0;
+  for(const ball of balls){
+    if(ball.id<=0||!ball.pocketed||placed>=usable.length)continue;
+    const slot=usable[placed++];
+    ball.x=slot.x;ball.y=slot.y;ball.vx=ball.vy=0;ball.slipX=ball.slipY=0;ball.spin=0;ball.follow=0;ball.pocketed=false;
+  }
+  return placed;
+}
 /** Radial well capture before cushion response. Mouth guards provide an approach corridor. */
 function pocketFor(ball){
   // A ball creeping slowly over a pocket lip has nothing left to carry it

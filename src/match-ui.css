@@ -199,3 +199,6 @@
 #gameScreen .choice-actions button{min-height:36px;padding:0 14px;border-radius:99px;border:1px solid #ffffff2a;background:#ffffff10;color:#f2ede2;font:800 11px system-ui;letter-spacing:.06em;cursor:pointer}
 #gameScreen .choice-actions button:first-child{background:linear-gradient(#f2dcab,#d6b36e);color:#1c2b23;border-color:#f3deb0}
 @media (max-height:420px){#gameScreen .choice-prompt{top:8%;padding:8px 12px}#gameScreen .choice-prompt p{margin:2px 0 6px;font-size:11px}}
+
+/* straight pool shows points instead of ball trays */
+#gameScreen .ball-slots[data-game="straight"]{display:none}

@@ -133,3 +133,6 @@ See [interaction research and copy boundaries](docs/REFERENCE-CONTROLS.md). Keep
 
 ## Second pass 2026-10-04: flow, personas, exhibitions, aim guide, music
 See `docs/FLOW-AND-AUDIO-RESEARCH-2026-10.md`. Turn changes are a slim chip above the table, fine aim is much finer, no dots over pockets, circular player tokens with the shot clock as the ring, a two-line aim guide (object ball and a short cue-ball deflection), four named CPU personas, watched AI-vs-AI exhibitions, lounge music, and nine-ball legal-break and three-foul rules.
+
+## Game modes
+8-ball (casual, Call the 8, Official WPA-style), 9-ball (legal break, three-foul, push-out), 10-ball (call the last ball), straight pool (race to 30) and one-pocket, all against Rookie, Dex, Vera or Club Pro, plus two-player, the Club Circuit, the Daily Rack and watched exhibitions. `node scripts/stress.mjs` stress-tests every ruleset.

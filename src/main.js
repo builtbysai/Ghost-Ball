@@ -89,15 +89,17 @@ function recapFor(event){
   const tail=`${next} ${next==='You'?'have':'has'} ball in hand${event.kitchen?' behind the head line':''}.`;
   if(event.reason==='shot-clock')return `${seatName(offender)}${seatName(offender)==='You'?'r':"'s"} shot clock expired. ${tail}`;
   const warn=event.foulWarning==='three-fouls'?` ${seatName(offender)} ${seatName(offender)==='You'?'have':'has'} fouled twice in a row: one more loses the rack.`:'';
-  return `${seatName(offender)} fouled: ${why}. ${tail}${warn}`;
+  return `${seatName(offender)} fouled: ${why}${event.penalty?` (${event.penalty})`:''}. ${tail}${warn}`;
  }
  const shooter=event.shooter??turn,name=seatName(shooter),potted=event.potted||[];
  if(event.type==='choice')return event.choice==='break'?`${name}${name==='You'?'r':"'s"} break was illegal. ${next} ${next==='You'?'choose':'chooses'}: accept the table or re-rack.`:`${name} pushed out. ${next} ${next==='You'?'shoot':'shoots'} or ${next==='You'?'pass':'passes'} it back.`;
  if(event.type==='rerack')return `Re-racked. ${next} ${next==='You'?'break':'breaks'}.`;
  if(event.accepted)return `${next} accepted the table.`;
  if(event.decision)return `${seatName(event.turn)} ${event.decision==='shoot'?'shoots from the push-out':'passed it back'}.`;
- const extra=event.safety?' Safety.':(event.uncounted?.length?` ${ballList(event.uncounted)} dropped but was not called.`:'');
- const potText=(potted.length?`${name} potted ${ballList(potted)}.`:`${name} missed.`)+extra;
+ const extra=(event.safety?' Safety.':(event.uncounted?.length?` ${ballList(event.uncounted)} dropped but was not called.`:''))+
+  (event.theirs?.length?` ${ballList(event.theirs)} went in ${seatName(1-shooter)}${seatName(1-shooter)==='You'?'r':"'s"} pocket.`:'')+(event.spotted?.length?` ${ballList(event.spotted)} spotted.`:'');
+ const score=event.points?` ${event.points[shooter]} / ${event.target}.`:'';
+ const potText=(potted.length?`${name} potted ${ballList(potted)}.`:`${name} missed.`)+extra+score+(event.reracked?' Re-racked.':'');
  if(event.assignment)return `${potText} ${seatName(shooter)==='You'?'You have':name+' has'} ${event.assignment}.`;
  if(event.retain){
   let run=0;for(let i=current.history.length-1;i>=0;i--){const h=current.history[i];if(h.kind==='ruling'&&h.shooter===shooter&&h.result==='retain')run++;else break;}
@@ -141,7 +143,7 @@ function matchTurn(event){
     at:new Date().toISOString(),shots:current.shots,winner:current.winner,
     players:current.players,difficulty:current.difficulty,persona:current.persona.id,room,
     reason:event.reason,
-    bestRun:current.rotation?nineBestRun(current.history,0):current.players==='local'
+    bestRun:current.ruleset==='straight'||current.ruleset==='onepocket'?Math.min(15,straightBestRun(current.history,0)):current.rotation?nineBestRun(current.history,0):current.players==='local'
       ?Math.max(bestLegalRun(current.history,0),bestLegalRun(current.history,1))
       :bestLegalRun(current.history,0)
    });
@@ -163,6 +165,7 @@ function matchTurn(event){
  const watching=current.players==='ai',local=current.players==='local'||watching,human=event.turn===0&&!watching;
  const who=watching?seatName(event.turn).toUpperCase():local?`PLAYER ${event.turn+1}`:human?'YOU':'RIVAL';
  calledPocket=null;
+ if(event.reracked){finishRackFlock();startRackFlock(event.before);lastScoreSignature='';}
  if(current.kind==='match')setRecap(recapFor(event),event.type==='foul'?'foul':'');
  const incoming=watching?`${who}'S TURN`:local?`PLAYER ${event.turn+1}'S TURN`:human?'YOUR TURN':`${seatName(1).toUpperCase()}'S TURN`;
  if(event.type==='foul'){
@@ -217,10 +220,12 @@ function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice'||m
 function closeSetup(){const wasOpen=!$('setupSheet').hidden;hide('setupSheet');if($('settingsSheet').hidden)hide('backdrop');if(wasOpen)$('openSetup').focus();}
 const SETUP_NOTES={eight:'8-ball, casual: no called shots. Call the 8: when you are down to the black, name its pocket first; any other pocket loses the rack.',
  nine:'9-ball: hit the lowest ball first, break hard (pot a ball or four to a cushion), pot the 9 to win. Three fouls in a row lose the rack.',
+ onepocket:'One-pocket: you own one corner pocket and your rival the other. First to eight balls in their own pocket wins; a foul costs you a ball.',
+ straight:'Straight pool: a race to 30. A pocket is called on every shot and only those balls score; fouls cost a point; one ball left means a re-rack of the other fourteen.',
  ten:'10-ball: like 9-ball, but the 10 only wins when it is the last ball and you call its pocket. A 10 potted any other way goes back on the table.'};
 function syncGameType(){
  all('#gameType [data-game]').forEach(b=>{const on=b.dataset.game===gameType;b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
- const rotation=gameType==='nine'||gameType==='ten';
+ const rotation=gameType!=='eight';
  $('ruleset').closest('.setting').hidden=rotation||mode==='practice'||mode==='circuit';
  setText('setupNote',SETUP_NOTES[gameType]);
 }
@@ -416,11 +421,17 @@ function closeGuide(){
  else{show('clubMenu');$('menuGuide').focus();}
 }
 function openMenu(){const d=dailySummary(progress);setText('dailySub',d.today!==null?`Cleared in ${d.today} shots today${d.streak>1?` · ${d.streak} days running`:''}`:d.streak>0?`${d.streak} days running · clear today's`:'One rack, the same for everyone today');show('clubMenu');$('closeMenu').focus();}
-function refreshMenu(){const ball=gameType==='nine'?'9-Ball':gameType==='ten'?'10-Ball':'8-Ball';
+function refreshMenu(){const ball=gameType==='nine'?'9-Ball':gameType==='ten'?'10-Ball':gameType==='straight'?'Straight pool':gameType==='onepocket'?'One-pocket':'8-Ball';
   const circuitStage=circuitState(progress),circuitPersona=personaFor(CIRCUIT[circuitStage.stage]);
   setText('matchSummary',mode==='circuit'?`Round ${circuitStage.stage+1} of ${CIRCUIT.length} · ${circuitPersona.name}`:mode==='practice'?'Open practice table':(rival==='local'?`${ball} · Two players`:`${ball} vs ${personaFor(rival).name}`)+(gameType==='eight'&&rules!=='casual'?` · ${rules==='official'?'Official':'Call the 8'}`:''));
   setText('playSubtitle',mode==='circuit'?`${circuitPersona.style.toUpperCase()}${circuitStage.champion?` · CHAMPION ×${circuitStage.champion}`:''}`:mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`CASUAL ${ball.toUpperCase()} · NO ENTRY FEE`);
   all('.mode[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));}
+/** One short phrase for how the rack ended, from the referee's own reason. */
+function finishText(reason){
+ return ({'eight-cleared':'CLEAN 8-BALL','nine-potted':'LEGAL 9','ten-potted':'CALLED 10',
+  'race-won':current?.points?`${current.points[0]}–${current.points[1]} POINTS`:'RACE WON','three-fouls':'THREE FOULS IN A ROW',
+  'wrong-pocket':'WRONG POCKET','early-eight':'EARLY 8','scratch-on-eight':'SCRATCH ON THE 8','wrong-ball-first':'WRONG BALL FIRST'})[reason]||'FINISHED';
+}
 function circuitNote(){
  if(!circuitRun||current.players!=='cpu')return '';
  if(current.winner!==0)return ` · CIRCUIT ROUND ${circuitRun.stage+1}: TRY AGAIN`;
@@ -464,6 +475,7 @@ function nineBallSlots(container,player){
  container.setAttribute('aria-label',credited.length?`Potted: ${credited.join(', ')}`:'No balls potted yet');
 }
 function ballSlots(container,player){
+ if(current.ruleset==='straight'||current.ruleset==='onepocket'){container.dataset.game='straight';container.replaceChildren();container.setAttribute('aria-label',`${current.points[player]} of ${current.target} points`);return;}
  if(current.rotation){nineBallSlots(container,player);return;}
  delete container.dataset.game;
  const group=current.groups[player],pocketed=current.sim.balls.filter(b=>b.pocketed).map(b=>b.id);
@@ -497,6 +509,12 @@ function ballSlots(container,player){
 }
 /** Honest per-seat numbers from the referee log: balls potted and fouls committed. */
 /** Most balls potted legally in one visit: the nine-ball run. */
+/** Most points scored in one visit at straight pool. */
+function straightBestRun(history,seat){
+ let best=0,run=0;
+ for(const h of history||[]){if(h?.kind!=='ruling')continue;if(h.shooter!==seat){run=0;continue;}run+=Math.max(0,h.gained||0);best=Math.max(best,run);if(h.result!=='retain')run=0;}
+ return best;
+}
 function nineBestRun(history,seat){
  let run=0,best=0;
  for(const e of history){if(e?.kind!=='ruling')continue;if(e.shooter!==seat||e.result==='foul'){run=0;continue;}
@@ -522,7 +540,9 @@ function turnUI(){if(!current)return;
  setText('turnLabel',current.over?drill?'DRILL FINISHED':'FINISHED':drill?'SKILL DRILL':current.ballInHand?passAndPlay?`P${current.turn+1} PLACING`:current.players==='ai'?`${seatName(current.turn).toUpperCase()} PLACING…`:current.isAI()?`${seatName(1).toUpperCase()} PLACING…`:'BALL IN HAND':current.kind==='practice'?(dailyDay?'DAILY RACK':'PRACTICE'):current.kind==='attract'?'EXHIBITION':current.break?passAndPlay?`P${current.turn+1} BREAK`:'THE BREAK':passAndPlay?`P${current.turn+1} TURN`:current.players==='ai'?`${seatName(current.turn).toUpperCase()}'S SHOT`:current.turn===0?'YOUR TURN':`${seatName(1).toUpperCase()}'S TURN`);
  $('turnLabel').setAttribute('aria-label',passAndPlay?`Player ${current.turn+1}${current.ballInHand?' placing cue ball':current.break?' breaking':' to shoot'}`:$('turnLabel').textContent);
  const nineLabel=seat=>`${creditedBalls(current.history,seat).length} POTTED`;
- const p1=current.rotation?nineLabel(0):current.groups[0]?.toUpperCase()||'OPEN TABLE',p2=current.rotation?nineLabel(1):current.groups[1]?.toUpperCase()||'OPEN TABLE';
+ const pointsLabel=seat=>`${current.points[seat]} / ${current.target} PTS`;
+ const scored=current.ruleset==='straight'||current.ruleset==='onepocket';
+ const p1=scored?pointsLabel(0):current.rotation?nineLabel(0):current.groups[0]?.toUpperCase()||'OPEN TABLE',p2=scored?pointsLabel(1):current.rotation?nineLabel(1):current.groups[1]?.toUpperCase()||'OPEN TABLE';
  $('playerOne').innerHTML=drill?`YOU <small>${current.shots} / ${drillInfo.attempts} SHOTS · ONE TARGET</small>`:
    practice?`YOU <small>${current.shots} SHOTS · ${current.sim.balls.filter(b=>b.id!==0&&b.pocketed).length} POCKETED</small>`:`${current.players==='ai'?current.personaAt(0).name.toUpperCase():current.players==='local'?'PLAYER ONE':'YOU'} <small>${p1}</small>`;
  $('playerTwo').innerHTML=`${current.players==='ai'?current.personaAt(1).name.toUpperCase():current.players==='local'?'PLAYER TWO':current.persona.name.toUpperCase()} <small>${p2}</small>`;
@@ -536,7 +556,7 @@ function turnUI(){if(!current)return;
   setText('matchResultTitle',drill?current.drillOutcome==='completed'?'DRILL COMPLETE':'TRY AGAIN':practice?(dailyDay?'DAILY RACK CLEARED':'TABLE CLEARED'):`${player} ${player==='YOU'?'WIN':'WINS'}`);
   setText('playAgain',drill?'RETRY DRILL ↻':current.players==='ai'?'NEXT EXHIBITION ↻':circuitRun?(current.winner!==0?'REPLAY ROUND ↻':circuitState(progress).stage===0?'RUN THE CIRCUIT AGAIN ↻':'NEXT ROUND ↻'):"RACK 'EM AGAIN ↻");
   const finalReason=current.history.at(-1)?.reason;
-  const resultKind=practice?'practice':finalReason==='eight-cleared'||finalReason==='nine-potted'||finalReason==='ten-potted'?'clean':'foul';
+  const resultKind=practice?'practice':finalReason==='eight-cleared'||finalReason==='nine-potted'||finalReason==='ten-potted'||finalReason==='race-won'?'clean':'foul';
   $('matchResult').dataset.finish=resultKind;
   const last=drill||practice?null:decisiveShot(current.history);
   $('resultLastShot').hidden=!last;
@@ -557,7 +577,7 @@ function turnUI(){if(!current)return;
         'no-bank':'NO CUSHION BANK · TRY AGAIN'})[current.history.at(-1)?.reason]||'RESET AND TRY AGAIN');
    }else
   setText('matchResultDetail',practice?(dailyDay?(()=>{const d=dailySummary(progress,dailyDay);return `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · BEST TODAY ${d.today??current.shots}${d.streak>1?` · ${d.streak} DAYS RUNNING`:''}`;})():`${current.shots} ${current.shots===1?'SHOT':'SHOTS'} THIS SESSION`):
-     `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · `+(current.players==='local'||current.players==='ai'?'':(()=>{const s=seatStats(current.history,0);return `YOU POTTED ${s.potted} · ${s.fouls} ${s.fouls===1?'FOUL':'FOULS'} · `;})())+`${resultKind==='clean'?(current.ruleset==='nine'?'LEGAL 9':'CLEAN 8-BALL'):resultKind==='foul'&&current.history.at(-1)?.reason==='wrong-pocket'?'WRONG POCKET':'FOUL ON THE 8'}`+
+     `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · `+(current.players==='local'||current.players==='ai'?'':(()=>{const s=seatStats(current.history,0);return `YOU POTTED ${s.potted} · ${s.fouls} ${s.fouls===1?'FOUL':'FOULS'} · `;})())+finishText(finalReason)+
      (newlyEarnedCueCount?` · ${newlyEarnedCueCount} ${newlyEarnedCueCount===1?'CUE':'CUES'} EARNED`:'')+(circuitRun?circuitNote():''));
  }
  const seconds=Math.ceil(current.shotRemaining);
@@ -594,7 +614,7 @@ function turnUI(){if(!current)return;
  updatePlacementTools();
  const officialHelp=()=>{const c=callForShot();return safetyArmed?'SAFETY · NO POCKET CALLED · F TO CANCEL':c>=0?`${callManual?'CALLED':'CALLING'} ${POCKET_LABELS[c]} · TAP A POCKET TO CHANGE · F FOR SAFETY`:'NO POCKET IN LINE · TAP A POCKET TO CALL, OR SHOOT A SAFETY';};
  const help=drill&&!current.over?drillInfo.brief:officialCalls()&&!current.ballInHand&&!busy?officialHelp():callingNeeded()&&!current.ballInHand&&!busy?(calledPocket===null?`CALL THE ${callBall()} · TAP A POCKET (OR PRESS C)`:`${callBall()} CALLED · ${POCKET_LABELS[calledPocket]} · TAP ANOTHER TO CHANGE`):
-  current.rotation&&!current.ballInHand&&!current.over&&!current.isAI()&&!busy?`HIT THE ${current.group.slice(4)} FIRST · POT THE ${current.topBall} TO WIN`:current.ballInHand&&!current.over&&!current.isAI()?current.kitchen?'BEHIND THE HEAD LINE ONLY · DRAG TO PLACE':'TAP TO PREVIEW · DRAG TO PLACE':'';
+  current.ruleset==='onepocket'&&!current.ballInHand&&!current.over&&!current.isAI()&&!busy?`YOUR POCKET: ${POCKET_LABELS[current.ownerPockets[0]]} · FIRST TO ${current.target}`:current.rotation&&!current.ballInHand&&!current.over&&!current.isAI()&&!busy?`HIT THE ${current.group.slice(4)} FIRST · POT THE ${current.topBall} TO WIN`:current.ballInHand&&!current.over&&!current.isAI()?current.kitchen?'BEHIND THE HEAD LINE ONLY · DRAG TO PLACE':'TAP TO PREVIEW · DRAG TO PLACE':'';
  setText('guideBadge',help);
  $('guideBadge').classList.toggle('is-visible',Boolean(help));
  $('guideBadge').style.opacity=busy?'0':'.95';
@@ -663,7 +683,7 @@ function pauseMatch(){
  const clock=`${String(Math.floor(matchElapsed/60)).padStart(2,'0')}:${String(Math.floor(matchElapsed%60)).padStart(2,'0')}`;
  const opponent=current?.players==='local'?'Two players':current?.players==='ai'?`${current.personaAt(0).name} vs ${current.personaAt(1).name}`:`vs ${personaFor(rival).name}`;
  setText('pauseSummary',current?.kind==='practice'?(dailyDay?`Daily rack · ${dayKey()}`:`Practice table · ${clock}`):current?.kind==='drill'?'Skill challenge':current?.kind==='attract'?'Exhibition table':
-  `${opponent} · ${current?.ruleset==='nine'?'Casual 9-ball':current?.ruleset==='ten'?'Ten-ball, call the 10':current?.official?'Official 8-ball':current?.callEight?'Call the 8':'Casual 8-ball'} · ${clock}`);
+  `${opponent} · ${current?.ruleset==='nine'?'Casual 9-ball':current?.ruleset==='ten'?'Ten-ball, call the 10':current?.ruleset==='straight'?`Straight pool, race to ${current.target}`:current?.ruleset==='onepocket'?'One-pocket, first to 8':current?.official?'Official 8-ball':current?.callEight?'Call the 8':'Casual 8-ball'} · ${clock}`);
  show('pauseMenu');$('resumeMatch').focus();
 }
 function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('gameCanvas').focus({preventScroll:true});turnUI();}
@@ -874,7 +894,7 @@ function setSound(on){
  savePreference('ghostball-sound',on?'on':'off');syncMute();
 }
 // "Call the 8": on the 8 the shooter names a pocket first (tap it, or press C).
-const callingNeeded=()=>Boolean(current?.needsCall()&&!current.official&&!current.isAI()&&!current.over);
+const callingNeeded=()=>Boolean(current?.needsCall()&&!current.callsEveryShot&&!current.isAI()&&!current.over);
 // Official 8-ball: a pocket is called on every shot. It is read from the aim, tapping a pocket overrides it, F declares a safety.
 const officialCalls=()=>Boolean(current?.callsEveryShot&&!current.isAI()&&!current.over);
 function autoPocket(){
@@ -1288,7 +1308,7 @@ for(const type of ['pointerdown','keydown'])window.addEventListener(type,()=>aud
 window.addEventListener('blur',cancelKeyPull);
 window.addEventListener('pagehide',()=>audio.suspend());
  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelKeyPull();audio.suspend();}else audio.resume();});
- try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';audio.musicOn=localStorage.getItem('ghostball-music')!=='off';tableView=localStorage.getItem('ghostball-view')==='elevated'?'elevated':'overhead';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';const savedAim=localStorage.getItem('ghostball-aim-mode');if(AIM_MODES.includes(savedAim))aimMode=savedAim;rules=['call8','official'].includes(localStorage.getItem('ghostball-rules'))?localStorage.getItem('ghostball-rules'):'casual';const g=localStorage.getItem('ghostball-guide');if(['full','short','off'].includes(g))guideMode=g;gameType=['nine','ten'].includes(localStorage.getItem('ghostball-game'))?localStorage.getItem('ghostball-game'):'eight';wheelFine=localStorage.getItem('ghostball-wheel')==='fine';spinKeep=localStorage.getItem('ghostball-spin')==='keep';clockSeconds=localStorage.getItem('ghostball-clock')==='0'?0:45;}catch{}
+ try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';audio.musicOn=localStorage.getItem('ghostball-music')!=='off';tableView=localStorage.getItem('ghostball-view')==='elevated'?'elevated':'overhead';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';const savedAim=localStorage.getItem('ghostball-aim-mode');if(AIM_MODES.includes(savedAim))aimMode=savedAim;rules=['call8','official'].includes(localStorage.getItem('ghostball-rules'))?localStorage.getItem('ghostball-rules'):'casual';const g=localStorage.getItem('ghostball-guide');if(['full','short','off'].includes(g))guideMode=g;gameType=['nine','ten','straight','onepocket'].includes(localStorage.getItem('ghostball-game'))?localStorage.getItem('ghostball-game'):'eight';wheelFine=localStorage.getItem('ghostball-wheel')==='fine';spinKeep=localStorage.getItem('ghostball-spin')==='keep';clockSeconds=localStorage.getItem('ghostball-clock')==='0'?0:45;}catch{}
  syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();syncClock();syncRules();syncGameType();syncMute();syncAim();
 syncSpin();syncEquippedCue();
 applyRoom();refreshMenu();hide('gameScreen');
@@ -1328,7 +1348,7 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
    const cpuPose=g.isAI()?g.presentedCue:null;
    const zone=active==='game'&&!g.over&&!g.sim.moving&&!g.isAI()
      ?g.ballInHand?(g.kitchen?'break':'all'):pointerMode==='break-place'?'break':null:null;
-    const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over&&!g.ballInHand&&pointerMode!=='break-place',aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike,marker:liveMarker(now),guideMode},placement,placementZone:zone,fx:motion?g.fx:[],targetBall:g.rotation&&!g.over&&!g.sim.moving&&!g.ballInHand?Number(g.group.slice(4)):null,callPocket:g.official&&g.callsEveryShot?(g.isAI()?(g.previewShot?.pocket??null):(g.sim.moving||g.over?null:(()=>{const c=callForShot();return c>=0?c:null;})())):g.needsCall()?(g.isAI()?(g.previewShot?.pocket??null):calledPocket):null,callLabel:g.official&&g.callsEveryShot?'':g.ruleset==='ten'?10:8};
+    const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over&&!g.ballInHand&&pointerMode!=='break-place',aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike,marker:liveMarker(now),guideMode},placement,placementZone:zone,fx:motion?g.fx:[],targetBall:g.rotation&&!g.over&&!g.sim.moving&&!g.ballInHand?Number(g.group.slice(4)):null,callPocket:g.official&&g.callsEveryShot?(g.isAI()?(g.previewShot?.pocket??null):(g.sim.moving||g.over?null:(()=>{const c=callForShot();return c>=0?c:null;})())):g.needsCall()?(g.isAI()?(g.previewShot?.pocket??null):calledPocket):null,callLabel:g.official&&g.callsEveryShot?'':g.ruleset==='ten'?10:8,pocketOwners:g.ruleset==='onepocket'?g.ownerPockets:null,pocketOwnerNames:g.ruleset==='onepocket'?[g.players==='ai'?g.personaAt(0).initial:g.players==='local'?'1':'YOU',g.players==='ai'?g.personaAt(1).initial:g.players==='local'?'2':g.persona.initial]:null};
    table.draw(g.sim,frame);uiTimer+=elapsed;if(uiTimer>.2){turnUI();uiTimer=0;}}
 }
 requestAnimationFrame(frame);

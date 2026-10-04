@@ -11,7 +11,7 @@ export const PROGRESS_VERSION=1;
 /** The Club Circuit: beat each named opponent in turn. A win advances; a loss replays the round. */
 export const CIRCUIT=Object.freeze(['rookie','dex','vera','club']);
 const RECORD_LIMIT=80,DAILY_LIMIT=60,DAY_KEY=/^\d{4}-\d\d-\d\d$/;
-const FINISH_REASONS=new Set(['eight-cleared','early-eight','scratch-on-eight','wrong-ball-first','wrong-pocket','nine-potted','ten-potted','three-fouls']);
+const FINISH_REASONS=new Set(['eight-cleared','early-eight','scratch-on-eight','wrong-ball-first','wrong-pocket','nine-potted','ten-potted','three-fouls','race-won']);
 
 export function freshProgress(){
  return {version:PROGRESS_VERSION,matchesPlayed:0,vsCpuWins:0,vsCpuLosses:0,
