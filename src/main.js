@@ -644,9 +644,9 @@ function syncAim(){
 function nudgeAim(direction,fine){angle+=direction*aimStep(fine);syncAim();}
 // Hold-to-pull keyboard shot. Power ramps on a timer, never on OS key repeat.
 let keyPull=null;
-function beginKeyPull(){
+function beginKeyPull(stamp=performance.now()){
  if(keyPull||!canAct()||powerControl.isDragging())return;
- keyPull={start:performance.now()};
+ keyPull={start:performance.now(),downStamp:stamp};
  audio.unlock();
 }
 function tickKeyPull(now){
@@ -658,9 +658,11 @@ function cancelKeyPull(){
  if(!keyPull)return;
  keyPull=null;powerControl.reset();setPower(50);setText('powerValue','PULL ↓');
 }
-function releaseKeyPull(){
+function releaseKeyPull(stamp=performance.now()){
  if(!keyPull)return;
- const held=(performance.now()-keyPull.start)/1000;
+ // Judge the hold by when the keys were pressed, not when a busy frame got
+ // around to handling them: a slow device must not turn a tap into a shot.
+ const held=Math.max(0,stamp-keyPull.downStamp)/1000;
  // A tap is not a shot: it silently cancels so accidental presses never dribble.
  if(held<KEY_PULL_MIN_HOLD||!canAct()){cancelKeyPull();return;}
  tickKeyPull(performance.now());
@@ -909,14 +911,14 @@ window.addEventListener('keydown',e=>{
    // Buttons keep their native Space activation.
    if(onButton)return;
    e.preventDefault();
-   if(!e.repeat&&canAct()){keyboardHint();beginKeyPull();}
+   if(!e.repeat&&canAct()){keyboardHint();beginKeyPull(e.timeStamp);}
   }
   else if(e.key==='Enter'){if(!onButton&&!keyPull){e.preventDefault();fire();}}
   else if(key==='m'&&!e.repeat){setSound(!audio.enabled);}
   else if(key==='r'){pauseMatch();}
 });
 window.addEventListener('keyup',e=>{
- if(e.code==='Space'&&keyPull){e.preventDefault();releaseKeyPull();}
+ if(e.code==='Space'&&keyPull){e.preventDefault();releaseKeyPull(e.timeStamp);}
 });
 window.addEventListener('blur',cancelKeyPull);
 window.addEventListener('pagehide',()=>audio.suspend());
