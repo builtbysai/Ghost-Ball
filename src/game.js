@@ -13,7 +13,7 @@ export const HEAD_STRING=265;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 const nowMs=()=>typeof performance!=='undefined'?performance.now():Date.now();
 export class Game {
- constructor({kind='attract',players='cpu',difficulty='rookie',persona=null,seats=null,fixedRack=false,official=false,target=30,seed=Date.now(),drillId=null,ruleset='eight',callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
+ constructor({kind='attract',players='cpu',difficulty='rookie',persona=null,seats=null,fixedRack=false,official=false,target=30,localSeat=0,seed=Date.now(),drillId=null,ruleset='eight',callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
   this.ruleset=(ruleset==='nine'||ruleset==='ten'||ruleset==='straight'||ruleset==='onepocket')&&(kind==='match'||kind==='attract')?ruleset:'eight';
   // Straight pool is a race to `target` points (one per called-pocket ball).
   this.target=this.ruleset==='onepocket'?8:Math.max(5,Math.min(150,Number(target)||30));
@@ -24,7 +24,7 @@ export class Game {
   this.callEight=Boolean(callEight)&&kind==='match'&&this.ruleset==='eight';
   // 0 turns the shot clock off (relaxed games); any positive value is whole seconds per shot.
   this.shotClockSeconds=Number.isFinite(shotClock)&&shotClock>0?Math.round(shotClock):0;
-  this.kind=kind;this.players=players;this.fixedRack=fixedRack;this.officialRequested=official;
+  this.kind=kind;this.players=players;this.localSeat=localSeat===1?1:0;this.remotePose=null;this.fixedRack=fixedRack;this.officialRequested=official;
   // `persona` picks the named CPU; `difficulty` stays the planner tier that records and unlocks see.
   // An exhibition (players:'ai') seats two personas and plays a fully refereed match with no human.
   this.persona=personaFor(persona||difficulty);this.seatPersonas=seats?seats.map(personaFor):null;
@@ -52,7 +52,12 @@ export class Game {
  /** Nine- and ten-ball share the rotation referee; only the last ball differs. */
  get rotation(){return this.ruleset==='nine'||this.ruleset==='ten';}
  get topBall(){return this.ruleset==='ten'?10:9;}
- isAI(){return this.kind==='attract'||this.players==='ai'||(this.players==='cpu'&&this.turn===1);}
+ /** A computer decides this turn. */
+ isCpu(){return this.kind==='attract'||this.players==='ai'||(this.players==='cpu'&&this.turn===1);}
+ /** Online play: the other person holds the cue this turn. */
+ isRemote(){return this.players==='online'&&this.turn!==this.localSeat;}
+ /** True whenever this device does not control the current turn (a CPU or a remote player). */
+ isAI(){return this.isCpu()||this.isRemote();}
  /** The incoming player's answer to a pending referee choice: 'accept' / 'rerack' (illegal break) or 'shoot' / 'pass' (push-out). */
  choose(option){
    const choice=this.pendingChoice;if(!choice||this.over)return false;
@@ -73,6 +78,30 @@ export class Game {
      this.onTurn({type:'turn',turn:this.turn,shooter:choice.seat,potted:[],retain:false,assignment:null,pushedOut:true,decision:'pass'});return true;
    }
    return false;
+ }
+ /** The compact authoritative state a host sends to (re)sync a replica. */
+ exportState(){
+   return {v:1,balls:this.sim.snapshot().balls,turn:this.turn,groups:[...this.groups],break:this.break,ballInHand:this.ballInHand,
+     kitchen:this.kitchen,foul:this.foul,over:this.over,winner:this.winner,shots:this.shots,points:[...this.points],credit:[...this.credit],
+     pendingChoice:this.pendingChoice?{...this.pendingChoice}:null,pushOutAvailable:this.pushOutAvailable,foulStreak:[...this.foulStreak],
+     dryTurns:[...this.dryTurns],history:this.history,rackSeed:this.rackSeed,shotRemaining:this.shotRemaining};
+ }
+ /** Replace this game's state with a host's checkpoint. Returns false (and changes nothing) if it is malformed. */
+ importState(state){
+   const ok=n=>Number.isFinite(n);
+   if(!state||state.v!==1||!Array.isArray(state.balls)||state.balls.length<2||state.balls.length>16||![0,1].includes(state.turn)||
+      !state.balls.every(b=>b&&Number.isInteger(b.id)&&ok(b.x)&&ok(b.y)&&ok(b.vx)&&ok(b.vy))||!Array.isArray(state.history))return false;
+   this.sim.loadSnapshot({balls:state.balls,moving:false,elapsed:this.sim.elapsed});
+   for(const b of this.sim.balls){b.vx=b.vy=0;}
+   this.sim.moving=false;
+   Object.assign(this,{turn:state.turn,groups:[...state.groups],break:Boolean(state.break),ballInHand:Boolean(state.ballInHand),
+     kitchen:Boolean(state.kitchen),foul:Boolean(state.foul),over:Boolean(state.over),winner:state.winner??null,shots:state.shots|0,
+     points:[...(state.points||[0,0])],credit:new Map(state.credit||[]),pendingChoice:state.pendingChoice?{...state.pendingChoice}:null,
+     pushOutAvailable:Boolean(state.pushOutAvailable),foulStreak:[...(state.foulStreak||[0,0])],dryTurns:[...(state.dryTurns||[0,0])],
+     history:state.history.map(h=>({...h})),rackSeed:state.rackSeed,turnShot:null,timer:0,activeStroke:null,fx:[]});
+   if(Number.isFinite(state.shotRemaining))this.shotRemaining=state.shotRemaining;
+   this.shotClockKey='';
+   return true;
  }
  /** The CPU's pick for a pending choice: take a table it can run, otherwise hand it back. */
  autoChoose(){
@@ -142,6 +171,8 @@ export class Game {
  }
  /** The CPU previews the real shot it will take, including cue motion. */
  get presentedCue(){
+   // Online: show the other player's live aim, then their stroke.
+   if(this.isRemote()&&!this.activeStroke)return this.remotePose&&!this.sim.moving?{angle:this.remotePose.angle,power:this.remotePose.power,drawback:this.remotePose.drawback,showGuide:false}:null;
    if(this.activeStroke&&this.activeStroke.elapsed<.18){
      return {angle:this.activeStroke.angle,power:this.activeStroke.power,
        strike:{...this.activeStroke,progress:Math.min(1,this.activeStroke.elapsed/.16)},showGuide:false};
@@ -169,7 +200,7 @@ export class Game {
      if(this.activeStroke.elapsed>=.18)this.activeStroke=null;}
    if(this.pendingChoice&&!this.sim.moving){
      this.timer+=dt;
-     if(this.isAI()&&this.timer>=1.6)this.autoChoose();
+     if(this.isCpu()&&this.timer>=1.6)this.autoChoose();
      return;
    }
    if(!this.sim.moving){this.timer+=dt;
@@ -179,7 +210,7 @@ export class Game {
        this.sim=new Simulation(rack(this.random()*100000|0));
        this.break=true;this.timer=0;this.previewShot=null;
      }
-     if(this.isAI()&&!this.over){
+     if(this.isCpu()&&!this.over){
        if(this.kind==='match'&&this.ballInHand){
          // A visible beat before the CPU takes ball in hand lets the human
          // register that the turn changed hands.
