@@ -219,3 +219,6 @@ kbd{display:inline-block;min-width:1.6em;padding:1px 6px;margin:0 2px;border:1px
 /* opponent personas */
 #rivals{flex-wrap:wrap;justify-content:flex-end}
 .rival-blurb{margin:-2px 0 6px;font:500 12px/1.4 system-ui,sans-serif;color:var(--sh-dim,#9fb0b8)}
+
+/* touch devices: segmented options meet a 44px target */
+@media (pointer:coarse){#gameType button,#rivals button,#clockSetting button,#ruleset button,.seg button{min-height:44px}}

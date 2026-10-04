@@ -324,8 +324,8 @@ function syncPowerSide(){
  $('gameScreen').classList.toggle('power-right',powerSide==='right');
  all('[data-power-side]').forEach(b=>{const pressed=b.dataset.powerSide===powerSide;b.setAttribute('aria-pressed',String(pressed));b.classList.toggle('selected',pressed);});
 }
-function openSettings(){syncTableView();syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('musicToggle').checked=audio.musicOn;$('motionToggle').checked=motion;$('closeSettings').focus();}
-function closeSettings(){if($('settingsSheet').hidden)return;hide('settingsSheet');hide('backdrop');if(settingsOrigin==='menu'&&active==='lobby'){show('clubMenu');$('menuSettings').focus();}else if(active==='paused')$('pauseSettings').focus();else if(active==='lobby')$('menuBtn').focus();}
+function openSettings(){syncTableView();syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');if(settingsOrigin==='pause')$('pauseMenu').inert=true;show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('musicToggle').checked=audio.musicOn;$('motionToggle').checked=motion;$('closeSettings').focus();}
+function closeSettings(){if($('settingsSheet').hidden)return;$('pauseMenu').inert=false;hide('settingsSheet');hide('backdrop');if(settingsOrigin==='menu'&&active==='lobby'){show('clubMenu');$('menuSettings').focus();}else if(active==='paused')$('pauseSettings').focus();else if(active==='lobby')$('menuBtn').focus();}
 function ensureLockerCards(){
  if($('lockerGrid').children.length)return;
  for(const cue of CUES){
@@ -453,14 +453,17 @@ function showRecord(){
  $('resetRecord').disabled=!progressAccess.writable;
  $('recordConfirm').hidden=true;$('resetRecord').hidden=false;
 }
-function openRecord(){
- if($('settingsSheet').hidden)return;
- hide('settingsSheet');showRecord();show('recordSheet');$('closeRecord').focus();
+let recordOrigin='settings';
+function openRecord(from='settings'){
+ if(from==='settings'&&$('settingsSheet').hidden)return;
+ recordOrigin=from;
+ hide('settingsSheet');hide('clubMenu');showRecord();show('backdrop');show('recordSheet');$('closeRecord').focus();
 }
 function closeRecord(){
  if($('recordSheet').hidden)return;
  hide('recordSheet');$('recordConfirm').hidden=true;$('resetRecord').hidden=false;
- show('settingsSheet');$('openRecord').focus();
+ if(recordOrigin==='menu'){hide('backdrop');show('clubMenu');$('menuRecord').focus();}
+ else{show('settingsSheet');$('openRecord').focus();}
 }
 function downloadRecord(){
  const contents=exportLocalProgress(progress);
@@ -533,11 +536,12 @@ function closeGuide(){
  if(guideOrigin==='pause'){show('pauseMenu');$('pauseGuide').focus();}
  else{show('clubMenu');$('menuGuide').focus();}
 }
+function closeMenu(){if($('clubMenu').hidden)return;hide('clubMenu');$('menuBtn').focus();}
 function openMenu(){const d=dailySummary(progress);setText('dailySub',d.today!==null?`Cleared in ${d.today} shots today${d.streak>1?` · ${d.streak} days running`:''}`:d.streak>0?`${d.streak} days running · clear today's`:'One rack, the same for everyone today');show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){const ball=gameType==='nine'?'9-Ball':gameType==='ten'?'10-Ball':gameType==='straight'?'Straight pool':gameType==='onepocket'?'One-pocket':'8-Ball';
   const circuitStage=circuitState(progress),circuitPersona=personaFor(CIRCUIT[circuitStage.stage]);
   setText('matchSummary',mode==='circuit'?`Round ${circuitStage.stage+1} of ${CIRCUIT.length} · ${circuitPersona.name}`:mode==='practice'?'Open practice table':(rival==='local'?`${ball} · Two players`:`${ball} vs ${personaFor(rival).name}`)+(gameType==='eight'&&rules!=='casual'?` · ${rules==='official'?'Official':'Call the 8'}`:''));
-  setText('playSubtitle',mode==='circuit'?`${circuitPersona.style.toUpperCase()}${circuitStage.champion?` · CHAMPION ×${circuitStage.champion}`:''}`:mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`CASUAL ${ball.toUpperCase()} · NO ENTRY FEE`);
+  setText('playSubtitle',mode==='circuit'?`${circuitPersona.style.toUpperCase()}${circuitStage.champion?` · CHAMPION ×${circuitStage.champion}`:''}`:mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`${gameType==='eight'&&rules!=='casual'?(rules==='official'?'OFFICIAL':'CALL THE 8'):'CASUAL'} ${ball.toUpperCase()} · NO ENTRY FEE`);
   all('.mode[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));}
 /** One short phrase for how the rack ended, from the referee's own reason. */
 function finishText(reason){
@@ -1130,9 +1134,9 @@ function onPull(amount){
 function setPower(n){power=clamp(Number(n)/100,.08,1);setText('powerValue',`${Math.round(power*100)}%`);}
 $('menuGuide').onclick=()=>openGuide('menu');$('pauseGuide').onclick=()=>openGuide('pause');$('closeGuide').onclick=closeGuide;
 all('[data-guide-tab]').forEach(tab=>tab.onclick=()=>selectGuideTab(tab.dataset.guideTab));
-$('menuBtn').onclick=openMenu;$('closeMenu').onclick=()=>hide('clubMenu');
+$('menuBtn').onclick=openMenu;$('closeMenu').onclick=closeMenu;
 $('menuPractice').onclick=()=>begin('practice');$('menuDaily').onclick=()=>begin('daily');$('menuSettings').onclick=openSettings;
-$('menuOnline').onclick=openOnline;$('closeOnline').onclick=closeOnline;$('onlineHost').onclick=()=>hostOnline();$('onlineJoin').onclick=()=>joinOnline($('onlineCode').value);
+$('menuOnline').onclick=openOnline;$('modeOnline').onclick=openOnline;$('menuRecord').onclick=()=>openRecord('menu');$('closeOnline').onclick=closeOnline;$('onlineHost').onclick=()=>hostOnline();$('onlineJoin').onclick=()=>joinOnline($('onlineCode').value);
 $('onlineCode').onkeydown=e=>{if(e.key==='Enter')joinOnline($('onlineCode').value);};
 $('onlineCancel').onclick=()=>{closeOnlineSession();show('onlineStart');hide('onlineWait');onlineStatus('');};
 $('onlineCopy').onclick=async()=>{const link=online?.link;if(!link)return;try{await navigator.clipboard.writeText(link);onlineStatus('Invite link copied.');}catch{onlineStatus(link);}};
@@ -1407,7 +1411,7 @@ window.addEventListener('keydown',e=>{
     }
     return;
   }
-  if(e.key==='Escape'){if(keyPull){e.preventDefault();cancelKeyPull();return;}if(!$('spinSheet').hidden){closeSpin();return;}if(!$('settingsSheet').hidden)closeSettings();else if(!$('setupSheet').hidden)closeSetup();else if(!$('clubMenu').hidden)hide('clubMenu');else if(active==='paused')resumeMatch();else if(active==='game')pauseMatch();return;}
+  if(e.key==='Escape'){if(keyPull){e.preventDefault();cancelKeyPull();return;}if(!$('spinSheet').hidden){closeSpin();return;}if(!$('settingsSheet').hidden)closeSettings();else if(!$('setupSheet').hidden)closeSetup();else if(!$('clubMenu').hidden)closeMenu();else if(active==='paused')resumeMatch();else if(active==='game')pauseMatch();return;}
   if(!$('settingsSheet').hidden||!$('setupSheet').hidden||!$('clubMenu').hidden||!$('spinSheet').hidden)return;
   if(active!=='game'||['INPUT','BUTTON','TEXTAREA'].includes(document.activeElement?.tagName)&&document.activeElement?.type==='range')return;
   if(placementActive()){
