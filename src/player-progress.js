@@ -33,7 +33,7 @@ function validProgress(p){
    p.drillEvents.every(id=>typeof id==='string'&&id.length>0&&id.length<=128)))&&
   (p.roomMastery===undefined||(p.roomMastery&&typeof p.roomMastery==='object'&&
    !Array.isArray(p.roomMastery)&&Object.entries(p.roomMastery).every(([room,mask])=>
-    ['0','1','2'].includes(room)&&Number.isInteger(mask)&&mask>=0&&mask<=7)))&&
+    ['0','1','2','3','4'].includes(room)&&Number.isInteger(mask)&&mask>=0&&mask<=7)))&&
   Array.isArray(p.records)&&p.records.length<=RECORD_LIMIT&&
   p.records.every(e=>e&&typeof e.id==='string'&&e.id.length<=128);
 }
