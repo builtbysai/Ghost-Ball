@@ -6,6 +6,7 @@ import {skillDrillById,skillDrillBalls,gradeSkillDrill} from './skill-drills.js'
 import {impactEffectFor} from './impact-effects.js';
 export {chooseShot} from './ai.js';
 export const SHOT_CLOCK_SECONDS=45;
+export const AI_PLACEMENT_PAUSE=1.1;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 export class Game {
  constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),drillId=null,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
@@ -19,7 +20,7 @@ export class Game {
    this.foul=false;this.ballInHand=false;this.over=false;this.winner=null;
    this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;this.drillOutcome=null;
   this.history=[];this.previewShot=null;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.activeStroke=null;
-  this.shotRemaining=SHOT_CLOCK_SECONDS;this.shotClockKey='';
+  this.shotRemaining=SHOT_CLOCK_SECONDS;this.shotClockKey='';this.dryTurns=[0,0];
   this.notify('A fresh rack. Take your time.');}
  get group(){const group=this.groups[this.turn];if(!group)return 'open';return this.sim.balls.some(b=>!b.pocketed&&(group==='solids'?b.id<8&&b.id>0:b.id>8))?group:'eight';}
  isAI(){return this.kind==='attract'||(this.players==='cpu'&&this.turn===1);}
@@ -80,6 +81,7 @@ export class Game {
      power:shot.power,drawback:(.09+ready*.46)*(this.kind==='attract'?1:.65),showGuide:false};
  }
  update(dt,{audio=null,haptics=false}={}){
+   this.fx=this.fx.filter(effect=>(effect.life-=dt*(effect.type==='pocket'?5:effect.type==='impact'?4.2:3.2))>0);
    if(this.activeStroke){this.activeStroke.elapsed+=dt;
      if(this.activeStroke.elapsed>=.18)this.activeStroke=null;}
    if(!this.sim.moving){this.timer+=dt;
@@ -91,6 +93,9 @@ export class Game {
      }
      if(this.isAI()&&!this.over){
        if(this.kind==='match'&&this.ballInHand){
+         // A visible beat before the CPU takes ball in hand lets the human
+         // register that the turn changed hands.
+         if(this.timer<AI_PLACEMENT_PAUSE)return;
          const placement=chooseAiCuePlacement(this.sim,this.group,this.difficulty);
          if(placement&&this.placeCue(placement.x,placement.y)){
            // Reusing Game.placeCue ensures the actual AI follows the same
@@ -102,11 +107,15 @@ export class Game {
        if(this.ballInHand)return; // no strike while there is no legal site
        if(!this.previewShot){
          if(this.break)this.previewShot={angle:0,power:this.kind==='attract'?.83:.82};
-         else if(this.kind==='match'&&this.difficulty==='club'){
+         else{
+           const attract=this.kind==='attract';
+           const group=attract?'open':this.group;
+           const tier=attract?(this.turn===0?'club':'rookie'):this.difficulty;
            if(!this.planIterator){
-             this.planIterator=createShotPlanner(this.sim,this.group,this.difficulty,this.random);
-             const guess=candidateShots(this.sim,this.group)[0],cue=this.sim.cue();
-             const legal=this.sim.balls.filter(b=>!b.pocketed&&groupContains(b.id,this.group))
+             this.planIterator=createShotPlanner(this.sim,group,tier,this.random,
+               {stalled:this.dryTurns[this.turn]||0});
+             const guess=candidateShots(this.sim,group)[0],cue=this.sim.cue();
+             const legal=this.sim.balls.filter(b=>!b.pocketed&&groupContains(b.id,group))
                .sort((a,b)=>Math.hypot(a.x-cue.x,a.y-cue.y)-
                  Math.hypot(b.x-cue.x,b.y-cue.y))[0];
              this.planningPose=guess?{angle:guess.angle,power:guess.power}:
@@ -122,10 +131,7 @@ export class Game {
                this.planSettledAt=this.timer;break;
              }
            }
-         }else this.previewShot=chooseShot(this.sim,
-           this.kind==='attract'?'open':this.group,
-           this.kind==='attract'?(this.turn===0?'club':'rookie'):this.difficulty,
-           this.random);
+         }
        }
        if(this.previewShot&&this.timer>=(this.kind==='attract'?2.4:1.35)&&
            (!this.planningPose||this.timer-this.planSettledAt>=.22)){
@@ -147,7 +153,6 @@ export class Game {
        if(this.shotRemaining===0)this.expireShotClock();
      }
    }
-   this.fx=this.fx.filter(effect=>(effect.life-=dt*(effect.type==='pocket'?5:effect.type==='impact'?4.2:3.2))>0);
  }
  step({audio=null,haptics=false}={}){
    const events=this.sim.step();if(this.sim.moving)this.timer=0;
@@ -215,6 +220,7 @@ export class Game {
      railAfterFirst:!!shot.rail,elapsedSimSeconds:this.sim.elapsed,
      potRecords:[...(shot.potRecords||[])],
      breakRailBalls:[...(shot.railBalls||[])]});
+   this.dryTurns[shooter]=result.type==='retain'?0:(this.dryTurns[shooter]||0)+1;
    if(result.spotEight)this.spotEight();
    this.groups=result.groups;this.break=false;
    if(result.type==='end'){
@@ -237,7 +243,8 @@ export class Game {
      }else this.notify(result.type==='retain'
        ?`Player ${this.turn+1} keeps the table.`
        :`Player ${this.turn+1} to shoot.`);
-     this.onTurn({type:result.type==='foul'?'foul':'turn',turn:this.turn,
+     this.onTurn({type:result.type==='foul'?'foul':'turn',turn:this.turn,shooter,
+       potted:shot.pots.filter(id=>id>0),scratched:shot.pots.includes(0),
        ballInHand:this.ballInHand,reason:result.reason,
        retain:result.type==='retain',
        assignment:result.groups[shooter]!==previousGroups[shooter]?result.groups[shooter]:null});

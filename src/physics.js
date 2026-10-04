@@ -33,9 +33,12 @@ export function rack(seed=0){
 }
 /** Radial well capture before cushion response. Mouth guards provide an approach corridor. */
 function pocketFor(ball){
+  // A ball creeping slowly over a pocket lip has nothing left to carry it
+  // across: a slightly wider well lets it drop instead of balancing forever.
+  const lip=distance(ball.vx,ball.vy)<70?9:0;
   for(let i=0;i<POCKETS.length;i++){
     const [px,py]=POCKETS[i],side=i===1||i===4;
-    if(distance(ball.x-px,ball.y-py)<(side?26:32))return i;
+    if(distance(ball.x-px,ball.y-py)<(side?26:32)+lip)return i;
   }
   return -1;
 }

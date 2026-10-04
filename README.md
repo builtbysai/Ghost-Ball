@@ -52,6 +52,17 @@ No dependencies or build step. Code is grouped by responsibility:
 
 See the [active roadmap](docs/ROADMAP.md), [measured full-rack reliability results](docs/P2-1-RELIABILITY-LAB.md), [pool-game engagement research](docs/ENGAGEMENT-RESEARCH.md), [P2 rules architecture](docs/P2-RULES-ARCHITECTURE.md) and [physics/visual research](docs/RESEARCH.md). Focused Node regression tests cover input geometry, cue loading and collision physics; Playwright browser smoke checks the live entrance, all five hall palettes, and responsive mouse/touch input. Do not bolt future game modes into `main.js`: extract state machines and provide explicit tests.
 
+## Overhaul 2026-10-04: controls, clarity and a finishable Rookie
+
+Addresses the verified play-test findings (see [docs/OVERHAUL-2026-10-04.md](docs/OVERHAUL-2026-10-04.md)).
+
+- **Keyboard shooting:** hold **Space** to pull (power ramps 0-100% over 1.2 s with the cue drawing back), release to shoot. A tap under 150 ms or **Esc** cancels. **←/→** or **A/D** aim in 2° steps, **Shift** for 0.25°; the +/- buttons and aim wheel use the same steps and the fine-aim readout always shows the exact angle. **M** mutes.
+- **Turns you can follow:** the 45 s shot clock is the large timer in the HUD centre (match time is demoted beneath the turn label), a persistent one-line recap says what just happened and whose turn it is, a 2.8 s banner names the incoming player on every change of turn, and the CPU pauses ~1 s before taking ball in hand.
+- **Honest trays:** neutral dashed ghost slots while the table is open, real numbered balls after assignment, and a dedicated 8-ball slot that lights up when a player is on the 8.
+- **HUD mute button** beside Pause, persisted and synced with Settings.
+- **Rookie can finish a rack:** pot lines now respect the rubber jaws and impossible cuts, a bounded look-ahead vets each shot so Rookie misses pots but not rules, blocked shots fall back to a real safety, and stalled turns widen the search. Unforced fouls fell from ~24% of shots to ~2%, and seeded Rookie-vs-Rookie racks finish in ~80 shots.
+- Slow balls creeping over a pocket lip now drop instead of balancing; `favicon.ico` added.
+
 ## P3: Physical impact and match finish polish
 
 Real ball contacts and solid cushion rebounds now create brief, capped visual impact glints without changing physics. Completed casual matches display the actual referee-recorded decisive shot, never an invented eight-ball pot. A legally pocketed eight receives a subtle warm light at its real destination; Rematch receives keyboard focus, and Change Table returns to the Clubhouse. Reduced-motion preferences remain respected. A complete replay recorder is still on the roadmap.

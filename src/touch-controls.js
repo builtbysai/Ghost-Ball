@@ -1,5 +1,11 @@
 /** Pointer-first pool controls. DOM-independent gesture maths are exported for tests. */
 export const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+/** Keyboard and button aim steps: a deliberate 2 degrees, Shift for 0.25. */
+export const AIM_STEP=2*Math.PI/180,AIM_FINE_STEP=Math.PI/720;
+export const aimStep=fine=>fine?AIM_FINE_STEP:AIM_STEP;
+/** Keyboard pull: power climbs 0-100% over this many seconds while Space is held. */
+export const KEY_PULL_SECONDS=1.2,KEY_PULL_MIN_HOLD=.15;
+export const keyPullAmount=heldSeconds=>clamp(heldSeconds/KEY_PULL_SECONDS,0,1);
 export function pullPower(startY,nowY,travel){return clamp((nowY-startY)/Math.max(1,travel),0,1);}
 // Pointer capture delivers releases even after the finger leaves the rail.
 // Only a release near the actual track is a deliberate shot.
@@ -103,9 +109,11 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
    else if(['ArrowUp','ArrowLeft'].includes(e.key))draw(clamp(old-.05,.08,1));
    else if(e.key==='Home')draw(.08);
    else if(e.key==='End')draw(1);
-   else if(e.key==='Enter'||e.key===' '){onPower(Math.max(.08,current));const retained=onShoot()===false;if(retained)track.classList.add('held');else{track.classList.add('releasing');draw(0);setTimeout(()=>track.classList.remove('releasing'),220);}}
+   // Space is hold-to-pull / release-to-shoot and is owned by the window-level
+   // handler; only Enter fires immediately from the focused rail.
+   else if(e.key==='Enter'){if(current>0)onPower(Math.max(.08,current));const retained=onShoot()===false;if(retained)track.classList.add('held');else{track.classList.add('releasing');draw(0);setTimeout(()=>track.classList.remove('releasing'),220);}}
    else return;e.preventDefault();});
- return {reset:()=>{track.classList.remove('held','releasing');draw(0);},isDragging:()=>pointer!==null,getProgress:()=>current};
+ return {reset:()=>{track.classList.remove('held','releasing');draw(0);},setProgress:p=>draw(p),isDragging:()=>pointer!==null,getProgress:()=>current};
 }
 export function bindAimWheel({element,canAim,getAngle,setAngle,onReset=()=>{}}){
  let pointer=null,lastY=0,travel=0,lastTap=0;
@@ -135,8 +143,9 @@ export function bindAimWheel({element,canAim,getAngle,setAngle,onReset=()=>{}}){
  element.addEventListener('wheel',e=>{if(!canAim())return;lastTap=0;setAngle(wheelAngle(getAngle(),e.deltaY*.45));e.preventDefault();},{passive:false});
  element.addEventListener('keydown',e=>{
   if(!canAim())return;
-  if(e.key==='ArrowUp'||e.key==='ArrowLeft')setAngle(getAngle()+Math.PI/720);
-  else if(e.key==='ArrowDown'||e.key==='ArrowRight')setAngle(getAngle()-Math.PI/720);
+  // Same direction as the window-level keys: left turns the aim counter-clockwise.
+  if(e.key==='ArrowRight'||e.key==='ArrowUp')setAngle(getAngle()+aimStep(e.shiftKey));
+  else if(e.key==='ArrowLeft'||e.key==='ArrowDown')setAngle(getAngle()-aimStep(e.shiftKey));
   else if(e.key==='Backspace'||e.key==='Home')onReset();
   else return;
   lastTap=0;e.preventDefault();

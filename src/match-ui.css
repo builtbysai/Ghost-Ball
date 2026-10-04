@@ -1,0 +1,141 @@
+/* Match HUD refinements. Loaded last: shot clock, turn recap and banner, honest
+   ball trays, mute control and aim readout. Pure presentation. */
+:root{--hud-gold:#f1d9a1;--hud-ink:#fff6e0;--hud-warn:#ff9a72;--hud-you:#8fe3b6;--hud-rival:#9cc8ff}
+
+/* --- layout: HUD / recap / arena ------------------------------------- */
+#gameScreen.game-screen{grid-template-rows:clamp(46px,11%,72px) auto minmax(0,1fr)}
+#gameScreen .match-hud{grid-row:1;grid-template-columns:auto minmax(0,1fr) clamp(138px,21vw,252px) minmax(0,1fr)}
+#gameScreen .turn-recap{grid-row:2}
+#gameScreen .match-arena{grid-row:3}
+#gameScreen .hud-controls{grid-column:1;grid-row:1;display:flex;align-items:center;gap:clamp(4px,.7vw,8px)}
+#gameScreen .hud-controls .hud-menu{position:static;grid-column:auto;grid-row:auto;
+ width:clamp(30px,4.4vw,42px);height:clamp(30px,4.4vw,42px);padding:0;display:grid;place-items:center;
+ transition:transform .12s ease,filter .12s ease,border-color .12s}
+#gameScreen .hud-controls .hud-menu:hover{filter:brightness(1.12);border-color:#e7f3f8aa}
+#gameScreen .hud-controls .hud-menu:active{transform:translateY(1px) scale(.97)}
+#gameScreen .hud-controls .hud-menu:focus-visible,#gameScreen .aim-wheel-control>button:focus-visible,
+#gameScreen .cueball-button:focus-visible{outline:2px solid var(--hud-gold);outline-offset:2px}
+#gameScreen .hud-mute svg{width:62%;height:62%;fill:#c9f0dc;stroke:#c9f0dc;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#gameScreen .hud-mute .mute-waves{fill:none}
+#gameScreen .hud-mute .mute-slash{fill:none;stroke:#ffb59b;display:none}
+#gameScreen .hud-mute[data-muted="true"] .mute-waves{display:none}
+#gameScreen .hud-mute[data-muted="true"] .mute-slash{display:block}
+#gameScreen .hud-mute[data-muted="true"]{color:#ffb59b;border-color:#e9a28b88}
+#gameScreen .hud-mute[data-muted="true"] .mute-body{fill:#e7ad98;stroke:#e7ad98}
+
+/* --- centre column: turn label + the shot clock as the primary timer ---- */
+#gameScreen .match-center{display:flex;align-items:center;justify-content:center;gap:clamp(6px,1vw,14px);overflow:visible}
+#gameScreen .match-center .center-text{min-width:0;text-align:center}
+#gameScreen .match-center .center-text strong{font-size:clamp(10px,1.45vw,18px)}
+#gameScreen .match-time{font-size:clamp(7px,.78vw,9.5px);letter-spacing:.1em;color:#a9bfc8;margin-top:1px;opacity:.88}
+#gameScreen .match-time::before{font-size:inherit;color:#8fa9b2}
+#gameScreen .shot-clock{--clock-progress:100%;position:relative;flex:none;display:grid;place-items:center;
+ min-width:clamp(40px,5.4vw,66px);height:clamp(30px,7.4dvh,50px);padding:0 clamp(5px,.8vw,10px);
+ font:800 clamp(20px,5.3dvh,34px)/1 ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums;
+ color:var(--hud-ink);background:linear-gradient(#17304a,#0d1b2d);border:1.5px solid #cdb783;border-radius:10px;
+ box-shadow:inset 0 1px #ffffff2e,0 4px 12px #0009;text-shadow:0 1px 3px #000a;overflow:hidden;
+ transition:opacity .2s,border-color .2s,background .2s}
+#gameScreen .shot-clock::after{content:'';position:absolute;left:0;bottom:0;height:3px;width:var(--clock-progress);
+ background:linear-gradient(90deg,#9be6c1,#e9d28a);transition:width .25s linear}
+#gameScreen .shot-clock[hidden]{display:none}
+#gameScreen .shot-clock.is-idle{opacity:.5}
+#gameScreen .shot-clock.clock-warning{color:#fff1e8;background:linear-gradient(#8d3a2c,#5a1f17);border-color:#ffb08c;
+ animation:clock-pulse 1s ease-in-out infinite}
+#gameScreen .shot-clock.clock-warning::after{background:#ffb08c}
+@keyframes clock-pulse{50%{box-shadow:inset 0 1px #ffffff2e,0 0 16px #ff7a5aa6,0 4px 12px #0009}}
+#gameScreen[data-practice="true"] .shot-clock,#gameScreen[data-timed="false"] .shot-clock{display:none}
+
+/* --- persistent last-shot recap ---------------------------------------- */
+#gameScreen .turn-recap{justify-self:center;max-width:min(94%,760px);margin:clamp(1px,.4dvh,4px) 0 clamp(1px,.4dvh,3px);
+ padding:clamp(2px,.45dvh,5px) clamp(10px,1.6vw,18px);border-radius:99px;
+ font:700 clamp(9px,1.25vw,13px)/1.25 system-ui,sans-serif;letter-spacing:.015em;color:#ecf2ee;
+ background:linear-gradient(90deg,#10253a00,#10253ad9 12%,#10253ad9 88%,#10253a00);
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;z-index:3;
+ text-shadow:0 1px 2px #000a;animation:recap-in .25s ease-out both}
+#gameScreen .turn-recap[hidden]{display:none}
+#gameScreen .turn-recap[data-tone="foul"]{color:#ffd9c2}
+@keyframes recap-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+
+/* --- unmissable turn banner -------------------------------------------- */
+#gameScreen .turn-banner{position:absolute;z-index:9;left:50%;top:20%;transform:translate(-50%,0);
+ display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none;
+ padding:clamp(7px,1.6dvh,14px) clamp(18px,3.4vw,40px);border-radius:14px;text-align:center;
+ background:linear-gradient(160deg,#16314af2,#0b1727f5);border:1.5px solid #cdb783;
+ box-shadow:0 14px 44px #000b,inset 0 1px #ffffff26;max-width:92%}
+#gameScreen .turn-banner[hidden]{display:none}
+#gameScreen .turn-banner strong{font:700 clamp(19px,5.2dvh,38px)/1.05 Georgia,serif;letter-spacing:.04em;color:var(--hud-ink);white-space:nowrap}
+#gameScreen .turn-banner small{font:850 clamp(8px,1.25dvh,12px) system-ui;letter-spacing:.16em;color:var(--hud-gold)}
+#gameScreen .turn-banner[data-side="you"]{border-color:#7fdcae}
+#gameScreen .turn-banner[data-side="you"] small{color:var(--hud-you)}
+#gameScreen .turn-banner[data-side="rival"]{border-color:#8eb9ec}
+#gameScreen .turn-banner[data-side="rival"] small{color:var(--hud-rival)}
+#gameScreen .turn-banner[data-kind="foul"] small{color:var(--hud-warn)}
+#gameScreen .turn-banner.is-in{animation:banner-life 2.8s cubic-bezier(.2,.8,.2,1) both}
+@keyframes banner-life{
+ 0%{opacity:0;transform:translate(-50%,-14px) scale(.94)}
+ 9%{opacity:1;transform:translate(-50%,0) scale(1)}
+ 90%{opacity:1;transform:translate(-50%,0) scale(1)}
+ 100%{opacity:0;transform:translate(-50%,-6px) scale(.98)}
+}
+#gameScreen .table-toast[data-kind="hint"]{background:#10283eef;border-color:#b9d8ef99;color:#e8f4ff;max-width:min(94%,520px);letter-spacing:.05em}
+
+/* --- ball trays: neutral open state, real groups, a home for the 8 ----- */
+#gameScreen .ball-slots{grid-template-columns:repeat(7,minmax(0,1fr)) minmax(0,1fr);
+ max-width:calc(8 * 23px + 6 * 5px + 9px);column-gap:clamp(1px,.34vw,5px)}
+#gameScreen .ball-slot{max-width:23px;font-size:clamp(5.5px,.82vw,9px)}
+#gameScreen .ball-slots .eight-slot{margin-left:clamp(3px,.6vw,9px)}
+#gameScreen .ball-slot.ghost{background:transparent;border:1.5px dashed #9fb4c58f;box-shadow:none;opacity:1;filter:none}
+#gameScreen .ball-slot.ghost::before{display:none}
+#gameScreen .ball-slots[data-group="open"]{position:relative}
+#gameScreen .ball-slot.assigned{opacity:1;filter:none}
+#gameScreen .ball-slot.assigned.pocketed{opacity:.22;filter:grayscale(1)}
+#gameScreen .ball-slot.just-assigned{animation:slot-flip .5s cubic-bezier(.2,.9,.25,1.2) both;animation-delay:calc(var(--slot-index,0) * 45ms)}
+@keyframes slot-flip{from{opacity:0;transform:scale(.4) rotate(-90deg)}to{opacity:1;transform:none}}
+#gameScreen .ball-slot.eight-slot{--slot-color:#191918;border-color:#8c98a6}
+#gameScreen .ball-slot.eight-slot::before{background:#eef0ee}
+#gameScreen .ball-slot.eight-slot[data-state="inactive"]{opacity:.34;filter:grayscale(.6)}
+#gameScreen .ball-slot.eight-slot[data-state="active"]{opacity:1;filter:none;border:2px solid var(--hud-gold);
+ box-shadow:0 0 0 2px #f1d9a14d,0 0 14px #f4d78d99;animation:eight-glow 1.2s ease-in-out infinite}
+#gameScreen .ball-slot.eight-slot[data-state="pocketed"]{opacity:1;filter:none;border:2px solid #9be6c1;box-shadow:0 0 12px #9be6c199}
+@keyframes eight-glow{50%{box-shadow:0 0 0 3px #f1d9a166,0 0 20px #ffe29fcc}}
+#gameScreen .player-info small{letter-spacing:.06em}
+#gameScreen .opponent-card.playing .player-info strong{color:#fffbe9}
+#gameScreen .opponent-card:not(.playing) .player-info{opacity:.82}
+#gameScreen .opponent-card .player-info{transition:opacity .25s}
+
+/* --- fine aim: readable value, moving grooves ---------------------------- */
+#gameScreen .aim-readout{display:block;font:800 clamp(8px,.95vw,11px)/1 ui-monospace,SFMono-Regular,Consolas,monospace;
+ color:#f6e5b5;letter-spacing:.02em;min-height:1em;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px #000}
+#gameScreen .aim-wheel{background-position:0 var(--wheel-turn,0px)}
+#gameScreen .aim-wheel-control>button{min-width:38px;min-height:26px;transition:transform .1s,filter .1s}
+#gameScreen .aim-wheel-control>button:active:not(:disabled){transform:scale(.94);filter:brightness(1.2)}
+#gameScreen .aim-wheel-control>button:disabled{opacity:.45}
+
+/* Space-pull on the keyboard shares the rail's tension styling; make the
+   readout unmistakable while charging. */
+#gameScreen .shot-rail .power-track.charging ~ .power-readout{font-size:clamp(12px,1.5vw,16px)}
+
+@media (max-height:440px){
+ #gameScreen.game-screen{grid-template-rows:42px auto minmax(0,1fr)}
+ #gameScreen .match-hud{grid-template-columns:auto minmax(0,1fr) clamp(118px,24vw,170px) minmax(0,1fr)}
+ #gameScreen .hud-controls .hud-menu{width:30px;height:30px}
+ #gameScreen .shot-clock{height:30px;min-width:38px;font-size:19px;border-radius:8px}
+ #gameScreen .turn-recap{font-size:9px;padding:1px 10px;margin:0}
+ #gameScreen .turn-banner{top:12%;padding:6px 16px}
+ #gameScreen .turn-banner strong{font-size:19px}
+ #gameScreen .aim-readout{font-size:8px}
+}
+@media (max-height:350px){
+ #gameScreen.game-screen{grid-template-rows:38px auto minmax(0,1fr)}
+ #gameScreen .shot-clock{height:26px;min-width:34px;font-size:16px}
+ #gameScreen .ball-slots .eight-slot{margin-left:2px}
+}
+@media (prefers-reduced-motion:reduce){
+ #gameScreen .turn-banner.is-in,#gameScreen .turn-recap,#gameScreen .ball-slot.just-assigned,
+ #gameScreen .ball-slot.eight-slot[data-state="active"],#gameScreen .shot-clock.clock-warning{animation:none}
+ #gameScreen .shot-clock::after{transition:none}
+}
+
+/* The table is focusable for keyboard play; keep its focus mark quiet. */
+#gameScreen #gameCanvas:focus{outline:none}
+#gameScreen #gameCanvas:focus-visible{outline:1px solid #f1d9a14d;outline-offset:-2px}
