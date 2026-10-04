@@ -157,7 +157,10 @@ with sync_playwright() as p:
         page.keyboard.press('Shift+ArrowLeft')
         assert page.locator('#aimReadout').inner_text()=='1.75°', 'Shift refines to a quarter degree'
         page.keyboard.press('ArrowLeft')
-        page.keyboard.press('Space')  # a tap must never shoot
+        # A tap: keydown and keyup in one tick. Two separate driver round trips can be
+        # >150 ms apart on a loaded runner, which is a genuine hold, not a tap.
+        page.evaluate("""()=>{for(const type of ['keydown','keyup'])
+          window.dispatchEvent(new KeyboardEvent(type,{code:'Space',key:' ',bubbles:true,cancelable:true}));}""")
         page.wait_for_timeout(200)
         assert page.locator('#gameScreen').get_attribute('data-shots')=='0', 'a Space tap fired a shot'
         assert page.locator('#shootBtn').count() == 0
