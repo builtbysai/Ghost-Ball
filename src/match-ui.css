@@ -171,8 +171,6 @@
  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3.5px));
  mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3.5px))}
 #gameScreen .opponent-card:not(.playing) .player-token{filter:saturate(.7) brightness(.82)}
-/* the centre clock and the ring already say it; the little pill was a third copy */
-#gameScreen .shot-countdown{display:none!important}
 
 /* watching an exhibition: the player's controls step back so the table is the show */
 #gameScreen[data-exhibition="true"] .shot-rail,#gameScreen[data-exhibition="true"] .tools-rail{opacity:.2;pointer-events:none;filter:saturate(.5)}

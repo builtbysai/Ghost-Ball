@@ -21,10 +21,6 @@
  background:conic-gradient(#9be6c1 0 var(--turn-progress,100%),#30415a var(--turn-progress,100%) 100%);
  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3.5px),#000 calc(100% - 3px));
  mask:radial-gradient(farthest-side,transparent calc(100% - 3.5px),#000 calc(100% - 3px));pointer-events:none}
-.shot-countdown{position:absolute;right:-8px;bottom:-7px;min-width:17px;height:15px;padding:1px 2px;
- background:#0c1b2c;border:1px solid #849fa8;border-radius:5px;color:#e8eddb;
- font:800 9px/11px ui-monospace,monospace;text-align:center;box-shadow:0 2px 5px #0009}
-.shot-countdown[hidden]{display:none}
 #gameScreen .match-arena{min-height:0;min-width:0}
 #gameScreen .table-play-area{overflow:visible;isolation:isolate}
 #gameScreen .tools-rail{justify-content:space-evenly}

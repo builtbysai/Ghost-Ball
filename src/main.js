@@ -92,7 +92,10 @@ function recapFor(event){
  const shooter=event.shooter??turn,name=seatName(shooter),potted=event.potted||[];
  const potText=potted.length?`${name} potted ${ballList(potted)}.`:`${name} missed.`;
  if(event.assignment)return `${potText} ${seatName(shooter)==='You'?'You have':name+' has'} ${event.assignment}.`;
- if(event.retain)return `${potText} ${name==='You'?'You shoot':name+' shoots'} again.`;
+ if(event.retain){
+  let run=0;for(let i=current.history.length-1;i>=0;i--){const h=current.history[i];if(h.kind==='ruling'&&h.shooter===shooter&&h.result==='retain')run++;else break;}
+  return `${potText} ${name==='You'?'You shoot':name+' shoots'} again.${run>=2?` Run of ${run}.`:''}`;
+ }
  return `${potText} ${next==='You'?'Your':next+"'s"} turn.`;
 }
 function setRecap(text,tone=''){
@@ -138,7 +141,7 @@ function matchTurn(event){
   }
   if(current.players==='ai'){clearTimeout(exhibitionTimer);exhibitionTimer=setTimeout(()=>{if(active==='game'&&current?.players==='ai'&&current.over){resetMatch();}},7000);}
   audio.play({type:event.practice||current.players==='local'||current.players==='ai'||event.winner===0?'win':'loss'});
-  if(current.kind==='match')setRecap(event.reason==='three-fouls'?`Three fouls in a row. ${seatName(event.winner)} ${seatName(event.winner)==='You'?'win':'wins'} the rack.`:`${seatName(event.winner)} ${seatName(event.winner)==='You'?'win':'wins'} the rack.`);
+  if(current.kind==='match')setRecap(event.reason==='three-fouls'?`Three fouls in a row. ${seatName(event.winner)} ${seatName(event.winner)==='You'?'win':'wins'} the rack.`:`${seatName(event.winner)} ${seatName(event.winner)==='You'?'win':'wins'} the rack.${current.players==='cpu'?` ${current.persona.name}: “${current.persona.quips[event.winner===1?'win':'lose']}”`:''}`);
   turnUI(); // Show result before keyboard focus is transferred.
   $('playAgain').focus();
   return;
@@ -517,10 +520,8 @@ function turnUI(){if(!current)return;
  const timed=current.kind==='match'&&!current.over&&current.shotClockSeconds>0;
  const pct=timed?`${Math.max(0,current.shotRemaining/current.shotClockSeconds)*100}%`:'100%';
  const clockLive=timed&&!current.ballInHand&&!busy;
- for(const [i,id,clock] of [[0,'oneCard','clockOne'],[1,'twoCard','clockTwo']]){
+ for(const [i,id] of [[0,'oneCard'],[1,'twoCard']]){
   $(id).style.setProperty('--turn-progress',current.turn===i?pct:'100%');
-  $(clock).textContent=String(seconds);$(clock).hidden=!timed||current.turn!==i||current.ballInHand;
-  $(clock).classList.toggle('clock-warning',timed&&current.turn===i&&seconds<=10&&!current.ballInHand);
  }
  // The 45-second shot clock is THE timer during a turn; elapsed match time is demoted.
  const big=$('shotClock');

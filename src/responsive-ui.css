@@ -13,7 +13,6 @@
 #gameScreen .opponent-card.right{justify-content:flex-end}
 #gameScreen .player-token{width:clamp(28px,6dvh,47px);height:clamp(28px,6dvh,47px);
  flex:0 0 auto;position:relative;z-index:1;font-size:clamp(14px,3.4dvh,23px)}
-#gameScreen .shot-countdown{right:-3px;bottom:-5px;min-width:16px}
 #gameScreen .player-info{flex:1 1 auto;min-width:0;width:0}
 #gameScreen .player-info strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
  font-size:clamp(8px,1.18vw,13px);line-height:1.15;letter-spacing:.025em}
@@ -61,7 +60,6 @@
 #gameScreen[data-practice="true"] #ballsOne{display:none!important}
 #gameScreen[data-practice="true"] .match-center{grid-column:3 / 5;justify-self:center}
 #gameScreen .match-time::before{content:"TIME ";font:700 clamp(6px,.69vw,9px)/1 system-ui;letter-spacing:.06em;color:#c8ddcf;vertical-align:middle}
-#gameScreen .shot-countdown.clock-warning{color:#ffdda0;background:#733629;border-color:#ffae77}
 #gameScreen .match-result{
  position:absolute;z-index:7;top:49%;left:50%;transform:translate(-50%,-50%);
  width:min(440px,77%);max-height:86%;overflow:hidden;
