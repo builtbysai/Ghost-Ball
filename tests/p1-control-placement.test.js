@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Simulation,makeBall} from '../src/physics.js';
 import {nearbyLegalCuePlacement} from '../src/placement-guide.js';
 import {safePowerRelease,bindAimWheel} from '../src/touch-controls.js';
-import {Game} from '../src/game.js';
+import {Game,AI_PLACEMENT_PAUSE} from '../src/game.js';
 
 const table=(positions)=>new Simulation([makeBall(0,240,250),...positions.map(([x,y],i)=>makeBall(i+1,x,y))]);
 
@@ -75,7 +75,7 @@ test('AI searches new legal positions if its preferred locations are occupied',(
  const game=new Game({kind:'match',players:'cpu',seed:4});
  game.turn=1;game.ballInHand=true;game.break=false;
  game.sim=table([[240,250],[320,220],[360,300],[210,150]]);
- game.update(.05);
+ game.update(AI_PLACEMENT_PAUSE+.05);
  assert.equal(game.ballInHand,false,'the AI cannot wait indefinitely for an occupied location');
  assert.ok(game.sim.canPlaceCue(game.sim.cue().x,game.sim.cue().y));
 });
@@ -84,6 +84,7 @@ test('pocket effects use event ball color and disappear quickly',()=>{
  game.sim=table([[11,11]]);game.turnShot={first:null,pots:[],rail:false};
  game.sim.moving=true;game.step();
  assert.ok(game.fx.some(effect=>effect.type==='pocket'&&effect.color));
- game.update(.25);
+ assert.equal(game.fx.find(effect=>effect.type==='pocket').id,1,'the sinking ball keeps its number');
+ game.update(.4);
  assert.ok(game.fx.every(effect=>effect.type!=='pocket'));
 });

@@ -52,6 +52,11 @@ export class Audio {
    this.tone({frequency:330,end:215,volume:.014,length:.052,wave:'sine'});
    return;
   }
+  if(event.type==='tick'){
+   // Last-five-seconds shot clock: a quiet, dry click; the last second is a touch higher.
+   this.tone({frequency:event.last?980:820,end:event.last?820:700,volume:.03,length:.04,wave:'sine'});
+   return;
+  }
   if(event.type==='turn'){
    this.tone({frequency:420,end:540,volume:.024,length:.075,wave:'sine'});
    return;

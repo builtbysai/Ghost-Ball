@@ -1,8 +1,10 @@
 /** All five tables share physical geometry, not the same paint job.
  * All detail is visual: no changes to cushion or pocket collision coordinates.
  */
-import {POCKETS,TABLE} from './physics.js';
+import {POCKETS,JAWS,TABLE} from './physics.js';
 const C=(n,a,b)=>Math.max(a,Math.min(b,n));
+const mix=(hex,target,amount)=>{const n=parseInt(hex.slice(1),16),c=[n>>16&255,n>>8&255,n&255].map(v=>Math.round(v+(target-v)*amount));return `rgb(${c[0]},${c[1]},${c[2]})`;};
+const lighten=(hex,amount)=>mix(hex,255,amount),darken=(hex,amount)=>mix(hex,0,amount);
 const path=(g,points)=>{g.beginPath();g.moveTo(points[0][0],points[0][1]);for(const p of points.slice(1))g.lineTo(p[0],p[1]);g.closePath();};
 const line=(g,a,b)=>{g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();};
 let weave=null;
@@ -90,6 +92,20 @@ export function paintCloth(g,{P,h,finish,bw,blend}){
  bloom.addColorStop(0,'rgba(255,246,208,.14)');bloom.addColorStop(.42,'rgba(226,235,199,.043)');
  bloom.addColorStop(1,'rgba(0,0,0,.20)');g.fillStyle=bloom;g.fillRect(0,0,g.canvas.width,g.canvas.height);
  const pattern=feltWeave();if(pattern){g.globalAlpha=.29;g.fillStyle=g.createPattern(pattern,'repeat');g.fillRect(0,0,g.canvas.width,g.canvas.height);g.globalAlpha=1;}
+ // Real tables are marked: the head string, and spots for the head, centre and foot (the
+ // rack's apex). Faint ink only, with no effect on play.
+ if(blend>.55){
+  const mark=C((blend-.55)/.3,0,1);
+  g.globalAlpha=mark;
+  const top=P(265,22),bottom=P(265,478);
+  g.beginPath();g.moveTo(top[0],top[1]);g.lineTo(bottom[0],bottom[1]);
+  g.strokeStyle='rgba(235,245,238,.16)';g.lineWidth=C(bw/700,.8,1.8);g.stroke();
+  for(const [x,y] of [[265,250],[500,250],[718,250]]){
+   const [sx,sy]=P(x,y);g.beginPath();g.arc(sx,sy,C(bw/330,1.6,3.4),0,Math.PI*2);
+   g.fillStyle='rgba(235,245,238,.2)';g.fill();
+  }
+  g.globalAlpha=1;
+ }
  // The dark cloth seam never crosses the openings; pocket mouths are drawn last.
  g.restore();
 }
@@ -159,5 +175,20 @@ export function paintPockets(g,{P,finish,bw,blend}){
    g.beginPath();g.arc(-r*.08,-r*.12,r*1.02,Math.PI*1.1,Math.PI*1.75);
    g.strokeStyle=finish.inlay;g.globalAlpha=.45;g.lineWidth=C(r*.13,.75,2);
    g.stroke();g.restore();
+ }
+ // The rubber noses that guard each pocket mouth are real collision geometry
+ // (physics JAWS, radius 4 around a 12-unit ball), so they must be visible:
+ // a ball that rebounds from a nub should visibly meet something.
+ for(const [jx,jy] of JAWS){
+   const [sx,sy,k]=P(jx,C(jy,0,500)),r=Math.max(2.2,4.6*u*k);
+   g.save();g.translate(sx,sy);g.scale(1,.77+.23*blend);
+   g.shadowColor='#000b';g.shadowBlur=C(r*.9,2,6);g.shadowOffsetY=1.4;
+   const rubber=g.createRadialGradient(-r*.35,-r*.4,.4,0,0,r*1.15);
+   // Same rubber as the cushion it caps, with a darker, glossy nose.
+   rubber.addColorStop(0,lighten(finish.cushion,.5));rubber.addColorStop(.5,finish.cushion);rubber.addColorStop(1,darken(finish.cushion,.55));
+   g.beginPath();g.arc(0,0,r,0,Math.PI*2);g.fillStyle=rubber;g.fill();
+   g.shadowBlur=0;g.shadowOffsetY=0;
+   g.beginPath();g.arc(0,0,r,0,Math.PI*2);g.strokeStyle=finish.trim;g.globalAlpha=.55;g.lineWidth=C(r*.2,.7,1.6);g.stroke();
+   g.restore();
  }
 }

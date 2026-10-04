@@ -15,8 +15,8 @@ const pct=(arr,n)=>arr.length?[...arr].sort((a,b)=>a-b)[Math.min(arr.length-1,Ma
 const sig=g=>g.sim.balls.map(b=>b.pocketed?'p':`${b.id}:${Math.round(b.x)},${Math.round(b.y)}`).join('|')+';'+g.group;
 const ensure=(assertion,message)=>{if(!assertion)throw Error(message);};
 
-export function runRack(seed,{maxShots=120,tiers=['rookie','club']}={}){
- const game=new Game({kind:'match',players:'local',seed});
+export function runRack(seed,{maxShots=120,tiers=['rookie','club'],ruleset='eight'}={}){
+ const game=new Game({kind:'match',players:'local',seed,ruleset});
  const fresh=()=>({legal:0,missed:0,fouls:0,scratches:0,
    pots:0,plannedPots:0,decisionFallbacks:0,placements:0,earlyEight:0,shots:0});
  const decisions=[],rulings=[],stagnant=[],counts=fresh(),byTier={};
@@ -83,6 +83,7 @@ export function runRack(seed,{maxShots=120,tiers=['rookie','club']}={}){
   if(repeated>=16)stagnant.push({shot:n+1,turn:game.turn,group:game.group});
   ensure(game.groups[0]===null&&game.groups[1]===null||
     game.groups[0]!==game.groups[1],`seed ${seed}: contradictory groups`);
+  if(ruleset==='nine')ensure(!game.sim.balls.find(b=>b.id===9)?.pocketed||game.over,`seed ${seed}: the 9 stayed down on a live table`);
  }
  ensure(rulings.length===game.shots,`seed ${seed}: ruling/shot mismatch`);
  const winner=game.winner;

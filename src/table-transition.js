@@ -1,6 +1,6 @@
 import {TableRenderer} from './render.js';
 import {TABLE} from './physics.js';
-import {advanceRoll} from './ball-orientation.js';
+import {planFlock,flockAt} from './rack-flock.js';
 
 // One physical table travels from the live exhibition into the chosen game.
 export const smooth=t=>{const x=Math.max(0,Math.min(1,t));return x*x*(3-2*x);};
@@ -15,74 +15,21 @@ export function cameraFlight(progress){
  };
 }
 /**
- * Staggered converging paths followed by a deterministic exclusion solver.
- * Every frame is a pure function of progress, so reflows/low frame rates never
- * accumulate drift. The last frame uses exact physics rack coordinates.
+ * Rack setup is a flock settling into formation (see rack-flock.js): every
+ * ball seeks its slot, neighbours steer around each other and exclusion
+ * guarantees no overlaps. The plan is computed once per (before, after) pair and
+ * played back by interpolation, so frames are a pure function of progress and
+ * reflows or dropped frames never accumulate drift. The last frame is the exact
+ * physics rack.
  */
+const plans=new WeakMap();
 export function movingRack(before,after,progress){
- const t=Math.max(0,Math.min(1,progress));
- const endFrame=t>=1;
- const origins=new Map(before.map(b=>[b.id,b]));
- const positions=after.map(ball=>{
-  const from=origins.get(ball.id)||ball;
-  const emerging=!origins.has(ball.id)||from.pocketed;
-  const distance=Math.hypot(ball.x-from.x,ball.y-from.y);
-  // Let the cue ball lead; the object balls form a visually legible wave.
-  const stagger=ball.id===0?0:((ball.id*7)%17)/17*.19;
-  const start=.12+stagger,span=.69-stagger;
-  const move=smooth((t-start)/span),prior=smooth((t-.014-start)/span);
-  const side=ball.id%2?1:-1;
-  const curve=Math.sin(move*Math.PI)*Math.min(47,distance*.092)*side;
-  const dx=(ball.x-from.x)/(distance||1),dy=(ball.y-from.y)/(distance||1);
-  const px=mix(from.x,ball.x,move)-dy*curve;
-  const py=mix(from.y,ball.y,move)+dx*curve;
-  return {...ball,pocketed:false,x:px,y:py,opacity:emerging?smooth((move-.015)/.26):1,
-   rotation:mix(from.rotation||0,ball.rotation||0,move)+distance/(24*Math.PI)*(move-prior),
-   trail:move>.025&&move<.96&&distance>65?{x:mix(from.x,ball.x,prior),y:mix(from.y,ball.y,prior),opacity:.15*(1-move)}:null};
- });
- // Position-only separation prevents balls passing through each other while
- // retaining their soft, curved migration toward their assigned rack slots.
- const spacing=24.04;
- for(let pass=0;pass<16;pass++){
-  let moved=false;
-  for(let i=0;i<positions.length;i++)for(let j=i+1;j<positions.length;j++){
-   const a=positions[i],b=positions[j];
-   if(a.opacity<.12||b.opacity<.12)continue;
-   let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
-   if(d>=spacing)continue;
-   if(d<.0001){const seed=(a.id*19+b.id*11)*2.39996;dx=Math.cos(seed);dy=Math.sin(seed);d=1;}
-   const correction=(spacing-d)/2+.0005,ux=dx/d,uy=dy/d;
-   a.x-=ux*correction;a.y-=uy*correction;
-   b.x+=ux*correction;b.y+=uy*correction;moved=true;
-  }
-  if(!moved)break;
- }
- // Integrate the curved path from its start, not from the preceding frame.
- // This keeps rolling visuals reproducible under dropped frames and reflows.
- for(const pose of positions){
-  const from=origins.get(pose.id)||after.find(b=>b.id===pose.id);
-  const target=after.find(b=>b.id===pose.id);
-  const distance=Math.hypot(target.x-from.x,target.y-from.y);
-  const stagger=pose.id===0?0:((pose.id*7)%17)/17*.19;
-  const start=.12+stagger,span=.69-stagger,side=pose.id%2?1:-1;
-  const dx=(target.x-from.x)/(distance||1),dy=(target.y-from.y)/(distance||1);
-  let prevX=from.x,prevY=from.y;
-  pose.orientation=[...(from.orientation||[1,0,0,0])];
-  pose.rotation=from.rotation||0;
-  for(let step=1;step<=12;step++){
-   const u=t*step/12,move=smooth((u-start)/span);
-   const curve=Math.sin(move*Math.PI)*Math.min(47,distance*.092)*side;
-   const x=mix(from.x,target.x,move)-dy*curve;
-   const y=mix(from.y,target.y,move)+dx*curve;
-   advanceRoll(pose,x-prevX,y-prevY,TABLE.radius);
-   prevX=x;prevY=y;
-  }
-  // The separation solver can slightly displace the drawn ball at its final step.
-  advanceRoll(pose,pose.x-prevX,pose.y-prevY,TABLE.radius);
- }
- if(endFrame)return after.map((ball,i)=>({...ball,pocketed:false,opacity:1,trail:null,
-  rotation:positions[i].rotation,orientation:[...positions[i].orientation]}));
- return positions;
+ let byAfter=plans.get(before);
+ if(!byAfter){byAfter=new WeakMap();plans.set(before,byAfter);}
+ let plan=byAfter.get(after);
+ if(!plan){plan=planFlock(before,after);byAfter.set(after,plan);}
+ const bodies=new Map(after.map(ball=>[ball.id,ball]));
+ return flockAt(plan,progress).map(pose=>({...bodies.get(pose.id),...pose}));
 }
 export function flyTable({app,source,target,from,to,hall,gameRenderer,done,reverse=false,isActive=()=>true}){
  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){done();return;}

@@ -14,10 +14,10 @@ The user's screenshot establishes spatial priorities: horizontal table dominates
 
 | Interaction | Ghost Ball v0.4 | Remaining |
 |---|---|---|
-| Table gesture | Grab and drag the visible cue **behind** the cue ball. Touches in front cannot grab the cue; relative rotation prevents an initial jump. | Physical touch occlusion and configurable sensitivity |
+| Table gesture | **Smart (default):** grab the cue behind the ball for relative rotation, or tap/drag the cloth to aim at that spot, or tap a ball to aim through it. **Stick only** restores rear-shaft-only aiming. See [COMPETITOR-STUDY-2026-10.md](COMPETITOR-STUDY-2026-10.md). | Real-device tuning of the 34 px touch lead and retarget slop; configurable sensitivity |
 | Fine aim wheel | Incremental vertical drag and keyboard arrows | Acceleration and haptic ticks |
 | Power | Pull down from handle; travel threshold and pointer capture; release by default | Power-side toggle; portrait usability |
-| Spin | Circular 2-axis selection, center reset | Realistic rolling and spin transfer calibration |
+| Spin | Circular 2-axis selection, center reset; quick-drag on the cue-ball icon | Realistic rolling and spin transfer calibration |
 | Cue ball placement | Drag after foul; pre-break head-only move | Tournament-specific break area rules |
 | Views | Top-down 2D only in matches; animated live perspective lobby morphs into the playing table | Future elevated/surface camera from new reference |
 | HUD | Compact two-player labels and pocketed-ball marker slots | Complete rules-driven group display |

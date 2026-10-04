@@ -2,6 +2,7 @@
  * Unlock conditions are IDs from actual committed live-match milestones.
  * The renderer uses the same colors as the locker preview.
  */
+import {paintCue} from './cue-art.js';
 export const CUES=Object.freeze([
  {id:'house',name:'House Maple',description:'Warm maple, linen wrap, ivory ferrule.',
   requirement:null,earn:'Ready to play',butt:'#704222',wrap:'#38261d',
@@ -47,22 +48,8 @@ export function paintCuePreview(canvas,cue){
  const g=canvas?.getContext?.('2d');
  if(!g)return;
  const w=canvas.width,h=canvas.height;
- g.clearRect(0,0,w,h);g.save();g.lineCap='round';
- const a={x:w*.11,y:h*.73},b={x:w*.91,y:h*.29};
- const interp=t=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
- const seg=(from,to,width,color)=>{
-  const p=interp(from),q=interp(to);
-  g.beginPath();g.moveTo(p.x,p.y);g.lineTo(q.x,q.y);
-  g.lineWidth=width;g.strokeStyle=color;g.stroke();
- };
- g.shadowColor='#000b';g.shadowBlur=14;g.shadowOffsetY=6;
- seg(0,1,17,cue.butt);g.shadowBlur=0;g.shadowOffsetY=0;
- seg(.03,.33,14,cue.wrap);
- seg(.03,.045,19,cue.accent);seg(.34,.35,17,cue.metal);
- seg(.36,.90,11,cue.shaft);seg(.91,.975,8,'#eee5cf');
- seg(.976,.992,8,cue.metal);seg(.992,1,7,cue.tip);
- // Narrow hand-crafted grip and ring details read at phone sizes.
- for(const t of [.08,.13,.18,.23,.28])seg(t,t+.006,15,cue.accent);
- seg(.36,.88,2,'#fff9da5c');
- g.restore();
+ g.clearRect(0,0,w,h);
+ // Same lathe-turned cue the table draws, scaled to fill the frame.
+ const tip={x:w*.91,y:h*.29},butt={x:w*.11,y:h*.73},len=Math.hypot(tip.x-butt.x,tip.y-butt.y);
+ paintCue(g,tip,butt,cue,{scale:len/115});
 }

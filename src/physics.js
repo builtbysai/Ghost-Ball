@@ -6,7 +6,7 @@ export const POCKETS = Object.freeze([[-7,-7],[500,-13],[1007,-7],[-7,507],[500,
 export const PHYSICS = Object.freeze({
   slideDeceleration: 760, rollingDeceleration: 135, rollingSpeedDrag: .10,
   ballRestitution: .94, railRestitution: .84, railFriction: .14,
-  spinDecay: 1.25, jawRestitution: .58, maxSpeed: 2050,
+  spinDecay: 1.25, jawRestitution: .5, jawFunnel: .2, jawFunnelReach: 62, maxSpeed: 2050,
 });
 const BALL_COLORS = ['#efece3','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d','#191918','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d'];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -31,11 +31,28 @@ export function rack(seed=0){
   }
   return balls;
 }
+/** Nine-ball diamond: the 1 at the apex, the 9 in the middle, the rest shuffled by seed. */
+export function rackNine(seed=0){
+  const balls=[makeBall(0,252,250)];
+  const rest=[2,3,4,5,6,7,8];
+  // Deterministic seeded shuffle (no Math.random: racks must replay from the seed).
+  let state=(seed*2654435761+12345)>>>0;
+  for(let i=rest.length-1;i>0;i--){state=(state*1664525+1013904223)>>>0;const j=state%(i+1);[rest[i],rest[j]]=[rest[j],rest[i]];}
+  const rows=[[1],[rest[0],rest[1]],[rest[2],9,rest[3]],[rest[4],rest[5]],[rest[6]]];
+  const step=TABLE.radius*2+.3;
+  rows.forEach((ids,row)=>ids.forEach((id,col)=>{
+    balls.push(makeBall(id,718+row*step*Math.sqrt(3)/2,250+(col-(ids.length-1)/2)*step));
+  }));
+  return balls;
+}
 /** Radial well capture before cushion response. Mouth guards provide an approach corridor. */
 function pocketFor(ball){
+  // A ball creeping slowly over a pocket lip has nothing left to carry it
+  // across: a slightly wider well lets it drop instead of balancing forever.
+  const lip=distance(ball.vx,ball.vy)<70?9:0;
   for(let i=0;i<POCKETS.length;i++){
     const [px,py]=POCKETS[i],side=i===1||i===4;
-    if(distance(ball.x-px,ball.y-py)<(side?26:32))return i;
+    if(distance(ball.x-px,ball.y-py)<(side?26:32)+lip)return i;
   }
   return -1;
 }
@@ -58,6 +75,11 @@ function slowBall(ball,dt){
   }
   const decay=Math.max(0,1-PHYSICS.spinDecay*dt);ball.spin*=decay;
 }
+function nearestWell(x,y){
+  let best=null,bestD=PHYSICS.jawFunnelReach**2;
+  for(const w of POCKETS){const d=(w[0]-x)**2+(w[1]-y)**2;if(d<bestD){bestD=d;best=w;}}
+  return best;
+}
 function jawHit(ball,jx,jy,events){
   const dx=ball.x-jx,dy=ball.y-jy,r=TABLE.radius+4,d2=dx*dx+dy*dy;
   if(d2>=r*r)return;
@@ -65,8 +87,24 @@ function jawHit(ball,jx,jy,events){
   ball.x+=nx*(r-d+.05);ball.y+=ny*(r-d+.05);
   const normal=ball.vx*nx+ball.vy*ny;
   if(normal>=0)return;
-  ball.vx-=(1+PHYSICS.jawRestitution)*normal*nx;
-  ball.vy-=(1+PHYSICS.jawRestitution)*normal*ny;
+  // Real pocket facings are angled into the throat: tilt the rebound normal
+  // toward the nearest well so a glancing nose contact funnels the ball in
+  // instead of spitting it back across the table.
+  let hx=nx,hy=ny;
+  const well=nearestWell(ball.x,ball.y);
+  if(well){
+   const wx=well[0]-ball.x,wy=well[1]-ball.y,wd=Math.hypot(wx,wy)||1;
+   hx=nx*(1-PHYSICS.jawFunnel)+wx/wd*PHYSICS.jawFunnel;hy=ny*(1-PHYSICS.jawFunnel)+wy/wd*PHYSICS.jawFunnel;
+   const hn=Math.hypot(hx,hy)||1;hx/=hn;hy/=hn;
+  }
+  const hit=ball.vx*hx+ball.vy*hy;
+  if(hit<0){
+   ball.vx-=(1+PHYSICS.jawRestitution)*hit*hx;
+   ball.vy-=(1+PHYSICS.jawRestitution)*hit*hy;
+  }else{
+   ball.vx-=(1+PHYSICS.jawRestitution)*normal*nx;
+   ball.vy-=(1+PHYSICS.jawRestitution)*normal*ny;
+  }
   ball.spin*=.65;ball.slipX=ball.vx*.16;ball.slipY=ball.vy*.16;
   if(-normal>60)events.push({type:'rail',id:ball.id,speed:-normal,jaw:true});
 }

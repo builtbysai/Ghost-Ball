@@ -19,7 +19,7 @@ test('each exhibition shot displays its actual cue aim, draw and strike',()=>{
  let steps=0;while(game.turnShot&&steps++<5000)game.step();
  assert.ok(steps<5000,'the first shot eventually settles');
  assert.equal(game.turn,1,'the next exhibition player takes over');
- game.update(.25);
+ for(let frame=0;frame<120&&!game.previewShot;frame++)game.update(.016);
  assert.ok(game.previewShot&&game.presentedCue,'the second player visibly aims');
 });
 

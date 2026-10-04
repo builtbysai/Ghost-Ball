@@ -7,11 +7,14 @@
  * group ball and the 8 on the same shot cannot be mistaken for a legal win.
  */
 export const groupOf=id=>id>=1&&id<=7?'solids':id>=9&&id<=15?'stripes':null;
-export const groupContains=(id,group)=>group==='solids'?id>=1&&id<=7:group==='stripes'?id>=9&&id<=15:group==='eight'?id===8:group==='open'?groupOf(id)!==null:false;
+/** Nine-ball has no groups; the only legal first contact is the lowest ball, written 'low-N'. */
+export const lowestGroup=ids=>{const live=ids.filter(id=>id>0);return live.length?`low-${Math.min(...live)}`:'low-9';};
+export const groupContains=(id,group)=>typeof group==='string'&&group.startsWith('low-')?id===Number(group.slice(4)):group==='solids'?id>=1&&id<=7:group==='stripes'?id>=9&&id<=15:group==='eight'?id===8:group==='open'?groupOf(id)!==null:false;
 
 /**
  * @param {{turn:number,breakShot:boolean,groups:(string|null)[],shot:
- * {first:number|null,pots:number[],rail:boolean,groupAtStart:string}}} input
+ * {first:number|null,pots:number[],rail:boolean,groupAtStart:string,
+ * callRequired?:boolean,call?:number,potRecords?:{id:number,pocket:number}[]}}} input
  * @returns {object} resolved turn, foul, and winner state. No world mutations.
  */
 export function resolveCasualEight({turn,breakShot,groups,shot}){
@@ -20,9 +23,12 @@ export function resolveCasualEight({turn,breakShot,groups,shot}){
  const scratch=pots.includes(0),eight=pots.includes(8);
  const group=shot.groupAtStart||'open';
  if(eight&&!breakShot){
-   const legal=group==='eight'&&!scratch&&shot.first===8;
+   // Optional "call the 8": the eight must drop in the pocket the shooter named.
+   const dropped=(shot.potRecords||[]).find(record=>record?.id===8);
+   const pocketOk=!shot.callRequired||dropped?.pocket===shot.call;
+   const legal=group==='eight'&&!scratch&&shot.first===8&&pocketOk;
    return {type:'end',winner:legal?turn:next,legal,reason:legal?'eight-cleared':
-     scratch?'scratch-on-eight':group!=='eight'?'early-eight':'wrong-ball-first',
+     scratch?'scratch-on-eight':group!=='eight'?'early-eight':shot.first!==8?'wrong-ball-first':'wrong-pocket',
      spotEight:false,groups:[...groups],turn,ballInHand:false,foul:false};
  }
  // On the first shot the actual object group is irrelevant. Casual mode
@@ -44,4 +50,30 @@ export function resolveCasualEight({turn,breakShot,groups,shot}){
    turn:keep?turn:next,winner:null,legal:null,groups:assigned,
    ballInHand:foul,foul
  };
+}
+
+/**
+ * Casual nine-ball (WPA flavour, without push-out or the three-foul rule).
+ *  - The first ball struck must be the lowest numbered ball on the table.
+ *  - Legally pot any ball and you keep shooting; pot the 9 legally and you win,
+ *    on the break or by combination.
+ *  - A foul (scratch, wrong first ball, no contact, or nothing to a cushion after
+ *    contact) gives ball in hand and flips the turn; a 9 potted on a foul is re-spotted.
+ * Pure: no world mutation.
+ * @param {{turn:number,breakShot:boolean,shot:{first:number|null,pots:number[],rail:boolean,
+ *   groupAtStart:string}}} input
+ */
+export function resolveNineBall({turn,breakShot,shot}){
+ if(!shot||![0,1].includes(turn))throw new TypeError('Invalid nine-ball shot');
+ const next=1-turn,pots=shot.pots||[];
+ const lowest=Number((shot.groupAtStart||'low-1').slice(4));
+ const scratch=pots.includes(0),nine=pots.includes(9);
+ const reason=scratch?'scratch':shot.first===null?'no-contact':shot.first!==lowest?'wrong-ball-first':
+  !shot.rail&&!pots.some(id=>id>0)?'no-rail':null;
+ const foul=reason!==null;
+ if(nine&&!foul)return {type:'end',winner:turn,legal:true,reason:'nine-potted',spotNine:false,
+  groups:[null,null],turn,ballInHand:false,foul:false};
+ const potted=pots.some(id=>id>0&&id!==9);
+ return {type:foul?'foul':potted?'retain':'turn',reason,spotNine:nine&&foul,
+  turn:foul||!potted?next:turn,winner:null,legal:null,groups:[null,null],ballInHand:foul,foul};
 }

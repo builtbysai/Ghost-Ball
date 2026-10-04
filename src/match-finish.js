@@ -9,7 +9,7 @@ export function decisiveShot(history){
  const ruling=[...history].reverse().find(entry=>entry?.kind==='ruling');
  if(!ruling||ruling.result!=='end')return null;
  const eight=Array.isArray(ruling.potRecords)?
-  ruling.potRecords.find(p=>p?.id===8&&Number.isInteger(p.pocket)&&p.pocket>=0&&p.pocket<6):null;
+  ruling.potRecords.find(p=>(p?.id===8||(ruling.reason==='nine-potted'&&p?.id===9))&&Number.isInteger(p.pocket)&&p.pocket>=0&&p.pocket<6):null;
  const pocket=eight?.pocket??null;
  switch(ruling.reason){
   case 'eight-cleared':
@@ -18,6 +18,10 @@ export function decisiveShot(history){
    return {label:pocket===null?'EARLY EIGHT':'EARLY EIGHT · '+POCKET_LABELS[pocket],pocket:null,clean:false};
   case 'scratch-on-eight':
    return {label:'SCRATCH ON THE EIGHT',pocket:null,clean:false};
+  case 'nine-potted':
+   return {label:pocket===null?'NINE':'NINE · '+POCKET_LABELS[pocket],pocket,clean:true};
+  case 'wrong-pocket':
+   return {label:pocket===null?'WRONG POCKET':'WRONG POCKET · '+POCKET_LABELS[pocket],pocket:null,clean:false};
   case 'wrong-ball-first':
    return {label:'WRONG FIRST CONTACT',pocket:null,clean:false};
   default:return null;

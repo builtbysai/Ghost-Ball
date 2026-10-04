@@ -24,7 +24,7 @@ test('intro camera and moving rack reach the same final geometry from live posit
  const finish=[{id:0,x:252,y:250},{id:1,x:718,y:250},{id:2,x:740,y:238}];
  assert.equal(cameraFlight(0).travel,0);assert.equal(cameraFlight(1).flatten,1);
  assert.ok(cameraFlight(.53).lift>.75);
- const mid=movingRack(start,finish,.55),end=movingRack(start,finish,1);
+ const mid=movingRack(start,finish,.3),end=movingRack(start,finish,1);
  assert.ok(mid.some(b=>b.trail&&b.trail.opacity>0));
  assert.ok(mid.every(b=>Number.isFinite(b.x)&&Number.isFinite(b.y)));
  assert.deepEqual(end.map(b=>[b.x,b.y]),finish.map(b=>[b.x,b.y]));

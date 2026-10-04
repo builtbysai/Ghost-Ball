@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Simulation,makeBall} from '../src/physics.js';
 import {createRandom} from '../src/random.js';
 import {candidateShots,chooseShot,previewShot,assessShot,chooseAiCuePlacement,createShotPlanner} from '../src/ai.js';
-import {Game} from '../src/game.js';
+import {Game,AI_PLACEMENT_PAUSE} from '../src/game.js';
 
 function sparse(){
  return new Simulation([
@@ -103,6 +103,8 @@ test('live CPU and benchmark share exactly the same real placement validation',(
  const expected=chooseAiCuePlacement(game.sim,'stripes','club');
  assert.ok(expected);
  game.update(.025);
+ assert.equal(game.ballInHand,true,'the CPU pauses visibly before taking ball in hand');
+ game.update(AI_PLACEMENT_PAUSE);
  assert.equal(game.ballInHand,false);
  assert.equal(game.sim.cue().pocketed,false);
  assert.deepEqual({x:game.sim.cue().x,y:game.sim.cue().y},

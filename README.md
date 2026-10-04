@@ -45,12 +45,44 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/cue-locker.css`: viewport-fitted 3×2 equipment browsing in landscape and portrait.
 - `src/main.js`: app wiring, responsive controls, lifecycle.
 - `src/touch-controls.js`: tested rear-shaft hit testing, pointer pull, wheel aim and spin-contact math.
+- `src/rack-flock.js`: precomputed flocking rack assembly with exclusion (presentation only).
+- `src/rooms.css`: per-hall room scenery. `src/sheets.css`: shared sheet design.
+- `src/aim-gestures.js`: pure smart-aim logic (stick vs table press, tap-to-aim, ball picking, touch lead).
+- `src/guide.css`, `src/match-ui.css`: How to play sheet; match HUD, banner, trays and preference layout.
 - `src/table-transition.js`: live-to-play table motion and deterministic rack assembly.
 - `src/landscape.css`: isolated pool gameplay layout.
 - `src/feel.css`: responsive, motion-aware power rail feedback.
 - `src/style.css`: viewport-contained presentation; design tokens.
 
 See the [active roadmap](docs/ROADMAP.md), [measured full-rack reliability results](docs/P2-1-RELIABILITY-LAB.md), [pool-game engagement research](docs/ENGAGEMENT-RESEARCH.md), [P2 rules architecture](docs/P2-RULES-ARCHITECTURE.md) and [physics/visual research](docs/RESEARCH.md). Focused Node regression tests cover input geometry, cue loading and collision physics; Playwright browser smoke checks the live entrance, all five hall palettes, and responsive mouse/touch input. Do not bolt future game modes into `main.js`: extract state machines and provide explicit tests.
+
+## Overhaul 2026-10-04: controls, clarity and a finishable Rookie
+
+Addresses the verified play-test findings (see [docs/OVERHAUL-2026-10-04.md](docs/OVERHAUL-2026-10-04.md)).
+
+- **Keyboard shooting:** hold **Space** to pull (power ramps 0-100% over 1.2 s with the cue drawing back), release to shoot. A tap under 150 ms or **Esc** cancels. **←/→** or **A/D** aim in 2° steps, **Shift** for 0.25°; the +/- buttons and aim wheel use the same steps and the fine-aim readout always shows the exact angle. **M** mutes.
+- **Turns you can follow:** the 45 s shot clock is the large timer in the HUD centre (match time is demoted beneath the turn label), a persistent one-line recap says what just happened and whose turn it is, a 2.8 s banner names the incoming player on every change of turn, and the CPU pauses ~1 s before taking ball in hand.
+- **Honest trays:** neutral dashed ghost slots while the table is open, real numbered balls after assignment, and a dedicated 8-ball slot that lights up when a player is on the 8.
+- **HUD mute button** beside Pause, persisted and synced with Settings.
+- **Rookie can finish a rack:** pot lines now respect the rubber jaws and impossible cuts, a bounded look-ahead vets each shot so Rookie misses pots but not rules, blocked shots fall back to a real safety, and stalled turns widen the search. Unforced fouls fell from ~24% of shots to ~2%, and seeded Rookie-vs-Rookie racks finish in ~80 shots.
+- Slow balls creeping over a pocket lip now drop instead of balancing; `favicon.ico` added.
+
+## Touch, rules and guide update (2026-10-04)
+
+- **Smart aiming:** the table accepts both ways of aiming without a mode switch. Grab the cue behind the ball to turn it, or tap or drag anywhere on the cloth to aim at that spot, or tap a ball to aim straight through it. A crosshair confirms the touch; on touch screens the aim point leads the finger so it never hides the target. Preferences → Table touch → *Stick only* restores the old behaviour. Aiming never fires a shot.
+- **Quick spin:** drag on the little cue ball to set the contact point without opening the sheet.
+- **Rules:** a scratch on the break gives ball in hand behind the head string. Match setup adds **Call the 8** (name the 8-ball's pocket; any other pocket loses; tap the pocket or press C) and a **shot clock** switch (45 s or off). Preferences add Aim guide (Full / Short / Off) and Wheel speed.
+- **How to play** in the Clubhouse and pause menus: controls, rules and a short history of pool.
+- Research and decisions: [docs/COMPETITOR-STUDY-2026-10.md](docs/COMPETITOR-STUDY-2026-10.md).
+
+## Visual, physics and rules update (2026-10-04, part 2)
+
+- **Pockets:** visible rubber jaw noses, funnelled glancing contacts (no more mystery bounce-outs), a ball that visibly sinks into the well, and a ball-return rail where pocketed balls roll in and queue.
+- **Rack flocking:** restarting or racking again sends the balls flocking back into the triangle without overlaps; pocketed balls re-enter from the return gate.
+- **Sheets:** Pause, Preferences, How to play, the Clubhouse menu, Match setup, Local record, Cue locker and Skill drills share one design (`src/sheets.css`).
+- **Halls:** each of the five rooms has its own wall, floor, lamp and light (`src/rooms.css`).
+- **9-ball:** pick it in Match setup. Lowest ball first (ringed), pot the 9 to win. See [docs/RULES-RESEARCH-2026-10.md](docs/RULES-RESEARCH-2026-10.md) for the rules research, including how solids and stripes are decided.
+- **Spin** resets to the centre after every shot (Preferences → Spin after a shot → Keep).
 
 ## P3: Physical impact and match finish polish
 

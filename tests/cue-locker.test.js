@@ -85,13 +85,15 @@ test('renderer cosmetics cannot influence deterministic shots or authoritative r
   new Simulation(rack(414)).snapshot());
 });
 test('locker full-length preview paints with zero impact on cue geometry',()=>{
- const strokes=[];
- const gradient={addColorStop(){}};
- const g={clearRect(){},save(){},restore(){},beginPath(){},moveTo(){},
-  lineTo(){},stroke(){strokes.push(this.strokeStyle)},arc(){},fill(){},
-  createLinearGradient(){return gradient;}};
+ const stops=[];
+ const gradient={addColorStop(_,color){stops.push(color);}};
+ const noop=()=>{};
+ const g=new Proxy({createLinearGradient:()=>gradient},{
+  get:(t,k)=>k in t?t[k]:noop,set:(t,k,v)=>{t[k]=v;return true;}});
  const canvas={width:640,height:150,getContext:()=>g};
  for(const cue of CUES)paintCuePreview(canvas,cue);
- assert.ok(strokes.includes(CUES[5].shaft));
- assert.ok(strokes.includes(CUES[5].tip));
+ // Every body part is shaded from the cue's own palette (gradient mid-stops).
+ assert.ok(stops.includes(CUES[5].shaft));
+ assert.ok(stops.includes(CUES[5].butt));
+ assert.ok(stops.includes(CUES[5].wrap));
 });

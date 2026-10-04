@@ -1,7 +1,8 @@
 import {orientationOf,rotateVector} from './ball-orientation.js';
-import {TABLE} from './physics.js';
+import {TABLE,POCKETS} from './physics.js';
 import {paintFrame,paintCloth,paintRailDetails,paintPockets,FINISHES} from './table-finishes.js';
 import {cueGeometry,strokeCharge} from './cue-feel.js';
+import {paintCue} from './cue-art.js';
 import {projectAim} from './aim-guide.js';
 import {cueById} from './cue-catalog.js';
 
@@ -54,7 +55,7 @@ export class TableRenderer{
    return {x:clamp(((sx-this.center)/(this.bw*k)+.5)*TABLE.width,0,1000),y:t*TABLE.height};
  }
  clear(){this.g.clearRect(0,0,this.w,this.h);}
- draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[]}={}){
+ draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[],callPocket=null,targetBall=null}={}){
   const g=this.g,P=(x,y)=>this.project(x,y);
   this.clear();g.save();
   if(this.cacheStatic&&typeof document!=='undefined'){
@@ -73,6 +74,8 @@ export class TableRenderer{
    g.drawImage(this.surface,0,0,this.w,this.h);
   }else this.paintSurface(g);
   if(placementZone&&!sim.moving)this.drawPlacementZone(sim,placementZone,placement);
+  if(callPocket!==null&&callPocket>=0)this.drawCalledPocket(callPocket);
+  if(targetBall!==null)this.drawTargetBall(sim,targetBall);
   if(interactive&&aim&&!sim.moving&&!sim.cue()?.pocketed)this.drawAim(sim,aim);
   else if(aim?.strike&&aim.strike.progress<1)this.drawStroke(aim.strike);
   // A placed-in-hand ball is a preview until confirmed; never draw two white
@@ -128,13 +131,25 @@ export class TableRenderer{
       g.restore();
     }else if(effect.type==='pocket'){
       const t=1-effect.life;
-      const [px,py]=P(effect.sourceX,effect.sourceY);
-      const x=px+(sx-px)*t,y=py+(sy-py)*t,r=Math.max(0,TABLE.radius*this.bw/1000*(1-.93*t));
-      g.save();g.shadowColor='#080d0a';g.shadowBlur=9*t;
-      g.beginPath();g.arc(x,y,r,0,TAU);g.fillStyle=effect.color||'#eee5d8';g.fill();
-      g.restore();
-      g.beginPath();g.arc(sx,sy,Math.max(1,t*25),0,TAU);
-      g.strokeStyle=`rgba(239,207,139,${effect.life*.35})`;g.lineWidth=1.6;g.stroke();
+      if(effect.id!==undefined){
+        // The real numbered ball rolls over the lip, sinks and darkens into
+        // the well, rather than a flat dot teleporting to the pocket centre.
+        const e=t*t*(3-2*t),slide=Math.min(1,t*1.25);
+        const wx=effect.sourceX+(effect.x-effect.sourceX)*(slide*slide*(3-2*slide));
+        const wy=effect.sourceY+(effect.y-effect.sourceY)*(slide*slide*(3-2*slide));
+        this.drawBall({id:effect.id,color:effect.color,x:wx,y:wy,rotation:0,
+          orientation:effect.orientation||[1,0,0,0],opacity:Math.max(0,1-.55*e*e)},1-.46*e,Math.min(.96,e*1.1));
+        g.save();g.beginPath();g.arc(sx,sy,Math.max(1,6+t*26),0,TAU);
+        g.strokeStyle=`rgba(239,207,139,${effect.life*.28})`;g.lineWidth=1.4;g.stroke();g.restore();
+      }else{
+        const [px,py]=P(effect.sourceX,effect.sourceY);
+        const x=px+(sx-px)*t,y=py+(sy-py)*t,r=Math.max(0,TABLE.radius*this.bw/1000*(1-.93*t));
+        g.save();g.shadowColor='#080d0a';g.shadowBlur=9*t;
+        g.beginPath();g.arc(x,y,r,0,TAU);g.fillStyle=effect.color||'#eee5d8';g.fill();
+        g.restore();
+        g.beginPath();g.arc(sx,sy,Math.max(1,t*25),0,TAU);
+        g.strokeStyle=`rgba(239,207,139,${effect.life*.35})`;g.lineWidth=1.6;g.stroke();
+      }
     }else{
       g.beginPath();g.arc(sx,sy,(1-effect.life)*28,0,TAU);
       g.strokeStyle=`rgba(239,207,139,${effect.life*.65})`;g.lineWidth=2;g.stroke();
@@ -167,8 +182,8 @@ export class TableRenderer{
   this.ballTextures.set(ball,{canvas,rotation:ball.rotation||0});
   return canvas;
  }
- drawBall(ball){
-  const g=this.g,[sx,sy,k]=this.project(ball.x,ball.y),r=Math.max(3,TABLE.radius*this.bw/1000*k);
+ drawBall(ball,scale=1,dark=0){
+  const g=this.g,[sx,sy,k]=this.project(ball.x,ball.y),r=Math.max(3,TABLE.radius*this.bw/1000*k)*scale;
   if(ball.trail&&ball.trail.opacity>.005){
    const [px,py]=this.project(ball.trail.x,ball.trail.y);
    g.save();g.lineCap='round';const sheen=g.createLinearGradient(px,py,sx,sy);
@@ -203,6 +218,7 @@ export class TableRenderer{
    }
    g.restore();
   }
+  if(dark>0){g.fillStyle=`rgba(3,5,5,${Math.min(1,dark)})`;g.fillRect(-r,-r,r*2,r*2);}
   g.restore();
  }
 
@@ -227,10 +243,34 @@ export class TableRenderer{
    }
    g.restore();
  }
+ // The pocket named for the 8 under "call the 8": a gold ring and numeral at the well.
+ drawCalledPocket(index){
+   const target=POCKETS[index];if(!target)return;
+   const g=this.g,[x,y]=this.project(target[0],target[1]),scale=this.bw/1000,radius=Math.max(11,34*scale);
+   // Pull the marker onto the cloth so corner wells (centred off the table) stay visible.
+   const cx=Math.min(Math.max(x,radius*.9),this.w-radius*.9),cy=Math.min(Math.max(y,radius*.9),this.h-radius*.9);
+   g.save();
+   g.beginPath();g.arc(cx,cy,radius,0,TAU);g.fillStyle='rgba(240,205,120,.16)';g.fill();
+   g.lineWidth=2;g.strokeStyle='rgba(247,214,138,.95)';g.setLineDash([5,4]);g.stroke();g.setLineDash([]);
+   g.fillStyle='rgba(255,236,176,.95)';g.font='800 '+Math.max(9,radius*.62)+'px system-ui,sans-serif';
+   g.textAlign='center';g.textBaseline='middle';g.fillText('8',cx,cy);
+   g.restore();
+ }
+ // Nine-ball: a soft ring marks the lowest ball, the only legal first contact.
+ drawTargetBall(sim,id){
+   const ball=sim.balls.find(b=>b.id===id&&!b.pocketed);if(!ball)return;
+   const g=this.g,[x,y,k]=this.project(ball.x,ball.y),r=Math.max(5,TABLE.radius*this.bw/1000*k);
+   g.save();g.beginPath();g.arc(x,y,r*1.55,0,TAU);
+   g.strokeStyle='rgba(247,214,138,.85)';g.lineWidth=1.6;g.setLineDash([4,4]);g.stroke();g.setLineDash([]);
+   g.beginPath();g.arc(x,y,r*2.05,0,TAU);g.strokeStyle='rgba(247,214,138,.25)';g.lineWidth=1;g.stroke();
+   g.restore();
+ }
  drawAim(sim,aim){
    const {angle}=aim,g=this.g,cue=sim.cue();if(!cue)return;
    if(aim.showGuide===false){this.drawCue(cue,angle,aim.drawback||0);return;}
-   const guide=projectAim(sim.balls,cue,angle);if(!guide)return;
+   const guideMode=aim.guideMode||'full';
+   if(guideMode==='off'){this.drawCue(cue,angle,aim.drawback||0);if(aim.marker)this.drawAimMarker(aim.marker);return;}
+   const guide=projectAim(sim.balls,cue,angle,guideMode==='short'?{maxObjectLength:60,maxCueLength:230}:{});if(!guide)return;
    const [sx,sy]=this.project(cue.x,cue.y),[ex,ey]=this.project(guide.cueEnd.x,guide.cueEnd.y);
    const scale=this.bw/1000;
    g.save();g.lineCap='round';
@@ -245,8 +285,20 @@ export class TableRenderer{
      g.setLineDash([Math.max(3,4*scale),Math.max(4,6*scale)]);
      g.strokeStyle='rgba(245,219,156,.85)';g.lineWidth=Math.max(1.15,1.9*scale);g.stroke();g.setLineDash([]);
    }
+   if(aim.marker)this.drawAimMarker(aim.marker,scale);
    g.restore();
    this.drawCue(cue,angle,aim.drawback||0);
+ }
+ // Where a tap or drag asked the cue to point: a fading crosshair so the
+ // player sees what the touch was understood as.
+ drawAimMarker(marker,scale=this.bw/1000){
+   const g=this.g,[mx,my]=this.project(marker.x,marker.y),size=Math.max(6,9*scale+3);
+   g.save();g.globalAlpha=Math.max(0,Math.min(1,marker.alpha??1));
+   g.strokeStyle='rgba(255,236,176,.95)';g.lineWidth=1.4;
+   g.beginPath();g.arc(mx,my,size,0,TAU);
+   g.moveTo(mx-size*1.5,my);g.lineTo(mx-size*.55,my);g.moveTo(mx+size*.55,my);g.lineTo(mx+size*1.5,my);
+   g.moveTo(mx,my-size*1.5);g.lineTo(mx,my-size*.55);g.moveTo(mx,my+size*.55);g.lineTo(mx,my+size*1.5);
+   g.stroke();g.restore();
  }
  // The dot is an aim-only contact-point indicator, not simulated 3D impact.
  drawCueStrike(cue,spin){
@@ -276,27 +328,10 @@ export class TableRenderer{
   const g=this.g,style=this.cueStyle||cueById('house'),{tip,grip,butt}=cueGeometry(cue,angle,drawback);
   const [tx,ty]=this.project(tip.x,tip.y),[gx,gy]=this.project(grip.x,grip.y),[bx,by]=this.project(butt.x,butt.y);
   const width=clamp(this.bw/560, .56, 1.28);
+  g.save();g.globalAlpha=clamp(opacity,0,1);
+  paintCue(g,{x:tx,y:ty},{x:bx,y:by},style,{scale:width*1.22});
+  g.restore();
   g.save();g.globalAlpha=clamp(opacity,0,1);g.lineCap='round';
-  // Contact shadows and a slender taper communicate a polished physical cue.
-  g.shadowColor='rgba(0,0,0,.64)';g.shadowBlur=5*width;g.shadowOffsetY=2.8*width;
-  g.beginPath();g.moveTo(bx,by);g.lineTo(gx,gy);g.strokeStyle=style.butt;g.lineWidth=8.8*width;g.stroke();
-  g.shadowBlur=0;g.shadowOffsetY=0;
-  const wood=g.createLinearGradient(bx-3,by-4,gx+3,gy+4);
-  wood.addColorStop(0,style.butt);wood.addColorStop(.28,style.wrap);
-  wood.addColorStop(.72,style.butt);wood.addColorStop(1,style.accent);
-  g.beginPath();g.moveTo(bx,by);g.lineTo(gx,gy);g.strokeStyle=wood;g.lineWidth=6.4*width;g.stroke();
-  g.beginPath();g.moveTo(bx+(gx-bx)*.09,by+(gy-by)*.09);
-  g.lineTo(bx+(gx-bx)*.70,by+(gy-by)*.70);
-  g.strokeStyle=style.wrap;g.lineWidth=5.1*width;g.stroke();
-  for(const t of [.1,.15,.2,.25,.3]){
-    const x=bx+(gx-bx)*t,y=by+(gy-by)*t;
-    g.beginPath();g.arc(x,y,1.35*width,0,TAU);g.fillStyle=style.accent;g.fill();
-  }
-  g.beginPath();g.moveTo(gx,gy);g.lineTo(tx,ty);g.strokeStyle=style.shaft;g.lineWidth=3.15*width;g.stroke();
-  g.beginPath();g.moveTo(gx,gy);g.lineTo(tx,ty);g.strokeStyle='rgba(255,246,207,.52)';g.lineWidth=.85*width;g.stroke();
-  const ring=this.project(cue.x-Math.cos(angle)*(cueGeometry(cue,angle,drawback).reach-92),cue.y-Math.sin(angle)*(cueGeometry(cue,angle,drawback).reach-92));
-  g.beginPath();g.moveTo(gx,gy);g.lineTo(...ring);g.strokeStyle=style.metal;g.lineWidth=1.8*width;g.stroke();
-  g.beginPath();g.arc(tx,ty,2.3*width,0,TAU);g.fillStyle=style.tip;g.fill();
   if(drawback>.03){
     const [cx,cy]=this.project(cue.x,cue.y);
     const v=Math.min(1,drawback);g.beginPath();g.arc(cx,cy,Math.max(5,TABLE.radius*this.bw/1000)*(1.28+.22*v),0,TAU);
