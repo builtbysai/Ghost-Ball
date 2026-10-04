@@ -105,10 +105,11 @@ with sync_playwright() as p:
         assert inside_viewport(cpanel,width,height),f'{width}x{height}: challenge picker clipped'
         assert page.locator('.challenge-panel').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'challenge panel overflow'
         assert page.locator('#challengeCards').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'skill cards clipped'
+        page.screenshot(path=str((root/'screenshots'/f'skill-drills-{width}x{height}.png').resolve()))
         for card in page.locator('#challengeCards button').all():
             assert inside_viewport(card.bounding_box(),width,height),'authored skill card outside viewport'
-            assert card.evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'),'skill card text clipped'
-        page.screenshot(path=str((root/'screenshots'/f'skill-drills-{width}x{height}.png').resolve()))
+            fits=card.evaluate('(el)=>({scroll:el.scrollHeight,client:el.clientHeight})')
+            assert fits['scroll']<=fits['client']+1,f"{width}x{height}: {card.get_attribute('data-drill')} text clipped: {fits}"
         page.keyboard.press('Escape')
         assert page.locator('#challengeSheet').is_hidden() and page.locator('#clubMenu').is_visible()
         assert page.evaluate('document.activeElement.id')=='menuChallenges','skill picker focus not restored'
