@@ -106,7 +106,7 @@
 #gameScreen .aim-readout{display:block;font:800 clamp(8px,.95vw,11px)/1 ui-monospace,SFMono-Regular,Consolas,monospace;
  color:#f6e5b5;letter-spacing:.02em;min-height:1em;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px #000}
 #gameScreen .aim-wheel{background-position:0 var(--wheel-turn,0px)}
-#gameScreen .aim-wheel-control>button{min-width:38px;min-height:26px;transition:transform .1s,filter .1s}
+#gameScreen .aim-wheel-control>button{min-width:44px;min-height:32px;transition:transform .1s,filter .1s}
 #gameScreen .aim-wheel-control>button:active:not(:disabled){transform:scale(.94);filter:brightness(1.2)}
 #gameScreen .aim-wheel-control>button:disabled{opacity:.45}
 
