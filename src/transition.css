@@ -16,10 +16,7 @@
  animation:room-to-table 1.3s ease-in-out both;
 }
 .game-screen.entering .table-play-area{visibility:hidden;}
-.game-screen.entering .match-hud,
-.game-screen.entering .match-footer,
-.game-screen.entering .shot-rail,
-.game-screen.entering .tools-rail{animation:match-controls-in .47s .80s both;}
+.game-screen.entering .match-hud,.game-screen.entering .shot-rail,.game-screen.entering .tools-rail{animation:match-controls-in .47s .80s both;}
 @keyframes room-to-table{0%,14%{opacity:0}100%{opacity:1}}
 @keyframes match-controls-in{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
 
@@ -30,44 +27,9 @@
 }
 #app.entering-match .room{filter:brightness(.51);transition:filter .56s ease-out}
 #app .room{transition:filter .3s ease-in}
-
-/* Current preferences are real controls; unreleased views are honest placeholders. */
-.prefs-eyebrow{font-size:9px;font-weight:800;letter-spacing:.2em;color:#887c68}
-.settings-sheet header h2{margin:1px 0 5px}
-.prefs-current{display:flex;justify-content:space-between;align-items:center;gap:10px;
- margin:13px 0;padding:9px 12px;background:#e2dbc9;border-radius:8px;
- color:#827767;font-size:9px;letter-spacing:.12em;font-weight:850}
-.prefs-current strong{color:#2c5545;font-size:10px;white-space:nowrap}
-.prefs-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,3vw,23px)}
-.prefs-section{min-width:0;margin:8px 0 11px}
-.prefs-section h3{display:flex;align-items:baseline;justify-content:space-between;gap:6px;
- margin:0 0 3px;font:normal 19px Georgia,serif;color:#211d18}
-.prefs-section h3 small{font:800 8px system-ui;letter-spacing:.07em;color:#998a73}
-.prefs-section .setting-line{padding:8px 0;font-size:12px;gap:7px}
-.prefs-section .setting-line input{width:18px;height:18px;flex:none}
-.prefs-hint{font-size:10px;line-height:1.45;color:#827665;margin:6px 0 11px}
-.prefs-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-.prefs-options>*{min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:center;
- gap:3px;padding:9px 4px;min-height:43px;border:1px solid #cfc4b3;border-radius:8px;
- background:#e8e1d5;color:#80776a;font-size:11px;font-weight:750}
-.prefs-options .current-option{background:#1d3e33;border-color:#1d3e33;color:#f3eddc}
-.prefs-options small{font-size:7px;letter-spacing:.12em;color:#8f8371}
-.prefs-options .current-option small{color:#bee5c5}
-.prefs-options button:disabled{opacity:.69;cursor:not-allowed}
-@media(max-width:440px){.prefs-grid{gap:10px}.prefs-section h3{font-size:17px}.prefs-section .setting-line{font-size:11px}}
-@media(max-height:470px) and (orientation:landscape){
- .settings-sheet{width:min(92%,850px);max-height:94dvh;padding:12px 20px}
- .settings-sheet header h2{font-size:23px}
- .prefs-grid{grid-template-columns:1fr 1fr}
- .prefs-section{margin:5px 0}.prefs-section h3{font-size:15px}
- .prefs-section .setting-line{padding:5px 0}.prefs-current{margin:7px 0}
- .prefs-hint{margin:4px 0}
-}
 @media(prefers-reduced-motion:reduce){
  .table-flight,.flight-stage{display:none}
  #app.entering-match .masthead,#app.entering-match .room-details,
  #app.entering-match .lobby-panel{transition:none}
- .game-screen.entering::before,.game-screen.entering .match-hud,
- .game-screen.entering .match-footer,.game-screen.entering .shot-rail,
- .game-screen.entering .tools-rail{animation:none}
+ .game-screen.entering::before,.game-screen.entering .match-hud,.game-screen.entering .shot-rail,.game-screen.entering .tools-rail{animation:none}
 }
