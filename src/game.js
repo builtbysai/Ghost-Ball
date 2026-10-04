@@ -25,9 +25,10 @@ export class Game {
    if(kind==='drill'&&!skillDrillById(drillId))throw new RangeError('Unknown skill drill');
    this.drillId=kind==='drill'?drillId:null;
   this.onPocket=onPocket;this.onTurn=onTurn;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
- reset(){this.rackSeed=this.random()*100000|0;
+ reset(alternate=false){this.rackSeed=this.random()*100000|0;
    this.sim=new Simulation(this.kind==='drill'?skillDrillBalls(this.drillId):this.ruleset==='nine'?rackNine(this.rackSeed):rack(this.rackSeed));
-   this.turn=0;this.groups=[null,null];this.break=this.kind!=='drill';
+   // Rack-again alternates the breaker (the fair casual convention); a restart is a fresh match.
+   this.rackCount=alternate?(this.rackCount||0)+1:0;this.turn=this.kind==='match'?this.rackCount%2:0;this.groups=[null,null];this.break=this.kind!=='drill';
    this.foul=false;this.ballInHand=false;this.kitchen=false;this.over=false;this.winner=null;
    this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;this.drillOutcome=null;
   this.history=[];this.previewShot=null;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.activeStroke=null;

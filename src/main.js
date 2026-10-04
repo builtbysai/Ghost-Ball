@@ -31,7 +31,7 @@ let settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',
 let matchElapsed=0,lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let previousShotAngles=[0,0],toastTimeout=null;
-let exhibitionIndex=Math.floor(Math.random()*6),exhibitionTimer=null;
+let coach=0,exhibitionIndex=Math.floor(Math.random()*6),exhibitionTimer=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
 function syncEquippedCue(){const cue=equippedCue(progress);ambient.setCue(cue.id);table.setCue(cue.id);}
@@ -139,7 +139,7 @@ function matchTurn(event){
    newlyEarnedCueCount=CUES.filter(cue=>cueUnlocked(updated,cue)&&!previouslyOwned.includes(cue.id)).length;
    saveProgress(updated);
   }
-  if(current.players==='ai'){clearTimeout(exhibitionTimer);exhibitionTimer=setTimeout(()=>{if(active==='game'&&current?.players==='ai'&&current.over){resetMatch();}},7000);}
+  if(current.players==='ai'){clearTimeout(exhibitionTimer);exhibitionTimer=setTimeout(()=>{if(active==='game'&&current?.players==='ai'&&current.over){resetMatch(true);}},7000);}
   audio.play({type:event.practice||current.players==='local'||current.players==='ai'||event.winner===0?'win':'loss'});
   if(current.kind==='match')setRecap(event.reason==='three-fouls'?`Three fouls in a row. ${seatName(event.winner)} ${seatName(event.winner)==='You'?'win':'wins'} the rack.`:`${seatName(event.winner)} ${seatName(event.winner)==='You'?'win':'wins'} the rack.${current.players==='cpu'?` ${current.persona.name}: “${current.persona.quips[event.winner===1?'win':'lose']}”`:''}`);
   turnUI(); // Show result before keyboard focus is transferred.
@@ -548,6 +548,9 @@ function turnUI(){if(!current)return;
  $('guideBadge').classList.toggle('is-visible',Boolean(help));
  $('guideBadge').style.opacity=busy?'0':'.95';
 }
+// A three-step first-match coach that advances on what the player actually does.
+const COACH_TEXT=['','STEP 1 OF 3 · TAP THE TABLE OR DRAG THE CUE TO AIM','STEP 2 OF 3 · PULL THE POWER BAR DOWN, OR HOLD SPACE','STEP 3 OF 3 · RELEASE TO SHOOT'];
+function coachTo(step){if(!coach||step<=coach)return;coach=step;setText('controlsHint',COACH_TEXT[step]);}
 function begin(kind,drillId=null){
  if(active!=='lobby')return;
  // A watched exhibition is a real refereed match between two personas, with no human seat.
@@ -564,7 +567,7 @@ function begin(kind,drillId=null){
  if(kind==='attract'){current.turn=0;notify('An exhibition between our house rivals.');}
  setRecap(kind==='match'?(exhibit?`Exhibition: ${current.personaAt(0).name} vs ${current.personaAt(1).name}. ${current.personaAt(0).name} breaks.`:rival==='local'?'Player 1 breaks.':(gameType==='nine'?'Your break: hit hard. Pot a ball or drive four to a cushion.':'Your break. Aim, pull the power bar and release.')):'');
  let needsHint=false;try{needsHint=localStorage.getItem('ghostball-controls-taught')!=='yes';}catch{}
- if(kind==='match'&&needsHint&&!exhibit)show('controlsHint');else hide('controlsHint');
+ if(kind==='match'&&needsHint&&!exhibit){coach=1;setText('controlsHint',COACH_TEXT[1]);show('controlsHint');}else{coach=0;hide('controlsHint');}
  active='transition';show('gameScreen');$('lobby').setAttribute('aria-hidden','true');
  $('gameScreen').classList.add('entering');$('app').classList.add('entering-match');
  applyRoom();turnUI();resize();
@@ -623,11 +626,11 @@ function finishRackFlock(){
  for(const ball of current?.sim.balls||[]){const pose=final.find(p=>p.id===ball.id);if(pose){ball.orientation=[...pose.orientation];ball.rotation=pose.rotation;}}
  rackFlock=null;
 }
-function resetMatch(){
+function resetMatch(alternate=false){
  if(!current)return;clearTimeout(exhibitionTimer);
- if(current.players==='ai')current.seatPersonas=exhibitionPair(exhibitionIndex++).map(personaFor);const before=cloneBalls(current.sim.balls);finishRackFlock();current.reset();startRackFlock(before);calledPocket=null;matchEventId=current.kind==='match'&&current.players!=='ai'?newMatchId():null;
+ if(current.players==='ai')current.seatPersonas=exhibitionPair(exhibitionIndex++).map(personaFor);const before=cloneBalls(current.sim.balls);finishRackFlock();current.reset(alternate);startRackFlock(before);calledPocket=null;matchEventId=current.kind==='match'&&current.players!=='ai'?newMatchId():null;
  drillEventId=current.kind==='drill'?newMatchId():null;lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();
- setRecap(current.kind==='match'?(current.players==='ai'?`Exhibition: ${current.personaAt(0).name} vs ${current.personaAt(1).name}.`:current.players==='local'?'Player 1 breaks.':(gameType==='nine'?'Your break: hit hard. Pot a ball or drive four to a cushion.':'Your break. Aim, pull the power bar and release.')):'');
+ setRecap(current.kind==='match'?(current.players==='ai'?`Exhibition: ${current.personaAt(0).name} vs ${current.personaAt(1).name}. ${current.personaAt(current.turn).name} breaks.`:current.players==='local'?`Player ${current.turn+1} breaks.`:current.turn===1?`${seatName(1)} breaks.`:(gameType==='nine'?'Your break: hit hard. Pot a ball or drive four to a cushion.':'Your break. Aim, pull the power bar and release.')):'');
  newlyEarnedCueCount=0;$('collectedBalls').replaceChildren();placement=null;placeGesture=null;angle=current.kind==='drill'?skillDrillById(current.drillId).referenceAngle:0;
  spin={x:0,y:0};syncAim();syncSpin();
  setPower(50);powerControl.reset();$('powerTrack').classList.remove('impact');turnUI();
@@ -757,6 +760,7 @@ function nudgePlacement(dx,dy){
 }
 function syncAim(){
  angle=Math.atan2(Math.sin(angle),Math.cos(angle));
+ if(Math.abs(angle)>.05)coachTo(2);
  const degrees=angle*180/Math.PI,shown=Number(degrees.toFixed(2))||0;
  $('aimRange').value=String(degrees);
  $('aimWheel').setAttribute('aria-valuenow',String(Math.round(degrees)));
@@ -839,7 +843,7 @@ function fire(){
   if(!spinKeep&&(spin.x||spin.y)){spin={x:0,y:0};syncSpin();}
   previousShotAngles[current.turn]=shotAngle;
   powerControl.reset();$('powerTrack').classList.remove('held');
-  if(!$('controlsHint').hidden){hide('controlsHint');savePreference('ghostball-controls-taught','yes');}
+  if(!$('controlsHint').hidden){coach=0;hide('controlsHint');savePreference('ghostball-controls-taught','yes');}
   shotMotion=motion&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches
    ?{cue:{x:strikingCue.x,y:strikingCue.y},angle:shotAngle,power:strength,start:performance.now()}:null;
   placement=null;
@@ -851,6 +855,7 @@ function fire(){
 }
 function onPull(amount){
  pullProgress=amount;
+ if(amount>.12)coachTo(3);
  const stage=tensionStage(amount);
  if(stage>tensionLevel&&stage>0&&motion){
   navigator.vibrate?.(stage>=3?7:4);
@@ -880,7 +885,7 @@ $('lockerGrid').onclick=event=>{const card=event.target.closest('[data-cue]');
  if(!card)return;lockerSelected=card.dataset.cue;renderLocker();card.focus();};
 $('pauseButton').onclick=pauseMatch;$('resumeMatch').onclick=resumeMatch;
 $('pauseSettings').onclick=openSettings;$('rerack').onclick=()=>{resetMatch();resumeMatch();};$('quitMatch').onclick=quitToLobby;
-$('playAgain').onclick=()=>{if(active==='game'&&current?.over){resetMatch();$('gameCanvas').focus();}};
+$('playAgain').onclick=()=>{if(active==='game'&&current?.over){resetMatch(true);$('gameCanvas').focus();}};
 $('resultMenu').onclick=quitToLobby;
 $('closeSettings').onclick=closeSettings;
 $('openRecord').onclick=openRecord;$('closeRecord').onclick=closeRecord;

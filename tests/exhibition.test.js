@@ -27,3 +27,9 @@ test('a watched exhibition is a refereed match with two CPU seats and no human',
  assert.ok(game.shots>=8);
  assert.ok(game.winner===0||game.winner===1);
 });
+
+test('the breaker alternates each rack in a match, and practice always starts on seat 0',()=>{
+ const g=new Game({kind:'match',players:'cpu',seed:5});
+ assert.equal(g.turn,0);g.reset(true);assert.equal(g.turn,1);g.reset(true);assert.equal(g.turn,0);g.reset(true);g.reset();assert.equal(g.turn,0,'a restart is a fresh match');
+ const p=new Game({kind:'practice',seed:5});p.reset(true);p.reset(true);assert.equal(p.turn,0);
+});
