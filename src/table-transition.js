@@ -31,7 +31,7 @@ export function movingRack(before,after,progress){
  const bodies=new Map(after.map(ball=>[ball.id,ball]));
  return flockAt(plan,progress).map(pose=>({...bodies.get(pose.id),...pose}));
 }
-export function flyTable({app,source,target,from,to,hall,gameRenderer,done,reverse=false,isActive=()=>true}){
+export function flyTable({app,source,target,from,to,hall,gameRenderer,done,reverse=false,endBlend=1,isActive=()=>true}){
  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){done();return;}
  const startBox=source.getBoundingClientRect(),appBox=app.getBoundingClientRect();
  const mobileRotate=window.matchMedia('(orientation:portrait) and (max-width:820px)').matches;
@@ -44,7 +44,7 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done,rever
  canvas.className='table-flight';canvas.setAttribute('aria-hidden','true');
  canvas.style.width=canvasW+'px';canvas.style.height=canvasH+'px';app.append(canvas);
  const flight=new TableRenderer(canvas,{view:reverse?'flat':'perspective',hall,cacheStatic:false});flight.resize();
- flight.setBlend(reverse?1:0);
+ flight.setBlend(reverse?endBlend:0);
  // Render the floating board at a higher pixel density when it is growing
  // toward the match layout; CSS-only scaling blurred the previous entrance.
  const targetPixels=gameRenderer.canvas.width/canvasW;
@@ -66,7 +66,7 @@ export function flyTable({app,source,target,from,to,hall,gameRenderer,done,rever
   if(!canvas.isConnected||!isActive()){canvas.remove();halo.remove();done();return;}
   started??=now;
   const t=Math.min(1,(now-started)/duration),camera=cameraFlight(t);
-  flight.setBlend(reverse?1-camera.flatten:camera.flatten);
+  flight.setBlend(endBlend*(reverse?1-camera.flatten:camera.flatten));
   // Re-target during orientation changes without deforming the world state.
   const targetBox=target.getBoundingClientRect(),root=app.getBoundingClientRect();
   const finish={x:targetBox.left-root.left+targetBox.width/2,y:targetBox.top-root.top+targetBox.height/2};

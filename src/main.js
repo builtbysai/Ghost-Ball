@@ -32,7 +32,7 @@ let settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',
 let matchElapsed=0,lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let previousShotAngles=[0,0],toastTimeout=null;
-let circuitRun=null,dailyDay=null,coach=0,exhibitionIndex=Math.floor(Math.random()*6),exhibitionTimer=null;
+let tableView='overhead',circuitRun=null,dailyDay=null,coach=0,exhibitionIndex=Math.floor(Math.random()*6),exhibitionTimer=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
 function syncEquippedCue(){const cue=equippedCue(progress);ambient.setCue(cue.id);table.setCue(cue.id);}
@@ -214,6 +214,7 @@ function syncGameType(){
 function syncRules(){
  all('#ruleset [data-rules]').forEach(b=>{b.classList.toggle('selected',b.dataset.rules===rules);b.setAttribute('aria-pressed',String(b.dataset.rules===rules));});
 }
+function syncTableView(){all('[data-view]').forEach(b=>{const on=b.dataset.view===tableView;b.setAttribute('aria-pressed',String(on));b.classList.toggle('selected',on);});}
 function syncGuideMode(){
  all('[data-guide-mode]').forEach(b=>{const on=b.dataset.guideMode===guideMode;b.setAttribute('aria-pressed',String(on));b.classList.toggle('selected',on);});
  all('[data-wheel]').forEach(b=>{const on=(b.dataset.wheel==='fine')===wheelFine;b.setAttribute('aria-pressed',String(on));b.classList.toggle('selected',on);});
@@ -231,7 +232,7 @@ function syncPowerSide(){
  $('gameScreen').classList.toggle('power-right',powerSide==='right');
  all('[data-power-side]').forEach(b=>{const pressed=b.dataset.powerSide===powerSide;b.setAttribute('aria-pressed',String(pressed));b.classList.toggle('selected',pressed);});
 }
-function openSettings(){syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('musicToggle').checked=audio.musicOn;$('motionToggle').checked=motion;$('closeSettings').focus();}
+function openSettings(){syncTableView();syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('musicToggle').checked=audio.musicOn;$('motionToggle').checked=motion;$('closeSettings').focus();}
 function closeSettings(){if($('settingsSheet').hidden)return;hide('settingsSheet');hide('backdrop');if(settingsOrigin==='menu'&&active==='lobby'){show('clubMenu');$('menuSettings').focus();}else if(active==='paused')$('pauseSettings').focus();else if(active==='lobby')$('menuBtn').focus();}
 function ensureLockerCards(){
  if($('lockerGrid').children.length)return;
@@ -413,7 +414,12 @@ function circuitNote(){
  const state=circuitState(progress);
  return state.stage===0&&state.champion>0?` · CIRCUIT CHAMPION ×${state.champion}`:` · ROUND ${circuitRun.stage+1} CLEARED · NEXT: ${personaFor(CIRCUIT[state.stage]).name.toUpperCase()}`;
 }
-function resize(){ambient.resize();table.resize();}
+// Overhead (flat) is the default; Elevated draws the match table with the lobby's perspective camera.
+// The upright-phone layout already turns the table 90 degrees, where a tilted camera only distorts it, so it stays overhead there.
+const rotatedLayout=()=>window.matchMedia('(orientation:portrait) and (max-width:820px)').matches;
+const elevatedNow=()=>tableView==='elevated'&&!rotatedLayout();
+const applyTableView=()=>{const view=elevatedNow()?'perspective':'flat';if(table.view!==view)table.setView(view);};
+function resize(){applyTableView();ambient.resize();table.resize();}
 let rackFlock=null;
 // Last-shot replay: the pre-stroke table is re-struck on a throwaway game. Physics is
 // deterministic, so it is exactly the shot that was played. The live match stays frozen,
@@ -605,7 +611,7 @@ function begin(kind,drillId=null){
  if(kind==='match'&&needsHint&&!exhibit){coach=1;setText('controlsHint',COACH_TEXT[1]);show('controlsHint');}else{coach=0;hide('controlsHint');}
  active='transition';show('gameScreen');$('lobby').setAttribute('aria-hidden','true');
  $('gameScreen').classList.add('entering');$('app').classList.add('entering-match');
- applyRoom();turnUI();resize();
+ applyTableView();applyRoom();turnUI();resize();
  // Start from the exact live exhibition frame rather than swapping in a still.
  $('ambient').style.visibility='hidden';
  const finish=()=>{
@@ -618,7 +624,7 @@ function begin(kind,drillId=null){
   turnUI();
  };
  try{flyTable({app:$('app'),source:$('attractCanvas'),target:$('tableArea'),
-   from:attract.sim,to:current.sim,hall:room,gameRenderer:table,done:finish,isActive:()=>active==='transition'});}
+   from:attract.sim,to:current.sim,hall:room,gameRenderer:table,endBlend:elevatedNow()?0:1,done:finish,isActive:()=>active==='transition'});}
  catch(err){console.warn('Table entrance skipped',err);finish();}
 }
 function finishLobby(){
@@ -634,7 +640,7 @@ function quitToLobby(){clearTimeout(exhibitionTimer);
  const leaving=current;active='transition';$('gameScreen').classList.add('leaving');$('app').classList.add('leaving-match');
  resize();ambient.draw(attract.sim,{fx:[]});
  try{flyTable({app:$('app'),source:$('gameCanvas'),target:$('attractCanvas'),from:leaving.sim,to:attract.sim,
-   hall:room,gameRenderer:ambient,reverse:true,done:finishLobby,isActive:()=>active==='transition'});}
+   hall:room,gameRenderer:ambient,reverse:true,endBlend:elevatedNow()?0:1,done:finishLobby,isActive:()=>active==='transition'});}
  catch(err){console.warn('Return transition skipped',err);finishLobby();}
 }
 function pauseMatch(){
@@ -940,6 +946,7 @@ $('confirmRecordReset').onclick=confirmLocalReset;
  all('[data-power-side]').forEach(b=>b.onclick=()=>{powerSide=b.dataset.powerSide;savePreference('ghostball-power-side',powerSide);syncPowerSide();});
 all('[data-spin-keep]').forEach(b=>b.onclick=()=>{spinKeep=b.dataset.spinKeep==='keep';savePreference('ghostball-spin',spinKeep?'keep':'reset');syncSpinKeep();});
 all('[data-guide-mode]').forEach(b=>b.onclick=()=>{guideMode=b.dataset.guideMode;savePreference('ghostball-guide',guideMode);syncGuideMode();});
+all('[data-view]').forEach(b=>b.onclick=()=>{tableView=b.dataset.view==='elevated'?'elevated':'overhead';savePreference('ghostball-view',tableView);applyTableView();resize();syncTableView();});
 all('[data-wheel]').forEach(b=>b.onclick=()=>{wheelFine=b.dataset.wheel==='fine';savePreference('ghostball-wheel',wheelFine?'fine':'normal');syncGuideMode();});
 all('#clockSetting [data-clock]').forEach(b=>b.onclick=()=>{clockSeconds=Number(b.dataset.clock);savePreference('ghostball-clock',String(clockSeconds));syncClock();});
 all('[data-aim-mode]').forEach(b=>b.onclick=()=>{aimMode=b.dataset.aimMode;savePreference('ghostball-aim-mode',aimMode);syncAimMode();});
@@ -1218,7 +1225,7 @@ for(const type of ['pointerdown','keydown'])window.addEventListener(type,()=>aud
 window.addEventListener('blur',cancelKeyPull);
 window.addEventListener('pagehide',()=>audio.suspend());
  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelKeyPull();audio.suspend();}else audio.resume();});
- try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';audio.musicOn=localStorage.getItem('ghostball-music')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';const savedAim=localStorage.getItem('ghostball-aim-mode');if(AIM_MODES.includes(savedAim))aimMode=savedAim;rules=localStorage.getItem('ghostball-rules')==='call8'?'call8':'casual';const g=localStorage.getItem('ghostball-guide');if(['full','short','off'].includes(g))guideMode=g;gameType=['nine','ten'].includes(localStorage.getItem('ghostball-game'))?localStorage.getItem('ghostball-game'):'eight';wheelFine=localStorage.getItem('ghostball-wheel')==='fine';spinKeep=localStorage.getItem('ghostball-spin')==='keep';clockSeconds=localStorage.getItem('ghostball-clock')==='0'?0:45;}catch{}
+ try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';audio.musicOn=localStorage.getItem('ghostball-music')!=='off';tableView=localStorage.getItem('ghostball-view')==='elevated'?'elevated':'overhead';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';const savedAim=localStorage.getItem('ghostball-aim-mode');if(AIM_MODES.includes(savedAim))aimMode=savedAim;rules=localStorage.getItem('ghostball-rules')==='call8'?'call8':'casual';const g=localStorage.getItem('ghostball-guide');if(['full','short','off'].includes(g))guideMode=g;gameType=['nine','ten'].includes(localStorage.getItem('ghostball-game'))?localStorage.getItem('ghostball-game'):'eight';wheelFine=localStorage.getItem('ghostball-wheel')==='fine';spinKeep=localStorage.getItem('ghostball-spin')==='keep';clockSeconds=localStorage.getItem('ghostball-clock')==='0'?0:45;}catch{}
  syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();syncClock();syncRules();syncGameType();syncMute();syncAim();
 syncSpin();syncEquippedCue();
 applyRoom();refreshMenu();hide('gameScreen');

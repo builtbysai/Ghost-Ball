@@ -1,14 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
-<title>Ghost Ball</title>
-<defs>
- <radialGradient id="felt"><stop stop-color="#244939"/><stop offset="1" stop-color="#081812"/></radialGradient>
- <radialGradient id="ball" cx=".32" cy=".23" r=".85"><stop stop-color="#fffefa"/><stop offset=".55" stop-color="#e9e1d0"/><stop offset="1" stop-color="#7e8b80"/></radialGradient>
-</defs>
-<rect width="512" height="512" rx="106" fill="url(#felt)"/>
-<circle cx="256" cy="256" r="188" fill="none" stroke="#d6b77e" stroke-width="8" opacity=".84"/>
-<circle cx="256" cy="250" r="145" fill="url(#ball)"/>
-<ellipse cx="209" cy="194" rx="53" ry="24" transform="rotate(-34 209 194)" fill="#fff" opacity=".64"/>
-<circle cx="256" cy="250" r="39" fill="#1b302b"/>
-<circle cx="256" cy="250" r="26" fill="#f5e6c4"/>
-<path d="M243 251h26M256 238v26" stroke="#38594c" stroke-linecap="round" stroke-width="4" opacity=".7"/>
+  <title id="title">Ghost Ball</title>
+  <defs>
+    <!-- Matte 3D sphere shading -->
+    <radialGradient id="sphereLight" cx="40%" cy="36%" r="64%" fx="35%" fy="32%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="28%" stop-color="#f4f3ef"/>
+      <stop offset="60%" stop-color="#dedcd5"/>
+      <stop offset="82%" stop-color="#aba9a1"/>
+      <stop offset="100%" stop-color="#5a5955"/>
+    </radialGradient>
+  </defs>
+  <!-- Dark rounded icon canvas -->
+  <rect width="512" height="512" rx="112" fill="#090a0f"/>
+  <!-- The ghost ball: a dashed circle where the cue ball will be -->
+  <circle cx="195" cy="256" r="105" fill="none" stroke="#c2c6cf" stroke-width="10" stroke-dasharray="15 26.23" stroke-dashoffset="7.5"/>
+  <!-- The real ball -->
+  <circle cx="330" cy="256" r="105" fill="url(#sphereLight)"/>
+  <!-- Red marker dot -->
+  <circle cx="361" cy="223" r="15" fill="#dc2626"/>
 </svg>

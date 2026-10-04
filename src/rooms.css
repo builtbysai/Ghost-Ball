@@ -122,3 +122,7 @@
 
 /* tablets held upright: the room caption sits below the table, not across its front rail */
 @media (orientation:portrait) and (min-width:600px){#app .room-details{top:63%}}
+
+/* the wordmark ball carries the icon's red marker dot */
+.word-ball{position:relative}
+.word-ball::after{content:'';position:absolute;left:61%;top:24%;width:15%;height:15%;border-radius:50%;background:#dc2626;box-shadow:0 0 0 .5px #7f1d1d}

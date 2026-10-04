@@ -5,7 +5,7 @@ const RELEASE="ghostball-20261004-overhaul-4";
 //  - when the network is gone the last good copy is served, so an installed game still opens
 //  - a new RELEASE changes these bytes, installs a new worker and retires the old cache
 const CACHE=RELEASE;
-const SHELL=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./icon-maskable-512.png','./favicon.ico'];
+const SHELL=['./','./index.html','./manifest.webmanifest','./icon.svg','./icon-192.png','./apple-touch-icon.png','./icon-512.png','./icon-maskable-512.png','./favicon.ico'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>Promise.all(SHELL.map(url=>
     fetch(new Request(url,{cache:'reload'})).then(response=>response.ok?cache.put(url,response):null).catch(()=>null)))).then(()=>self.skipWaiting()));
