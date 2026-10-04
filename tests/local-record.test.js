@@ -56,3 +56,11 @@ test('failed clear cannot claim success or destroy unsupported local versions',(
  assert.equal(read.writable,false);assert.equal(read.reason,'unsupported-version');
  assert.equal(store.getItem(PROGRESS_KEY),future);
 });
+
+test('the record names the persona that was played, falling back to the tier for older entries',()=>{
+ const records=[{id:'a',players:'cpu',difficulty:'club',persona:'vera',winner:0,shots:20,reason:'eight-cleared'},
+  {id:'b',players:'cpu',difficulty:'rookie',persona:'dex',winner:1,shots:30,reason:'eight-cleared'},
+  {id:'c',players:'cpu',difficulty:'club',winner:0,shots:12,reason:'eight-cleared'}];
+ const summary=recordSummary({matchesPlayed:3,vsCpuWins:2,vsCpuLosses:1,localMatches:0,cleanWins:2,bestRun:3,records},3);
+ assert.deepEqual(summary.recent.map(r=>r.opponent),['VERA','DEX','CLUB PRO']);
+});

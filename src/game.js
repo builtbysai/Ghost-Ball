@@ -11,6 +11,7 @@ export const AI_PLACEMENT_PAUSE=1.1;
 /** x of the head string: a scratch on the break gives ball in hand behind it. */
 export const HEAD_STRING=265;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
+const nowMs=()=>typeof performance!=='undefined'?performance.now():Date.now();
 export class Game {
  constructor({kind='attract',players='cpu',difficulty='rookie',persona=null,seats=null,seed=Date.now(),drillId=null,ruleset='eight',callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
   this.ruleset=(ruleset==='nine'||ruleset==='ten')&&(kind==='match'||kind==='attract')?ruleset:'eight';
@@ -164,12 +165,17 @@ export class Game {
            }
            // At most one predicted physical second per rendering frame. The
            // cue remains visibly aimed at the provisional legal target.
+           // On a slow device the slice also yields once ~8 ms are spent (after a
+           // minimum of 40 steps), so planning never costs a whole frame. Slicing only
+           // changes how many frames planning takes, never what it decides.
+           const started=nowMs();
            for(let i=0;i<240;i++){
              const result=this.planIterator.next();
              if(result.done){
                this.previewShot=result.value;this.planIterator=null;
                this.planSettledAt=this.timer;break;
              }
+             if(i>=40&&nowMs()-started>8)break;
            }
          }
        }

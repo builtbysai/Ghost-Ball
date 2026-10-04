@@ -114,7 +114,10 @@ export function recordLiveMatch(previous,event){
  if(humanWin&&clean)achievements.add('clean-eight');
  if(humanWin&&clean)achievements.add(event.difficulty==='club'?'beat-club':'beat-rookie');
  const compact={id:event.id,at:event.at,players:event.players,
-  difficulty:cpu?event.difficulty:null,winner:event.winner,room:event.room,
+  difficulty:cpu?event.difficulty:null,
+  // The named opponent, kept only when it is one of ours (older records have none).
+  persona:cpu&&['rookie','dex','vera','club'].includes(event.persona)?event.persona:null,
+  winner:event.winner,room:event.room,
   shots:event.shots,reason:event.reason,bestRun:event.bestRun};
  return {...previous,matchesPlayed:previous.matchesPlayed+1,
   vsCpuWins:previous.vsCpuWins+(humanWin?1:0),

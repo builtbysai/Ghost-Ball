@@ -127,7 +127,7 @@ function matchTurn(event){
    const updated=recordLiveMatch(progress,{
     kind:'match',source:'live',id:matchEventId,
     at:new Date().toISOString(),shots:current.shots,winner:current.winner,
-    players:current.players,difficulty:current.difficulty,room,
+    players:current.players,difficulty:current.difficulty,persona:current.persona.id,room,
     reason:event.reason,
     bestRun:current.rotation?nineBestRun(current.history,0):current.players==='local'
       ?Math.max(bestLegalRun(current.history,0),bestLegalRun(current.history,1))
@@ -551,6 +551,9 @@ function turnUI(){if(!current)return;
  $('gameScreen').dataset.timed=String(timed);
  if(current.kind!=='match')setRecap('');
  else $('turnRecap').hidden=!$('turnRecap').textContent;
+ // Tokens carry the opponent's initial when the seat is a named CPU, otherwise the seat number.
+ const tokenText=seat=>current.players==='ai'?current.personaAt(seat).initial:seat===1&&current.players==='cpu'?current.persona.initial:String(seat+1);
+ $('oneCard').querySelector('.player-token').textContent=tokenText(0);$('twoCard').querySelector('.player-token').textContent=tokenText(1);
  $('oneCard').classList.toggle('playing',current.turn===0);$('twoCard').classList.toggle('playing',current.turn===1);
  $('replayButton').hidden=!current.lastShot||current.kind==='drill'||current.sim.moving||active!=='game';
  $('replayButton').classList.toggle('on',Boolean(replay));

@@ -12,7 +12,7 @@ export function recordSummary(progress,maximum=3){
    const cpu=entry.players==='cpu',win=cpu?entry.winner===0:entry.winner===0;
    return {
     title:cpu?(win?'WIN':'LOSS'):`P${win?1:2} WON`,
-    opponent:cpu?(entry.difficulty==='club'?'CLUB PRO':'ROOKIE'):'LOCAL',
+    opponent:cpu?({rookie:'ROOKIE',dex:'DEX',vera:'VERA',club:'CLUB PRO'}[entry.persona]||(entry.difficulty==='club'?'CLUB PRO':'ROOKIE')):'LOCAL',
     detail:reasonLabel[entry.reason]||'MATCH',
     shots:count(entry.shots)
    };
