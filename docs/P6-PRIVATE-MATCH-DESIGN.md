@@ -1,6 +1,6 @@
 # P6: Private friend matches, protocol and recovery spike
 
-**October 3, 2026. Design and one pure shot-command gate only. Not a released Online mode.**
+**October 3, 2026. Design and two pure shot/placement command gates only. Not a released Online mode.**
 
 ## Goal and constraints
 
@@ -10,9 +10,9 @@ Physical Android verification of core P2.1 gameplay and low-end CPU planning rem
 
 ## First implemented slice
 
-`src/private-match-protocol.js` exports `PRIVATE_PROTOCOL_VERSION`, `authoritativeDigest`, `shotCommand`, and `adjudicateShotCommand`. The pure host gate checks a *transport-bound* sending seat (not the sender's claimed seat), session ID, monotonic turn epoch, shot number, angle, bounded power and spin, readiness and pre-shot state digest. It invokes the existing `Game.beginShot` only after validation. Duplicate/stale/mismatched commands receive explicit nonmutating rejections. Fixed-step twin-Game tests require identical histories and full snapshots on the same accepted input.
+`src/private-match-protocol.js` exports `PRIVATE_PROTOCOL_VERSION`, `authoritativeDigest`, `shotCommand`, `placementCommand`, `adjudicateShotCommand` and `adjudicatePlacementCommand`. The pure host gate checks a *transport-bound* sending seat (not the sender's claimed seat), session ID, monotonic turn epoch, shot number, angle, bounded power and spin, readiness and pre-shot state digest. It invokes the existing `Game.beginShot` only after validation. The separate placement gate also requires live host ball-in-hand ownership, valid table geometry, current turn/seat/shot/epoch and pre-placement state digest before calling `Game.placeCue`. Its acknowledgment contains the resulting authoritative digest. Duplicate placements cannot move the cue again, and twin-game fixtures must agree after placement plus the subsequent shot. Duplicate/stale/mismatched commands receive explicit nonmutating rejections. Fixed-step twin-Game tests require identical histories and full snapshots on the same accepted input.
 
-The compact 32-bit digest is for **ordinary stale-state detection only**. It is neither a cryptographic signature nor protection against a dishonest P2P host. It excludes hall finishes, cue cosmetics, audio, visual animation and real-time UI clocks. Never represent it as authoritative security for a ranked competitive server.
+The compact 32-bit digest is for **ordinary stale-state detection only**. It is neither a cryptographic signature nor protection against a dishonest P2P host. It includes gameplay flags such as ball-in-hand, foul and match completion, while excluding hall finishes, cue cosmetics, audio, visual animation and real-time UI clocks. Never represent it as authoritative security for a ranked competitive server.
 
 ## Next transport design, not yet implemented
 
@@ -20,7 +20,7 @@ The compact 32-bit digest is for **ordinary stale-state detection only**. It is 
 2. Use optional best-effort remote cue/aim previews on a separate unordered, at-most-once data channel. These previews are purely decorative and may be dropped. Disconnect must never leave a remotely previewed cue authoritative.
 3. Invite by private link/QR; no public usernames, chat or directory. Bind host and guest to seats at handshake. The session ID is ephemeral and unguessable. Cap inbound packet sizes; schema-validate every message. Keep TURN credentials short-lived and obtain them through a server-side endpoint configured for this game. Evaluate whether the existing Atelier Cloudflare TURN service can be adapted safely, rather than assuming its URL or permissions work unchanged.
 4. Negotiate WebRTC with collision-safe signaling using the recommended perfect-negotiation pattern. Prefer direct connectivity; use TURN if needed. Apply `restartIce()` to appropriate failed network states and reestablish the transport binding on reconnect.
-5. Host accepts one valid command per monotonic turn epoch. Only the host decrements canonical shot time and emits clock-expiry and ball-in-hand decisions. Both peers may run the deterministic physics for responsive rendering, but the host broadcasts the accepted stroke plus eventual canonical snapshot/ruling, and the guest reconciles any mismatch. Previews/animations must never drive adjudication.
+5. Host accepts only host-validated placement while ball-in-hand is active, followed by one valid stroke per current shot state and turn epoch. Only the host decrements canonical shot time and emits clock-expiry and ball-in-hand decisions. Both peers may run the deterministic physics for responsive rendering, but the host broadcasts the accepted stroke plus eventual canonical snapshot/ruling, and the guest reconciles any mismatch. Previews/animations must never drive adjudication.
 6. Serialize new network events as versioned envelopes: join, canonical snapshot, turn-start (epoch), shot-intent/accepted/rejected, placement-intent/accepted/rejected, stroke-settled, rules-end, rejoin-request/resync and explicit host-left. Make processing idempotent and reject late previous-turn events. Include current Game seed/rack snapshot, referee state, event history tail and turn clock on resync.
 7. On reload/rejoin, pause local authoritative actions until a single current host snapshot and epoch are acknowledged. A host loss is **undecided/disconnected**, not an automatic awarded win. Host migration and independent result trust need separate protocols before anyone promises them.
 
