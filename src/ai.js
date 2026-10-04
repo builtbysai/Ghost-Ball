@@ -332,3 +332,26 @@ export function* createShotPlanner(sim,group='open',difficulty='rookie',random=c
 export function chooseShot(sim,group='open',difficulty='rookie',random=createRandom(1),options={}){
  return drain(createShotPlanner(sim,group,difficulty,random,options));
 }
+
+/** The CPU's break: try a few angles at the apex with the real physics and keep the one that
+ * pots or spreads the most balls (four to a cushion makes it a legal WPA break). A generator so a
+ * slow device can spread the work across frames; it never depends on the clock. */
+export function* planBreak(sim,{power=1}={}){
+ const angles=[0,.012,-.012,.026,-.026,.04,-.04];
+ let best=null;
+ for(const angle of angles){
+  const predicted=new Simulation(sim.snapshot().balls);
+  if(!predicted.strike(angle,power))continue;
+  const rails=new Set();let pots=0,scratch=false;
+  for(let step=0;step<3000&&predicted.moving;step++){
+   for(const event of predicted.step()){
+    if(event.type==='rail'&&event.id>0)rails.add(event.id);
+    if(event.type==='pocket'){if(event.id===0)scratch=true;else pots++;}
+   }
+   if(step%60===59)yield;
+  }
+  const score=pots*3+rails.size-(scratch?10:0)+(rails.size>=4||pots>0?4:0);
+  if(!best||score>best.score)best={angle,score};
+ }
+ return {angle:best?best.angle:0,power,plan:'break'};
+}

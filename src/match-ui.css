@@ -183,3 +183,19 @@
 #gameScreen .hud-replay svg{width:62%;height:62%;fill:none;stroke:#c9f0dc;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #gameScreen .hud-replay[hidden]{display:none}
 #gameScreen .hud-replay.on{box-shadow:0 0 0 2px #f1d9a1aa,0 3px 10px #0008}
+
+/* official-rules controls: shot-mode chips and the referee's choice prompt */
+#gameScreen .shot-modes{position:absolute;left:8px;bottom:8px;z-index:5;display:flex;gap:6px;pointer-events:none}
+#gameScreen .mode-chip{pointer-events:auto;min-height:32px;padding:0 12px;border-radius:99px;border:1px solid #cdb78388;background:#0b1727d9;color:#f2e6c4;font:800 10px system-ui;letter-spacing:.1em;cursor:pointer}
+#gameScreen .mode-chip kbd{margin-left:4px;opacity:.6;font:inherit}
+#gameScreen .mode-chip[aria-pressed="true"]{background:linear-gradient(#f2dcab,#d6b36e);color:#1c2b23;border-color:#f3deb0}
+#gameScreen .mode-chip[hidden]{display:none}
+#gameScreen .choice-prompt{position:absolute;z-index:8;left:50%;top:18%;transform:translateX(-50%);width:min(88%,380px);padding:12px 16px;border-radius:14px;
+ background:linear-gradient(160deg,#16314af5,#0b1727f7);border:1.5px solid #cdb783;box-shadow:0 14px 44px #000b;text-align:center}
+#gameScreen .choice-prompt[hidden]{display:none}
+#gameScreen .choice-prompt b{display:block;font:700 16px Georgia,serif;color:var(--hud-ink,#f2ede2)}
+#gameScreen .choice-prompt p{margin:4px 0 10px;font:500 12px/1.4 system-ui;color:#c9d6dc}
+#gameScreen .choice-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#gameScreen .choice-actions button{min-height:36px;padding:0 14px;border-radius:99px;border:1px solid #ffffff2a;background:#ffffff10;color:#f2ede2;font:800 11px system-ui;letter-spacing:.06em;cursor:pointer}
+#gameScreen .choice-actions button:first-child{background:linear-gradient(#f2dcab,#d6b36e);color:#1c2b23;border-color:#f3deb0}
+@media (max-height:420px){#gameScreen .choice-prompt{top:8%;padding:8px 12px}#gameScreen .choice-prompt p{margin:2px 0 6px;font-size:11px}}

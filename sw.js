@@ -1,5 +1,5 @@
 // Build identifier changes the service-worker bytes with each release.
-const RELEASE="ghostball-20261004-overhaul-4";
+const RELEASE="ghostball-20261004-overhaul-5";
 // Offline-capable without ever serving stale code while online:
 //  - same-origin GETs are network-first; every good response refreshes this release's cache
 //  - when the network is gone the last good copy is served, so an installed game still opens
