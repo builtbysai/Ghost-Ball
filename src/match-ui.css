@@ -162,3 +162,9 @@
  linear-gradient(180deg,var(--room-wall,#101a2a),#070b12 135%)}
 #gameScreen.game-screen::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
  background:radial-gradient(ellipse 90% 80% at 50% 50%,transparent 55%,#00000066 100%)}
+
+/* nine-ball trays: nine slots, no separate 8 */
+#gameScreen .ball-slots[data-game="nine"]{grid-template-columns:repeat(9,minmax(0,1fr));max-width:calc(9 * 23px + 8 * 4px)}
+
+/* A contextual badge replaces the one-time controls hint while it is showing. */
+#gameScreen .table-play-area:has(.guide-badge.is-visible) .controls-hint{display:none}

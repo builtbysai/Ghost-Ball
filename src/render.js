@@ -54,7 +54,7 @@ export class TableRenderer{
    return {x:clamp(((sx-this.center)/(this.bw*k)+.5)*TABLE.width,0,1000),y:t*TABLE.height};
  }
  clear(){this.g.clearRect(0,0,this.w,this.h);}
- draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[],callPocket=null}={}){
+ draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[],callPocket=null,targetBall=null}={}){
   const g=this.g,P=(x,y)=>this.project(x,y);
   this.clear();g.save();
   if(this.cacheStatic&&typeof document!=='undefined'){
@@ -74,6 +74,7 @@ export class TableRenderer{
   }else this.paintSurface(g);
   if(placementZone&&!sim.moving)this.drawPlacementZone(sim,placementZone,placement);
   if(callPocket!==null&&callPocket>=0)this.drawCalledPocket(callPocket);
+  if(targetBall!==null)this.drawTargetBall(sim,targetBall);
   if(interactive&&aim&&!sim.moving&&!sim.cue()?.pocketed)this.drawAim(sim,aim);
   else if(aim?.strike&&aim.strike.progress<1)this.drawStroke(aim.strike);
   // A placed-in-hand ball is a preview until confirmed; never draw two white
@@ -252,6 +253,15 @@ export class TableRenderer{
    g.lineWidth=2;g.strokeStyle='rgba(247,214,138,.95)';g.setLineDash([5,4]);g.stroke();g.setLineDash([]);
    g.fillStyle='rgba(255,236,176,.95)';g.font='800 '+Math.max(9,radius*.62)+'px system-ui,sans-serif';
    g.textAlign='center';g.textBaseline='middle';g.fillText('8',cx,cy);
+   g.restore();
+ }
+ // Nine-ball: a soft ring marks the lowest ball, the only legal first contact.
+ drawTargetBall(sim,id){
+   const ball=sim.balls.find(b=>b.id===id&&!b.pocketed);if(!ball)return;
+   const g=this.g,[x,y,k]=this.project(ball.x,ball.y),r=Math.max(5,TABLE.radius*this.bw/1000*k);
+   g.save();g.beginPath();g.arc(x,y,r*1.55,0,TAU);
+   g.strokeStyle='rgba(247,214,138,.85)';g.lineWidth=1.6;g.setLineDash([4,4]);g.stroke();g.setLineDash([]);
+   g.beginPath();g.arc(x,y,r*2.05,0,TAU);g.strokeStyle='rgba(247,214,138,.25)';g.lineWidth=1;g.stroke();
    g.restore();
  }
  drawAim(sim,aim){

@@ -9,7 +9,7 @@ import {awardRoomMatch,awardRoomDrill} from './room-mastery.js';
 export const PROGRESS_KEY='ghostball-progress-v1';
 export const PROGRESS_VERSION=1;
 const RECORD_LIMIT=80;
-const FINISH_REASONS=new Set(['eight-cleared','early-eight','scratch-on-eight','wrong-ball-first','wrong-pocket']);
+const FINISH_REASONS=new Set(['eight-cleared','early-eight','scratch-on-eight','wrong-ball-first','wrong-pocket','nine-potted']);
 
 export function freshProgress(){
  return {version:PROGRESS_VERSION,matchesPlayed:0,vsCpuWins:0,vsCpuLosses:0,

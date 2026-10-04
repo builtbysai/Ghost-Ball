@@ -1,6 +1,6 @@
-import {Simulation,rack,POCKETS,TABLE} from './physics.js';
+import {Simulation,rack,rackNine,POCKETS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
-import {resolveCasualEight,groupContains} from './casual-rules.js';
+import {resolveCasualEight,resolveNineBall,groupContains,lowestGroup} from './casual-rules.js';
 import {chooseShot,chooseAiCuePlacement,createShotPlanner,candidateShots} from './ai.js';
 import {skillDrillById,skillDrillBalls,gradeSkillDrill} from './skill-drills.js';
 import {impactEffectFor} from './impact-effects.js';
@@ -11,8 +11,9 @@ export const AI_PLACEMENT_PAUSE=1.1;
 export const HEAD_STRING=265;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 export class Game {
- constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),drillId=null,callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
-  this.callEight=Boolean(callEight)&&kind==='match';
+ constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),drillId=null,ruleset='eight',callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
+  this.ruleset=ruleset==='nine'&&(kind==='match'||kind==='attract')?'nine':'eight';
+  this.callEight=Boolean(callEight)&&kind==='match'&&this.ruleset==='eight';
   // 0 turns the shot clock off (relaxed games); any positive value is whole seconds per shot.
   this.shotClockSeconds=Number.isFinite(shotClock)&&shotClock>0?Math.round(shotClock):0;
   this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;
@@ -20,14 +21,16 @@ export class Game {
    this.drillId=kind==='drill'?drillId:null;
   this.onPocket=onPocket;this.onTurn=onTurn;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
  reset(){this.rackSeed=this.random()*100000|0;
-   this.sim=new Simulation(this.kind==='drill'?skillDrillBalls(this.drillId):rack(this.rackSeed));
+   this.sim=new Simulation(this.kind==='drill'?skillDrillBalls(this.drillId):this.ruleset==='nine'?rackNine(this.rackSeed):rack(this.rackSeed));
    this.turn=0;this.groups=[null,null];this.break=this.kind!=='drill';
    this.foul=false;this.ballInHand=false;this.kitchen=false;this.over=false;this.winner=null;
    this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;this.drillOutcome=null;
   this.history=[];this.previewShot=null;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.activeStroke=null;
   this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';this.dryTurns=[0,0];
   this.notify('A fresh rack. Take your time.');}
- get group(){const group=this.groups[this.turn];if(!group)return 'open';return this.sim.balls.some(b=>!b.pocketed&&(group==='solids'?b.id<8&&b.id>0:b.id>8))?group:'eight';}
+ get group(){
+  if(this.ruleset==='nine')return lowestGroup(this.sim.balls.filter(b=>!b.pocketed).map(b=>b.id));
+  const group=this.groups[this.turn];if(!group)return 'open';return this.sim.balls.some(b=>!b.pocketed&&(group==='solids'?b.id<8&&b.id>0:b.id>8))?group:'eight';}
  isAI(){return this.kind==='attract'||(this.players==='cpu'&&this.turn===1);}
   /** `call` is the pocket index named for the 8 (-1: none named). Required on the 8 when callEight is on. */
   beginShot(angle,power,spin=0,call=null){
@@ -40,8 +43,10 @@ export class Game {
   this.turnShot={callRequired,call:callRequired?call:undefined,first:null,pots:[],potRecords:[],rail:false,railBalls:[],cushionBalls:[],groupAtStart:this.group};this.shots++;this.notify('');return true;}
  placeBreakCue(x,y){if(!this.break||this.shots||this.sim.moving||this.over||x>HEAD_STRING||!this.sim.placeCue(x,y))return false;this.history.push({kind:'break-placement',x,y});this.notify('Cue positioned. Line up your break.');return true;}
  placeCue(x,y){if(!this.ballInHand||(this.kitchen&&!(x<=HEAD_STRING)))return false;const placed=this.sim.placeCue(x,y);if(placed){this.history.push({kind:'placement',x,y});this.ballInHand=false;this.kitchen=false;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.shotClockKey='';this.notify('Cue ball placed. Line up your shot.');}return placed;}
- spotEight(){
-   const eight=this.sim.balls.find(b=>b.id===8);if(!eight)return false;
+ spotEight(){return this.spotBall(8);}
+ /** Re-spot a ball on the foot spot, or the nearest free place along the centre line behind it. */
+ spotBall(id){
+   const eight=this.sim.balls.find(b=>b.id===id);if(!eight)return false;
    // Standard spot, then search nearby along the lengthwise centerline to
    // avoid placing a spotted eight inside another stationary ball.
    const xs=[790];for(let offset=28;offset<=196;offset+=28)xs.push(790-offset,790+offset);
@@ -218,6 +223,7 @@ export class Game {
      if(this.sim.balls.every(b=>b.id===0||b.pocketed)){this.notify('Table cleared. Rack again to replay.');this.over=true;this.onTurn({type:'win',practice:true});}
      return;
    }
+   if(this.ruleset==='nine'){this.resolveNine(shot);return;}
    const shooter=this.turn,previousGroups=[...this.groups],wasBreak=this.break;
    const result=resolveCasualEight({
      turn:this.turn,breakShot:this.break,groups:this.groups,shot
@@ -263,5 +269,38 @@ export class Game {
    }
    this.timer=0;
 
+ }
+ /** Nine-ball ruling. Mirrors resolve() for the eight-ball game: history, notify, onTurn. */
+ resolveNine(shot){
+   const shooter=this.turn,wasBreak=this.break;
+   const result=resolveNineBall({turn:this.turn,breakShot:this.break,shot});
+   this.history.push({kind:'ruling',shot:this.shots,shooter,result:result.type,
+     reason:result.reason,turn:result.turn,groups:[null,null],
+     ballInHand:result.ballInHand,winner:result.winner,
+     groupAtStart:shot.groupAtStart,firstContact:shot.first,
+     railAfterFirst:!!shot.rail,elapsedSimSeconds:this.sim.elapsed,
+     potRecords:[...(shot.potRecords||[])],breakRailBalls:[...(shot.railBalls||[])]});
+   if(result.spotNine)this.spotBall(9);
+   this.dryTurns[shooter]=result.type==='retain'?0:(this.dryTurns[shooter]||0)+1;
+   this.break=false;
+   if(result.type==='end'){
+     this.over=true;this.winner=result.winner;this.foul=false;this.ballInHand=false;
+     this.notify(`Player ${this.turn+1} pots the 9 and wins the rack!`);
+     this.onTurn({type:'win',winner:this.winner,legal:true,reason:result.reason});
+   }else{
+     this.turn=result.turn;this.ballInHand=result.ballInHand;this.foul=result.foul;
+     this.kitchen=Boolean(result.ballInHand&&wasBreak&&shot.pots.includes(0));
+     if(result.type==='foul'){
+       const messages={scratch:'Scratch. Opponent has ball in hand.','no-contact':'No contact. Opponent has ball in hand.',
+         'wrong-ball-first':'Wrong ball first: hit the lowest ball. Opponent has ball in hand.',
+         'no-rail':'No rail after contact. Opponent has ball in hand.'};
+       this.notify(messages[result.reason]||'Foul. Opponent has ball in hand.');
+     }else this.notify(result.type==='retain'?`Player ${this.turn+1} keeps the table.`:`Player ${this.turn+1} to shoot.`);
+     this.onTurn({type:result.type==='foul'?'foul':'turn',turn:this.turn,shooter,
+       potted:shot.pots.filter(id=>id>0),scratched:shot.pots.includes(0),
+       ballInHand:this.ballInHand,kitchen:this.kitchen,reason:result.reason,
+       retain:result.type==='retain',assignment:null,spotted:result.spotNine});
+   }
+   this.timer=0;
  }
 }

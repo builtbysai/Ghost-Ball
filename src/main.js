@@ -1,4 +1,4 @@
-import {slotModels,eightSlotModel} from './score-slots.js';
+import {slotModels,eightSlotModel,nineSlotModels,creditedBalls} from './score-slots.js';
 import {Game} from './game.js';
 import {TableRenderer,halls} from './render.js';
 import {TABLE,POCKETS} from './physics.js';
@@ -26,7 +26,7 @@ const newMatchId=()=>globalThis.crypto?.randomUUID?.()||
 let matchEventId=null,drillEventId=null,lockerSelected='house',newlyEarnedCueCount=0;
 let room=clamp(progress.selectedRoom,0,halls.length-1),mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
 let current=null,active='lobby',motion=true,placement=null,pointerMode=null,placeGesture=null;
-let settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',rules='casual',calledPocket=null,guideMode='full',wheelFine=false,clockSeconds=45,spinKeep=false;
+let settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',rules='casual',calledPocket=null,guideMode='full',wheelFine=false,clockSeconds=45,spinKeep=false,gameType='eight';
 let matchElapsed=0,lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let previousShotAngles=[0,0],toastTimeout=null;
@@ -122,7 +122,7 @@ function matchTurn(event){
     at:new Date().toISOString(),shots:current.shots,winner:current.winner,
     players:current.players,difficulty:current.difficulty,room,
     reason:event.reason,
-    bestRun:current.players==='local'
+    bestRun:current.ruleset==='nine'?nineBestRun(current.history,0):current.players==='local'
       ?Math.max(bestLegalRun(current.history,0),bestLegalRun(current.history,1))
       :bestLegalRun(current.history,0)
    });
@@ -189,8 +189,16 @@ function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(roo
   if(current)setText('roundLabel',h.name.toUpperCase());
 }
 function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
-function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';$('clockSetting').closest('.setting').hidden=mode==='practice';syncClock();$('ruleset').closest('.setting').hidden=mode==='practice';syncRules();show('backdrop');show('setupSheet');$('closeSetup').focus();}
+function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';$('clockSetting').closest('.setting').hidden=mode==='practice';syncClock();$('gameType').closest('.setting').hidden=mode==='practice';syncGameType();syncRules();show('backdrop');show('setupSheet');$('closeSetup').focus();}
 function closeSetup(){const wasOpen=!$('setupSheet').hidden;hide('setupSheet');if($('settingsSheet').hidden)hide('backdrop');if(wasOpen)$('openSetup').focus();}
+const SETUP_NOTES={eight:'8-ball, casual: no called shots. Call the 8: when you are down to the black, name its pocket first; any other pocket loses the rack.',
+ nine:'9-ball, casual: always hit the lowest ball first, pot the 9 to win. No push-out or three-foul rule yet.'};
+function syncGameType(){
+ all('#gameType [data-game]').forEach(b=>{const on=b.dataset.game===gameType;b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
+ const nine=gameType==='nine';
+ $('ruleset').closest('.setting').hidden=nine||mode==='practice';
+ setText('setupNote',SETUP_NOTES[gameType]);
+}
 function syncRules(){
  all('#ruleset [data-rules]').forEach(b=>{b.classList.toggle('selected',b.dataset.rules===rules);b.setAttribute('aria-pressed',String(b.dataset.rules===rules));});
 }
@@ -382,13 +390,30 @@ function closeGuide(){
  else{show('clubMenu');$('menuGuide').focus();}
 }
 function openMenu(){show('clubMenu');$('closeMenu').focus();}
-function refreshMenu(){setText('matchSummary',mode==='practice'?'Open practice table':(rival==='local'?'8-Ball · Two players':`8-Ball vs ${rival==='rookie'?'Rookie':'Club Pro'}`)+(rules==='call8'?' · Call the 8':''));
-  setText('playSubtitle',mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':'CASUAL 8-BALL · NO ENTRY FEE');
+function refreshMenu(){const ball=gameType==='nine'?'9-Ball':'8-Ball';
+  setText('matchSummary',mode==='practice'?'Open practice table':(rival==='local'?`${ball} · Two players`:`${ball} vs ${rival==='rookie'?'Rookie':'Club Pro'}`)+(rules==='call8'&&gameType==='eight'?' · Call the 8':''));
+  setText('playSubtitle',mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`CASUAL ${ball.toUpperCase()} · NO ENTRY FEE`);
   all('.mode[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));}
 function resize(){ambient.resize();table.resize();}
 let rackFlock=null;
 function canAct(){return active==='game'&&current&&!rackFlock&&!current.over&&!current.sim.moving&&!current.isAI()&&!current.ballInHand;}
+function nineBallSlots(container,player){
+ const credited=creditedBalls(current.history,player),models=nineSlotModels(credited);
+ const wasOpen=container.dataset.game!=='nine';container.dataset.game='nine';container.dataset.group='open';
+ container.replaceChildren(...models.map((ball,index)=>{
+  const el=document.createElement('span');el.setAttribute('role','listitem');
+  if(ball.ghost){el.className='ball-slot ghost';el.setAttribute('aria-label',`Ball ${ball.slot} not potted by this player`);return el;}
+  el.className='ball-slot assigned'+(ball.stripe?' striped':'')+(wasOpen?'':' just-assigned');
+  el.style.setProperty('--slot-color',ball.color);el.style.setProperty('--slot-index',String(index));
+  const numeral=document.createElement('b');numeral.className='ball-number';numeral.textContent=String(ball.id);el.append(numeral);
+  el.setAttribute('aria-label',`Ball ${ball.id} potted`);return el;
+ }));
+ container.setAttribute('role','list');
+ container.setAttribute('aria-label',credited.length?`Potted: ${credited.join(', ')}`:'No balls potted yet');
+}
 function ballSlots(container,player){
+ if(current.ruleset==='nine'){nineBallSlots(container,player);return;}
+ delete container.dataset.game;
  const group=current.groups[player],pocketed=current.sim.balls.filter(b=>b.pocketed).map(b=>b.id);
  const models=slotModels(current.groups,player,pocketed);
  const eight=eightSlotModel({groups:current.groups,pocketed,over:current.over,winner:current.winner,
@@ -419,6 +444,13 @@ function ballSlots(container,player){
  container.setAttribute('aria-label',group?`${group}: ${models.filter(b=>!b.pocketed).length} balls remaining${eight.state==='active'?', on the 8':''}`:'Open table. Groups are not assigned yet.');
 }
 /** Honest per-seat numbers from the referee log: balls potted and fouls committed. */
+/** Most balls potted legally in one visit: the nine-ball run. */
+function nineBestRun(history,seat){
+ let run=0,best=0;
+ for(const e of history){if(e?.kind!=='ruling')continue;if(e.shooter!==seat||e.result==='foul'){run=0;continue;}
+  const n=(e.potRecords||[]).filter(p=>p.id>0).length;run=n?run+n:0;best=Math.max(best,run);}
+ return Math.min(15,best);
+}
 function seatStats(history,seat){
  let potted=0,fouls=0;
  for(const entry of history){
@@ -437,11 +469,12 @@ function turnUI(){if(!current)return;
  const passAndPlay=current.players==='local'&&current.kind==='match';
  setText('turnLabel',current.over?drill?'DRILL FINISHED':'FINISHED':drill?'SKILL DRILL':current.ballInHand?passAndPlay?`P${current.turn+1} PLACING`:current.isAI()?'RIVAL PLACING…':'BALL IN HAND':current.kind==='practice'?'PRACTICE':current.kind==='attract'?'EXHIBITION':current.break?passAndPlay?`P${current.turn+1} BREAK`:'THE BREAK':passAndPlay?`P${current.turn+1} TURN`:current.turn===0?'YOUR TURN':'RIVAL TURN');
  $('turnLabel').setAttribute('aria-label',passAndPlay?`Player ${current.turn+1}${current.ballInHand?' placing cue ball':current.break?' breaking':' to shoot'}`:$('turnLabel').textContent);
- const p1=current.groups[0]?.toUpperCase()||'OPEN TABLE',p2=current.groups[1]?.toUpperCase()||'OPEN TABLE';
+ const nineLabel=seat=>`${creditedBalls(current.history,seat).length} POTTED`;
+ const p1=current.ruleset==='nine'?nineLabel(0):current.groups[0]?.toUpperCase()||'OPEN TABLE',p2=current.ruleset==='nine'?nineLabel(1):current.groups[1]?.toUpperCase()||'OPEN TABLE';
  $('playerOne').innerHTML=drill?`YOU <small>${current.shots} / ${drillInfo.attempts} SHOTS · ONE TARGET</small>`:
    practice?`YOU <small>${current.shots} SHOTS · ${current.sim.balls.filter(b=>b.id!==0&&b.pocketed).length} POCKETED</small>`:`${current.kind==='attract'?'CLUB PRO':current.players==='local'?'PLAYER ONE':'YOU'} <small>${p1}</small>`;
  $('playerTwo').innerHTML=`${current.kind==='attract'?'ROOKIE':current.players==='local'?'PLAYER TWO':rival==='club'?'CLUB PRO':'ROOKIE'} <small>${p2}</small>`;
- const signature=current.groups.join(':')+':'+current.over+':'+current.winner+':'+current.sim.balls.filter(b=>b.pocketed).map(b=>b.id).sort((a,b)=>a-b).join(',');
+ const signature=current.groups.join(':')+':'+current.ruleset+':'+current.history.length+':'+current.over+':'+current.winner+':'+current.sim.balls.filter(b=>b.pocketed).map(b=>b.id).sort((a,b)=>a-b).join(',');
  if(signature!==lastScoreSignature){ballSlots($('ballsOne'),0);ballSlots($('ballsTwo'),1);lastScoreSignature=signature;}
  $('gameScreen').dataset.shots=String(current.shots);
  const completed=current.over&&current.kind!=='attract';
@@ -451,7 +484,7 @@ function turnUI(){if(!current)return;
   setText('matchResultTitle',drill?current.drillOutcome==='completed'?'DRILL COMPLETE':'TRY AGAIN':practice?'TABLE CLEARED':`${player} ${player==='YOU'?'WIN':'WINS'}`);
   setText('playAgain',drill?'RETRY DRILL ↻':"RACK 'EM AGAIN ↻");
   const finalReason=current.history.at(-1)?.reason;
-  const resultKind=practice?'practice':finalReason==='eight-cleared'?'clean':'foul';
+  const resultKind=practice?'practice':finalReason==='eight-cleared'||finalReason==='nine-potted'?'clean':'foul';
   $('matchResult').dataset.finish=resultKind;
   const last=drill||practice?null:decisiveShot(current.history);
   $('resultLastShot').hidden=!last;
@@ -472,7 +505,7 @@ function turnUI(){if(!current)return;
         'no-bank':'NO CUSHION BANK · TRY AGAIN'})[current.history.at(-1)?.reason]||'RESET AND TRY AGAIN');
    }else
   setText('matchResultDetail',practice?`${current.shots} ${current.shots===1?'SHOT':'SHOTS'} THIS SESSION`:
-     `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · `+(current.players==='local'?'':(()=>{const s=seatStats(current.history,0);return `YOU POTTED ${s.potted} · ${s.fouls} ${s.fouls===1?'FOUL':'FOULS'} · `;})())+`${resultKind==='clean'?'CLEAN 8-BALL':resultKind==='foul'&&current.history.at(-1)?.reason==='wrong-pocket'?'WRONG POCKET':'FOUL ON THE 8'}`+
+     `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · `+(current.players==='local'?'':(()=>{const s=seatStats(current.history,0);return `YOU POTTED ${s.potted} · ${s.fouls} ${s.fouls===1?'FOUL':'FOULS'} · `;})())+`${resultKind==='clean'?(current.ruleset==='nine'?'LEGAL 9':'CLEAN 8-BALL'):resultKind==='foul'&&current.history.at(-1)?.reason==='wrong-pocket'?'WRONG POCKET':'FOUL ON THE 8'}`+
      (newlyEarnedCueCount?` · ${newlyEarnedCueCount} ${newlyEarnedCueCount===1?'CUE':'CUES'} EARNED`:''));
  }
  const seconds=Math.ceil(current.shotRemaining);
@@ -504,7 +537,7 @@ function turnUI(){if(!current)return;
  $('powerTrack').setAttribute('aria-disabled',String(!canAct()));$('aimWheel').setAttribute('aria-disabled',String(!canAct()));
  updatePlacementTools();
  const help=drill&&!current.over?drillInfo.brief:callingNeeded()&&!current.ballInHand&&!busy?(calledPocket===null?'CALL THE 8 · TAP A POCKET (OR PRESS C)':`8 CALLED · ${POCKET_LABELS[calledPocket]} · TAP ANOTHER TO CHANGE`):
-  current.ballInHand&&!current.over&&!current.isAI()?current.kitchen?'BEHIND THE HEAD LINE ONLY · DRAG TO PLACE':'TAP TO PREVIEW · DRAG TO PLACE':'';
+  current.ruleset==='nine'&&!current.ballInHand&&!current.over&&!current.isAI()&&!busy?`HIT THE ${current.group.slice(4)} FIRST · POT THE 9 TO WIN`:current.ballInHand&&!current.over&&!current.isAI()?current.kitchen?'BEHIND THE HEAD LINE ONLY · DRAG TO PLACE':'TAP TO PREVIEW · DRAG TO PLACE':'';
  setText('guideBadge',help);
  $('guideBadge').classList.toggle('is-visible',Boolean(help));
  $('guideBadge').style.opacity=busy?'0':'.95';
@@ -516,7 +549,7 @@ function begin(kind,drillId=null){
  lastScoreSignature='';newlyEarnedCueCount=0;matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();calledPocket=null;placeGesture=null;$('collectedBalls').replaceChildren();hide('clubMenu');hide('challengeSheet');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=kind==='drill'?skillDrillById(drillId).referenceAngle:0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  calledPocket=null;
- current=new Game({kind,drillId,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',callEight:rules==='call8',shotClock:clockSeconds,notify,onPocket:animatePocket,onTurn:matchTurn});
+ current=new Game({kind,drillId,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',ruleset:kind==='match'?gameType:'eight',callEight:rules==='call8'&&gameType==='eight',shotClock:clockSeconds,notify,onPocket:animatePocket,onTurn:matchTurn});
  matchEventId=kind==='match'?newMatchId():null;
  drillEventId=kind==='drill'?newMatchId():null;
  if(kind==='attract'){current.turn=0;notify('An exhibition between our house rivals.');}
@@ -562,7 +595,7 @@ function pauseMatch(){
  const clock=`${String(Math.floor(matchElapsed/60)).padStart(2,'0')}:${String(Math.floor(matchElapsed%60)).padStart(2,'0')}`;
  const opponent=current?.players==='local'?'Two players':rival==='club'?'vs Club Pro':'vs Rookie';
  setText('pauseSummary',current?.kind==='practice'?`Practice table · ${clock}`:current?.kind==='drill'?'Skill challenge':current?.kind==='attract'?'Exhibition table':
-  `${opponent} · ${current?.callEight?'Call the 8':'Casual 8-ball'} · ${clock}`);
+  `${opponent} · ${current?.ruleset==='nine'?'Casual 9-ball':current?.callEight?'Call the 8':'Casual 8-ball'} · ${clock}`);
  show('pauseMenu');$('resumeMatch').focus();
 }
 function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('gameCanvas').focus({preventScroll:true});turnUI();}
@@ -858,10 +891,12 @@ all('[data-aim-mode]').forEach(b=>b.onclick=()=>{aimMode=b.dataset.aimMode;saveP
 $('soundToggle').onchange=event=>setSound(event.target.checked);
 $('muteButton').onclick=event=>{setSound(!audio.enabled);if(event.detail)$('gameCanvas').focus({preventScroll:true});};
 $('motionToggle').onchange=event=>{motion=event.target.checked;savePreference('ghostball-motion',motion?'on':'off');};
-$('openSetup').onclick=openSetup;$('closeSetup').onclick=closeSetup;$('backdrop').onclick=()=>{closeSetup();closeSettings();};
+$('openSetup').onclick=openSetup;$('closeSetup').onclick=closeSetup;
+for(const id of ['setupSheet','settingsSheet'])$(id).addEventListener('pointerdown',e=>{if(e.target===$(id)){if(id==='setupSheet')closeSetup();else closeSettings();}});$('backdrop').onclick=()=>{closeSetup();closeSettings();};
 $('prevRoom').onclick=()=>{room=(room-1+halls.length)%halls.length;applyRoom();};
 $('nextRoom').onclick=()=>{room=(room+1)%halls.length;applyRoom();};
 all('.mode[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;refreshMenu();applyRoom();});
+all('#gameType [data-game]').forEach(b=>b.onclick=()=>{gameType=b.dataset.game;savePreference('ghostball-game',gameType);syncGameType();refreshMenu();});
 all('#ruleset [data-rules]').forEach(b=>b.onclick=()=>{rules=b.dataset.rules;savePreference('ghostball-rules',rules);syncRules();refreshMenu();});
 all('#rivals [data-rival]').forEach(b=>b.onclick=()=>{rival=b.dataset.rival;all('#rivals button').forEach(n=>n.classList.toggle('selected',n===b));refreshMenu();});
 $('playBtn').onclick=()=>begin(mode);$('watchBtn').onclick=()=>begin('attract');
@@ -1110,8 +1145,8 @@ window.addEventListener('keyup',e=>{
 window.addEventListener('blur',cancelKeyPull);
 window.addEventListener('pagehide',()=>audio.suspend());
  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelKeyPull();audio.suspend();}else audio.resume();});
- try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';const savedAim=localStorage.getItem('ghostball-aim-mode');if(AIM_MODES.includes(savedAim))aimMode=savedAim;rules=localStorage.getItem('ghostball-rules')==='call8'?'call8':'casual';const g=localStorage.getItem('ghostball-guide');if(['full','short','off'].includes(g))guideMode=g;wheelFine=localStorage.getItem('ghostball-wheel')==='fine';spinKeep=localStorage.getItem('ghostball-spin')==='keep';clockSeconds=localStorage.getItem('ghostball-clock')==='0'?0:45;}catch{}
- syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();syncClock();syncRules();syncMute();syncAim();
+ try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';const savedAim=localStorage.getItem('ghostball-aim-mode');if(AIM_MODES.includes(savedAim))aimMode=savedAim;rules=localStorage.getItem('ghostball-rules')==='call8'?'call8':'casual';const g=localStorage.getItem('ghostball-guide');if(['full','short','off'].includes(g))guideMode=g;gameType=localStorage.getItem('ghostball-game')==='nine'?'nine':'eight';wheelFine=localStorage.getItem('ghostball-wheel')==='fine';spinKeep=localStorage.getItem('ghostball-spin')==='keep';clockSeconds=localStorage.getItem('ghostball-clock')==='0'?0:45;}catch{}
+ syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();syncClock();syncRules();syncGameType();syncMute();syncAim();
 syncSpin();syncEquippedCue();
 applyRoom();refreshMenu();hide('gameScreen');
 let previous=performance.now(),acc=0,uiTimer=0;
@@ -1142,7 +1177,7 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
    const cpuPose=g.isAI()?g.presentedCue:null;
    const zone=active==='game'&&!g.over&&!g.sim.moving&&!g.isAI()
      ?g.ballInHand?(g.kitchen?'break':'all'):pointerMode==='break-place'?'break':null:null;
-    const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over&&!g.ballInHand&&pointerMode!=='break-place',aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike,marker:liveMarker(now),guideMode},placement,placementZone:zone,fx:motion?g.fx:[],callPocket:g.callEight&&g.group==='eight'?(g.isAI()?(g.previewShot?.pocket??null):calledPocket):null};
+    const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over&&!g.ballInHand&&pointerMode!=='break-place',aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike,marker:liveMarker(now),guideMode},placement,placementZone:zone,fx:motion?g.fx:[],targetBall:g.ruleset==='nine'&&!g.over&&!g.sim.moving&&!g.ballInHand?Number(g.group.slice(4)):null,callPocket:g.callEight&&g.group==='eight'?(g.isAI()?(g.previewShot?.pocket??null):calledPocket):null};
    table.draw(g.sim,frame);uiTimer+=elapsed;if(uiTimer>.2){turnUI();uiTimer=0;}}
 }
 requestAnimationFrame(frame);

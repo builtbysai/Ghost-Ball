@@ -83,6 +83,7 @@ function* simulateAssessment(sim,candidate,group='open',{maxSteps=960,callEight=
  if(!predicted.strike(candidate.angle,candidate.power)){
    return {score:-Infinity,targetPocket:false,legalFirst:false,scratch:false,complete:false};
  }
+ const nine=typeof group==='string'&&group.startsWith('low-');
  let targetPocket=false,targetWrongPocket=false,scratch=false,earlyEight=false,own=0,eightDown=false,eightPocket=-1;
  let first=null,railAfterContact=false,complete=false,anyPocket=false;
  const visited=new Set();
@@ -95,6 +96,11 @@ function* simulateAssessment(sim,candidate,group='open',{maxSteps=960,callEight=
    if(event.type!=='pocket'||visited.has(event.id))continue;
    visited.add(event.id);anyPocket=true;
    if(event.id===0)scratch=true;
+   else if(nine&&event.id>0){
+    // Nine-ball: any ball counts as an extra pot; the 9 is simply a bonus.
+    if(event.id===candidate.target){if(event.pocket===candidate.pocket)targetPocket=true;else targetWrongPocket=true;}
+    else own++;
+   }
    else if(event.id===8&&group!=='eight')earlyEight=true;
    else if(event.id===8){eightDown=true;eightPocket=event.pocket;}
    else if(event.id===candidate.target){

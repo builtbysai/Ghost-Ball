@@ -162,3 +162,11 @@ kbd{display:inline-block;min-width:1.6em;padding:1px 6px;margin:0 2px;border:1px
 #app .locker-actions button{border-radius:99px;min-height:36px;padding:0 15px;font:800 11px system-ui;letter-spacing:.06em}
 #app .challenge-card{border-color:var(--sh-line);background:#ffffff0b;transition:border-color .16s,background .16s,transform .16s}
 #app .challenge-card:hover{border-color:#e9cf98;background:#e6c98b14;transform:translateY(-2px)}
+
+/* selection state set by class (setup) or aria-pressed (preferences) */
+.seg button.selected{background:linear-gradient(#f2dcab,#d6b36e);color:#1c2b23;box-shadow:0 1px 0 #fff6 inset,0 2px 6px #0007}
+.seg button:disabled{opacity:.45;cursor:not-allowed}.seg button small{font-size:8px;letter-spacing:.1em;text-transform:uppercase;opacity:.8}
+.setup-sheet.club-sheet{z-index:40}
+.setup-sheet .set-row{min-height:clamp(48px,8dvh,60px)}
+.setup-sheet .sheet-foot span{line-height:1.5;max-width:100%}
+.club-sheet [hidden]{display:none!important}

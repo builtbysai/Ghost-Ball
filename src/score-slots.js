@@ -31,3 +31,27 @@ export function eightSlotModel(state,player){
  const cleared=own.every(id=>taken.has(id));
  return {state:cleared&&!taken.has(8)?'active':'inactive',id:8,color:BALL_COLORS[8]};
 }
+
+/**
+ * Nine-ball trays show what each player has potted. Slots for balls still to be
+ * credited are neutral ghosts, so the strip fills up as the rack is cleared.
+ * @param {number[]} credited ball numbers 1-9 this player legally potted
+ */
+export function nineSlotModels(credited=[]){
+ const taken=new Set(credited);
+ return Array.from({length:9},(_,index)=>{
+  const id=index+1;
+  return taken.has(id)
+   ?{id,slot:null,color:BALL_COLORS[id],stripe:id>8,ghost:false,preview:false,pocketed:false}
+   :{id:null,slot:id,color:null,stripe:false,ghost:true,preview:true,pocketed:false};
+ });
+}
+/** Balls a seat has legally potted, from the referee log (foul pots stay down but earn nothing). */
+export function creditedBalls(history,seat){
+ const ids=[];
+ for(const entry of history||[]){
+  if(entry?.kind!=='ruling'||entry.shooter!==seat||entry.result==='foul')continue;
+  for(const record of entry.potRecords||[])if(record.id>0&&!ids.includes(record.id))ids.push(record.id);
+ }
+ return ids;
+}

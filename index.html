@@ -15,13 +15,17 @@
    <div class="actions"><button id="playBtn" class="primary"><span><strong id="playText">Break at The Parlor</strong><small id="playSubtitle">CASUAL 8-BALL · NO ENTRY FEE</small></span><span class="arrow">→</span></button><button id="watchBtn" class="secondary" aria-label="Watch a live AI exhibition"><span class="eye">◉</span><small>WATCH</small></button></div>
  </div></section>
  <section class="backdrop" id="backdrop" hidden></section>
- <section class="sheet" id="setupSheet" aria-label="Match setup" role="dialog" aria-modal="true" hidden><div class="grab"></div><header><span><small>MATCH SETUP</small><h2>Choose the frame.</h2></span><button id="closeSetup" class="close-sheet">DONE</button></header>
-  <div class="setting"><label>GAME</label><div class="choice-row"><button class="selected">8-BALL</button><button disabled>9-BALL <small>SOON</small></button><button disabled>STRAIGHT <small>SOON</small></button></div></div>
-  <div class="setting"><label>RULES</label><div class="choice-row" id="ruleset"><button class="selected" data-rules="casual">CASUAL</button><button data-rules="call8">CALL THE 8</button></div></div>
-  <div class="setting"><label>SHOT CLOCK</label><div class="choice-row" id="clockSetting"><button class="selected" data-clock="45">45 SEC</button><button data-clock="0">OFF</button></div></div>
-  <div class="setting"><label>OPPONENT</label><div class="choice-row" id="rivals"><button class="selected" data-rival="rookie">ROOKIE</button><button data-rival="club">CLUB PRO</button><button data-rival="local">2 PLAYERS</button></div></div>
-
-  <p class="footnote">Casual: no called shots. Call the 8: when you are down to the black, name its pocket first; any other pocket loses the rack. Full tournament rules are on the roadmap.</p>
+ <section class="club-sheet setup-sheet" id="setupSheet" role="dialog" aria-modal="true" aria-labelledby="setupTitle" hidden>
+  <div class="sheet-card" style="--w:600px">
+   <header class="sheet-head"><div><small class="eyebrow">MATCH SETUP</small><h2 id="setupTitle">Choose the frame</h2></div><button id="closeSetup" class="sheet-done" type="button">Done <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></header>
+   <div class="sheet-body"><div class="set-group">
+    <div class="setting set-row"><div class="set-text"><b>Game</b><small>Which rack to play</small></div><div class="seg" id="gameType" role="group" aria-label="Game"><button class="selected" data-game="eight" aria-pressed="true">8-Ball</button><button data-game="nine" aria-pressed="false">9-Ball</button><button disabled>Straight <small>soon</small></button></div></div>
+    <div class="setting set-row"><div class="set-text"><b>Opponent</b><small>Who you are playing</small></div><div class="seg" id="rivals" role="group" aria-label="Opponent"><button class="selected" data-rival="rookie">Rookie</button><button data-rival="club">Club Pro</button><button data-rival="local">2 Players</button></div></div>
+    <div class="setting set-row"><div class="set-text"><b>Shot clock</b><small>Time for each shot</small></div><div class="seg" id="clockSetting" role="group" aria-label="Shot clock"><button class="selected" data-clock="45">45 sec</button><button data-clock="0">Off</button></div></div>
+    <div class="setting set-row"><div class="set-text"><b>Rules</b><small>8-ball only</small></div><div class="seg" id="ruleset" role="group" aria-label="Eight-ball rules"><button class="selected" data-rules="casual">Casual</button><button data-rules="call8">Call the 8</button></div></div>
+   </div></div>
+   <footer class="sheet-foot"><span id="setupNote">8-ball, casual: no called shots. Call the 8: when you are down to the black, name its pocket first; any other pocket loses the rack.</span></footer>
+  </div>
  </section>
  <section class="club-sheet menu-sheet" id="clubMenu" role="dialog" aria-modal="true" aria-labelledby="clubTitle" hidden>
   <div class="sheet-card" style="--w:460px">
@@ -106,6 +110,11 @@
        <li>Sink it after your group to win.</li>
        <li>You lose if it drops early, drops with a scratch or a wrong first contact, or (in <b>Call the 8</b>) goes in a pocket you did not name.</li>
        <li>On the break the 8 is simply re-spotted.</li></ul></article>
+      <article><h3>Nine-ball</h3><ul>
+       <li>Nine balls, racked in a diamond with the 1 at the front and the 9 in the middle.</li>
+       <li>Always hit the <b>lowest ball</b> on the table first. A ring marks it.</li>
+       <li>Pot any ball and shoot again. <b>Pot the 9 legally to win</b>, even on the break or off a combination.</li>
+       <li>Fouls give ball in hand. A 9 potted on a foul goes back on the table.</li></ul></article>
       <article><h3>Casual vs the official game</h3><ul>
        <li><b>Casual</b> (default) has no called shots, like most phone pool.</li>
        <li><b>Call the 8</b> asks you to name the 8-ball's pocket, as in WPA rules and Miniclip's game.</li>

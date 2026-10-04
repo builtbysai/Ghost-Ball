@@ -2,7 +2,7 @@
 export function recordSummary(progress,maximum=3){
  const count=(value)=>Number.isSafeInteger(value)&&value>=0?value:0;
  const reasonLabel={'eight-cleared':'LEGAL 8','early-eight':'EARLY 8',
-  'scratch-on-eight':'8 SCRATCH','wrong-ball-first':'WRONG FIRST','wrong-pocket':'WRONG POCKET'};
+  'scratch-on-eight':'8 SCRATCH','wrong-ball-first':'WRONG FIRST','wrong-pocket':'WRONG POCKET','nine-potted':'LEGAL 9'};
  const records=Array.isArray(progress?.records)?progress.records:[];
  return {
   matches:count(progress?.matchesPlayed),wins:count(progress?.vsCpuWins),

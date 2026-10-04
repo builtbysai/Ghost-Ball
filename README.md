@@ -45,6 +45,8 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/cue-locker.css`: viewport-fitted 3×2 equipment browsing in landscape and portrait.
 - `src/main.js`: app wiring, responsive controls, lifecycle.
 - `src/touch-controls.js`: tested rear-shaft hit testing, pointer pull, wheel aim and spin-contact math.
+- `src/rack-flock.js`: precomputed flocking rack assembly with exclusion (presentation only).
+- `src/rooms.css`: per-hall room scenery. `src/sheets.css`: shared sheet design.
 - `src/aim-gestures.js`: pure smart-aim logic (stick vs table press, tap-to-aim, ball picking, touch lead).
 - `src/guide.css`, `src/match-ui.css`: How to play sheet; match HUD, banner, trays and preference layout.
 - `src/table-transition.js`: live-to-play table motion and deterministic rack assembly.
@@ -72,6 +74,15 @@ Addresses the verified play-test findings (see [docs/OVERHAUL-2026-10-04.md](doc
 - **Rules:** a scratch on the break gives ball in hand behind the head string. Match setup adds **Call the 8** (name the 8-ball's pocket; any other pocket loses; tap the pocket or press C) and a **shot clock** switch (45 s or off). Preferences add Aim guide (Full / Short / Off) and Wheel speed.
 - **How to play** in the Clubhouse and pause menus: controls, rules and a short history of pool.
 - Research and decisions: [docs/COMPETITOR-STUDY-2026-10.md](docs/COMPETITOR-STUDY-2026-10.md).
+
+## Visual, physics and rules update (2026-10-04, part 2)
+
+- **Pockets:** visible rubber jaw noses, funnelled glancing contacts (no more mystery bounce-outs), a ball that visibly sinks into the well, and a ball-return rail where pocketed balls roll in and queue.
+- **Rack flocking:** restarting or racking again sends the balls flocking back into the triangle without overlaps; pocketed balls re-enter from the return gate.
+- **Sheets:** Pause, Preferences, How to play, the Clubhouse menu, Match setup, Local record, Cue locker and Skill drills share one design (`src/sheets.css`).
+- **Halls:** each of the five rooms has its own wall, floor, lamp and light (`src/rooms.css`).
+- **9-ball:** pick it in Match setup. Lowest ball first (ringed), pot the 9 to win. See [docs/RULES-RESEARCH-2026-10.md](docs/RULES-RESEARCH-2026-10.md) for the rules research, including how solids and stripes are decided.
+- **Spin** resets to the centre after every shot (Preferences → Spin after a shot → Keep).
 
 ## P3: Physical impact and match finish polish
 
