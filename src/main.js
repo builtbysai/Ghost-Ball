@@ -5,6 +5,7 @@ import {TABLE,POCKETS} from './physics.js';
 import {Audio} from './audio.js';
 import {bindPower,bindAimWheel,spinFromPoint,cueShaftHit,rearAimAngle,wrapAngle,aimStep,keyPullAmount,KEY_PULL_MIN_HOLD} from './touch-controls.js';
 import {TAP_SLOP,leadFor,tapAim,bearingTo,classifyPress,AIM_MODES} from './aim-gestures.js';
+import {planFlock,flockAt} from './rack-flock.js';
 import {flyTable} from './table-transition.js';
 import {cueGeometry,tensionStage} from './cue-feel.js';
 import {cuePlacementDraft,initialCuePlacement} from './placement-guide.js';
@@ -378,7 +379,8 @@ function refreshMenu(){setText('matchSummary',mode==='practice'?'Open practice t
   setText('playSubtitle',mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':'CASUAL 8-BALL · NO ENTRY FEE');
   all('.mode[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));}
 function resize(){ambient.resize();table.resize();}
-function canAct(){return active==='game'&&current&&!current.over&&!current.sim.moving&&!current.isAI()&&!current.ballInHand;}
+let rackFlock=null;
+function canAct(){return active==='game'&&current&&!rackFlock&&!current.over&&!current.sim.moving&&!current.isAI()&&!current.ballInHand;}
 function ballSlots(container,player){
  const group=current.groups[player],pocketed=current.sim.balls.filter(b=>b.pocketed).map(b=>b.id);
  const models=slotModels(current.groups,player,pocketed);
@@ -533,7 +535,7 @@ function begin(kind,drillId=null){
  catch(err){console.warn('Table entrance skipped',err);finish();}
 }
 function finishLobby(){
- active='lobby';current=null;matchEventId=null;drillEventId=null;placement=null;placeGesture=null;pointerMode=null;shotMotion=null;pullProgress=0;tensionLevel=0;clearTableToast();clearTurnBanner();setRecap('');cancelKeyPull();
+ rackFlock=null;active='lobby';current=null;matchEventId=null;drillEventId=null;placement=null;placeGesture=null;pointerMode=null;shotMotion=null;pullProgress=0;tensionLevel=0;clearTableToast();clearTurnBanner();setRecap('');cancelKeyPull();
  hide('spinShade');hide('spinSheet');hide('pauseMenu');hide('gameScreen');hide('controlsHint');
  $('gameScreen').classList.remove('entering','leaving');$('app').classList.remove('entering-match','leaving-match');
  $('ambient').style.visibility='';$('lobby').removeAttribute('aria-hidden');resize();$('menuBtn').focus();
@@ -557,8 +559,23 @@ function pauseMatch(){
  show('pauseMenu');$('resumeMatch').focus();
 }
 function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('gameCanvas').focus({preventScroll:true});turnUI();}
+const cloneBalls=balls=>balls.map(b=>({...b,orientation:[...(b.orientation||[1,0,0,0])]}));
+/** Re-racking: the old table's balls (and those in the return rail) flock back into the triangle. */
+function startRackFlock(before){
+ const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ if(!motion||reduced||!current||current.kind==='drill'||current.kind==='attract')return;
+ const after=cloneBalls(current.sim.balls);
+ if(before.every(b=>!b.pocketed&&after.some(a=>a.id===b.id&&Math.hypot(a.x-b.x,a.y-b.y)<2)))return;
+ rackFlock={plan:planFlock(before,after,{seconds:1.5}),start:performance.now(),duration:1650,after};
+}
+function finishRackFlock(){
+ if(!rackFlock)return;
+ const final=flockAt(rackFlock.plan,1);
+ for(const ball of current?.sim.balls||[]){const pose=final.find(p=>p.id===ball.id);if(pose){ball.orientation=[...pose.orientation];ball.rotation=pose.rotation;}}
+ rackFlock=null;
+}
 function resetMatch(){
- if(!current)return;current.reset();calledPocket=null;matchEventId=current.kind==='match'?newMatchId():null;
+ if(!current)return;const before=cloneBalls(current.sim.balls);finishRackFlock();current.reset();startRackFlock(before);calledPocket=null;matchEventId=current.kind==='match'?newMatchId():null;
  drillEventId=current.kind==='drill'?newMatchId():null;lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();
  setRecap(current.kind==='match'?(current.players==='local'?'Player 1 breaks.':'Your break. Aim, pull the power bar and release.'):'');
  newlyEarnedCueCount=0;$('collectedBalls').replaceChildren();placement=null;placeGesture=null;angle=current.kind==='drill'?skillDrillById(current.drillId).referenceAngle:0;
@@ -1095,6 +1112,17 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
   if(document.hidden)return;
   if(active==='transition'||active==='paused'){previous=now;acc=0;return;}
   const g=active==='lobby'?attract:current;if(!g)return;
+  if(rackFlock&&active!=='lobby'){
+   const t=(now-rackFlock.start)/rackFlock.duration;
+   if(t>=1)finishRackFlock();
+   else{
+    const bodies=new Map(g.sim.balls.map(b=>[b.id,b])),poses=flockAt(rackFlock.plan,t)
+     .map(pose=>({...bodies.get(pose.id),...pose}));
+    table.draw({balls:poses,moving:false,cue:()=>poses.find(b=>b.id===0)},
+     {interactive:false,aim:null,placement:null,fx:[],callPocket:null});
+    updateClocks(elapsed);return;
+   }
+  }
   acc+=elapsed;let iterations=0;
   // Avoid spiral of death after tab suspension or background throttling.
   while(acc>=TABLE.step&&iterations++<14){g.step({audio,haptics:motion});acc-=TABLE.step;}

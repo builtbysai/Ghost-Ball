@@ -261,6 +261,7 @@ with sync_playwright() as p:
         page.locator('#pauseButton').click()
         page.locator('#rerack').click()
         assert page.locator('#gameScreen').get_attribute('data-shots') == '0', 'restart failed'
+        page.wait_for_timeout(1900)  # the balls flock back into the rack; the table is input-locked until they land
         assert page.locator('#pauseMenu').is_hidden(), 'restart remained paused'
         if width<900:
             # Genuine touch events catch mobile pointer capture regressions.
@@ -277,6 +278,7 @@ with sync_playwright() as p:
         # finger reaches the screen boundary, even without a pointerup.
         page.locator('#pauseButton').click()
         page.locator('#rerack').click()
+        page.wait_for_timeout(1900)  # rack flock settles
         track=page.locator('#powerTrack').bounding_box()
         max_start=(track['x']+track['width']-20,track['y']+track['height']/2) if sideways else (track['x']+track['width']/2,track['y']+20)
         max_end=(track['x']+4,track['y']+track['height']/2) if sideways else (track['x']+track['width']/2,track['y']+track['height']-4)
