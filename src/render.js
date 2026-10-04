@@ -2,6 +2,7 @@ import {orientationOf,rotateVector} from './ball-orientation.js';
 import {TABLE,POCKETS} from './physics.js';
 import {paintFrame,paintCloth,paintRailDetails,paintPockets,FINISHES} from './table-finishes.js';
 import {cueGeometry,strokeCharge} from './cue-feel.js';
+import {paintCue} from './cue-art.js';
 import {projectAim} from './aim-guide.js';
 import {cueById} from './cue-catalog.js';
 
@@ -327,27 +328,10 @@ export class TableRenderer{
   const g=this.g,style=this.cueStyle||cueById('house'),{tip,grip,butt}=cueGeometry(cue,angle,drawback);
   const [tx,ty]=this.project(tip.x,tip.y),[gx,gy]=this.project(grip.x,grip.y),[bx,by]=this.project(butt.x,butt.y);
   const width=clamp(this.bw/560, .56, 1.28);
+  g.save();g.globalAlpha=clamp(opacity,0,1);
+  paintCue(g,{x:tx,y:ty},{x:bx,y:by},style,{scale:width*1.22});
+  g.restore();
   g.save();g.globalAlpha=clamp(opacity,0,1);g.lineCap='round';
-  // Contact shadows and a slender taper communicate a polished physical cue.
-  g.shadowColor='rgba(0,0,0,.64)';g.shadowBlur=5*width;g.shadowOffsetY=2.8*width;
-  g.beginPath();g.moveTo(bx,by);g.lineTo(gx,gy);g.strokeStyle=style.butt;g.lineWidth=8.8*width;g.stroke();
-  g.shadowBlur=0;g.shadowOffsetY=0;
-  const wood=g.createLinearGradient(bx-3,by-4,gx+3,gy+4);
-  wood.addColorStop(0,style.butt);wood.addColorStop(.28,style.wrap);
-  wood.addColorStop(.72,style.butt);wood.addColorStop(1,style.accent);
-  g.beginPath();g.moveTo(bx,by);g.lineTo(gx,gy);g.strokeStyle=wood;g.lineWidth=6.4*width;g.stroke();
-  g.beginPath();g.moveTo(bx+(gx-bx)*.09,by+(gy-by)*.09);
-  g.lineTo(bx+(gx-bx)*.70,by+(gy-by)*.70);
-  g.strokeStyle=style.wrap;g.lineWidth=5.1*width;g.stroke();
-  for(const t of [.1,.15,.2,.25,.3]){
-    const x=bx+(gx-bx)*t,y=by+(gy-by)*t;
-    g.beginPath();g.arc(x,y,1.35*width,0,TAU);g.fillStyle=style.accent;g.fill();
-  }
-  g.beginPath();g.moveTo(gx,gy);g.lineTo(tx,ty);g.strokeStyle=style.shaft;g.lineWidth=3.15*width;g.stroke();
-  g.beginPath();g.moveTo(gx,gy);g.lineTo(tx,ty);g.strokeStyle='rgba(255,246,207,.52)';g.lineWidth=.85*width;g.stroke();
-  const ring=this.project(cue.x-Math.cos(angle)*(cueGeometry(cue,angle,drawback).reach-92),cue.y-Math.sin(angle)*(cueGeometry(cue,angle,drawback).reach-92));
-  g.beginPath();g.moveTo(gx,gy);g.lineTo(...ring);g.strokeStyle=style.metal;g.lineWidth=1.8*width;g.stroke();
-  g.beginPath();g.arc(tx,ty,2.3*width,0,TAU);g.fillStyle=style.tip;g.fill();
   if(drawback>.03){
     const [cx,cy]=this.project(cue.x,cue.y);
     const v=Math.min(1,drawback);g.beginPath();g.arc(cx,cy,Math.max(5,TABLE.radius*this.bw/1000)*(1.28+.22*v),0,TAU);

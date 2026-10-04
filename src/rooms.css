@@ -102,3 +102,16 @@
 #app.room-shift .room{animation:room-shift .5s ease-out}
 @keyframes room-shift{0%{opacity:.35;filter:blur(3px) brightness(.7)}100%{opacity:1;filter:none}}
 @media (prefers-reduced-motion:reduce){#app.room-shift .room{animation:none}}
+
+/* --- shared atmosphere: lamp pool on the floor, drifting dust in the beam, soft vignette --- */
+#app .room-floor::before{content:'';position:absolute;inset:0;pointer-events:none;
+ background:radial-gradient(ellipse 46% 60% at 50% 0%,var(--lamp-glow,#ffe9a62e),transparent 70%),
+  linear-gradient(#0000 55%,#0006)}
+#app .room-floor::after{content:'';position:absolute;left:0;right:0;top:-46vh;height:60vh;pointer-events:none;opacity:.55;
+ background:radial-gradient(1.6px 1.6px at 18% 62%,#fff9,transparent),radial-gradient(1.2px 1.2px at 34% 30%,#fff7,transparent),
+  radial-gradient(1.8px 1.8px at 52% 70%,#fffa,transparent),radial-gradient(1.2px 1.2px at 63% 22%,#fff6,transparent),
+  radial-gradient(1.5px 1.5px at 77% 54%,#fff8,transparent),radial-gradient(1px 1px at 88% 36%,#fff7,transparent);
+ animation:dust-drift 24s linear infinite}
+@keyframes dust-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-2%,9vh,0)}}
+@media (prefers-reduced-motion:reduce){#app .room-floor::after{animation:none}}
+#app[data-motion="off"] .room-floor::after{animation:none}

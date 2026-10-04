@@ -182,7 +182,7 @@
  #gameScreen .placement-tools button span[aria-hidden]{font-size:20px}
 }
 
-#gameScreen #gameCanvas:focus-visible{outline:2px solid #f0d69e;outline-offset:-3px}
+#gameScreen #gameCanvas:focus-visible{outline:1px solid #f0d69e33;outline-offset:-2px}
 
 /* P3: authentic physical-event receipt and legal-eight warm light, no scrolling. */
 #gameScreen .match-result .result-last-shot[hidden]{display:none!important}
