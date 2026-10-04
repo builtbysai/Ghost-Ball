@@ -150,6 +150,16 @@ with sync_playwright() as p:
         assert page.locator('#gameScreen').is_visible(), 'match missing'
         assert page.locator('#roundLabel').inner_text() == chosen, 'match used the wrong venue'
         assert page.locator('#pauseButton').is_visible(), 'pause control missing'
+        # Focus must land on the table so Space / arrows work without clicking first.
+        assert page.evaluate('document.activeElement.id')=='gameCanvas', 'focus stayed on a lobby control'
+        page.keyboard.press('ArrowRight')
+        assert page.locator('#aimReadout').inner_text()=='2°', 'one arrow press moves the aim a visible 2 degrees'
+        page.keyboard.press('Shift+ArrowLeft')
+        assert page.locator('#aimReadout').inner_text()=='1.75°', 'Shift refines to a quarter degree'
+        page.keyboard.press('ArrowLeft')
+        page.keyboard.press('Space')  # a tap must never shoot
+        page.wait_for_timeout(200)
+        assert page.locator('#gameScreen').get_attribute('data-shots')=='0', 'a Space tap fired a shot'
         assert page.locator('#shootBtn').count() == 0
         assert page.locator('#leaveGame').count() == 0
         assert not errors, errors

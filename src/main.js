@@ -479,6 +479,8 @@ function begin(kind,drillId=null){
   // Paint the real rack before removing the flying canvas: no empty-frame flash.
   resize();table.draw(current.sim,{interactive:!current.isAI()&&!current.over,aim:{angle,power},placement:null,fx:[]});
   active='game';$('gameScreen').classList.remove('entering');$('app').classList.remove('entering-match');
+  // Focus leaves the lobby button so Space / Enter / arrows drive the table at once.
+  $('gameCanvas').focus({preventScroll:true});
   turnUI();
  };
  try{flyTable({app:$('app'),source:$('attractCanvas'),target:$('tableArea'),
@@ -535,8 +537,18 @@ function animatePocket(event){
   if(event.id===0)flight.onfinish=()=>ball.remove();
  }else if(event.id===0)ball.remove();
 }
+let lastTickSecond=-1;
+// The human's own clock ticks audibly through its last five seconds.
+function tickShotClock(){
+ const live=current.kind==='match'&&!current.over&&current.turn===0&&!current.isAI()&&
+  !current.ballInHand&&!current.sim.moving;
+ const left=Math.ceil(current.shotRemaining);
+ if(!live||left>5||left<1){lastTickSecond=-1;return;}
+ if(left!==lastTickSecond){lastTickSecond=left;audio.play({type:'tick',last:left===1});}
+}
 function updateClocks(elapsed){
  if(!current)return;
+ tickShotClock();
  matchElapsed+=elapsed;
  const whole=Math.floor(matchElapsed);
  if(whole!==lastClockSecond){
@@ -874,7 +886,7 @@ window.addEventListener('keydown',e=>{
   if(!$('settingsSheet').hidden||!$('setupSheet').hidden||!$('clubMenu').hidden||!$('spinSheet').hidden)return;
   if(active!=='game'||['INPUT','BUTTON','TEXTAREA'].includes(document.activeElement?.tagName)&&document.activeElement?.type==='range')return;
   if(placementActive()){
-    if(document.activeElement?.tagName==='BUTTON')return;
+    if(document.activeElement?.tagName==='BUTTON'&&document.activeElement.closest('#gameScreen'))return;
     const step=e.shiftKey?3:12;
     if(e.key==='ArrowLeft')nudgePlacement(-step,0);
     else if(e.key==='ArrowRight')nudgePlacement(step,0);
@@ -887,7 +899,10 @@ window.addEventListener('keydown',e=>{
   }
   // A focused slider or wheel has already handled its own arrow keys.
   if(e.defaultPrevented||e.ctrlKey||e.metaKey||e.altKey)return;
-  const key=e.key.toLowerCase(),onButton=document.activeElement?.tagName==='BUTTON';
+  // Only a button inside the match keeps its native Space/Enter; a lobby button
+  // that merely retained focus after "Play" must never swallow the shot.
+  const focused=document.activeElement,key=e.key.toLowerCase(),
+   onButton=focused?.tagName==='BUTTON'&&Boolean(focused.closest('#gameScreen'));
   if(e.key==='ArrowLeft'||key==='a'){keyboardHint();nudgeAim(-1,e.shiftKey);e.preventDefault();}
   else if(e.key==='ArrowRight'||key==='d'){keyboardHint();nudgeAim(1,e.shiftKey);e.preventDefault();}
   else if(e.code==='Space'){
