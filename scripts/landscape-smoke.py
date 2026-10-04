@@ -19,7 +19,7 @@ def module_data(name, cache=None):
 
 def html_source():
     doc = (root / 'index.html').read_text()
-    for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css', 'responsive-ui.css', 'match-ui.css', 'sheets.css', 'rooms.css', 'cue-locker.css', 'local-record.css', 'skill-drills.css']:
+    for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css', 'responsive-ui.css', 'match-ui.css', 'sheets.css', 'rooms.css', 'online.css', 'cue-locker.css', 'local-record.css', 'skill-drills.css']:
         doc = re.sub(fr'<link rel="stylesheet" href="src/{re.escape(name)}(?:\?[^"]*)?">',
                      f'<style>{(root / "src" / name).read_text()}</style>', doc)
     doc = doc.replace('<link rel="manifest" href="manifest.webmanifest">', '')
@@ -101,7 +101,7 @@ with sync_playwright() as p:
         assert page.locator('#clubMenu').is_visible()
         page.locator('#menuChallenges').click()
         page.wait_for_timeout(450)
-        assert page.locator('#challengeSheet').is_visible() and page.locator('#challengeCards button').count()==5
+        assert page.locator('#challengeSheet').is_visible() and page.locator('#challengeCards button').count()==8
         cpanel=page.locator('.challenge-panel').bounding_box()
         assert inside_viewport(cpanel,width,height),f'{width}x{height}: challenge picker clipped'
         assert page.locator('.challenge-panel').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'challenge panel overflow'

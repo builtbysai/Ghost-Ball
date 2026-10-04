@@ -115,3 +115,14 @@
 @keyframes dust-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(-2%,9vh,0)}}
 @media (prefers-reduced-motion:reduce){#app .room-floor::after{animation:none}}
 #app[data-motion="off"] .room-floor::after{animation:none}
+
+/* --- lobby tabs: coming-soon placeholders never crowd a narrow screen; real tabs are finger-sized --- */
+#app .modes button{min-height:36px}
+@media (max-width:760px){#app .modes button:disabled{display:none}#app .modes{justify-content:flex-start;gap:clamp(14px,5vw,28px)}}
+
+/* tablets held upright: the room caption sits below the table, not across its front rail */
+@media (orientation:portrait) and (min-width:600px){#app .room-details{top:63%}}
+
+/* the wordmark ball carries the icon's red marker dot */
+.word-ball{position:relative}
+.word-ball::after{content:'';position:absolute;left:61%;top:24%;width:15%;height:15%;border-radius:50%;background:#dc2626;box-shadow:0 0 0 .5px #7f1d1d}

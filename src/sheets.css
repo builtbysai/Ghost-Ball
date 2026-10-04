@@ -122,7 +122,7 @@ kbd{display:inline-block;min-width:1.6em;padding:1px 6px;margin:0 2px;border:1px
  .sheet-body{padding:0 16px 8px}
  .set-row{min-height:30px;padding:2px 0}.set-text small{display:none}.set-text b{font-size:12px}
  .set-group h3{margin:4px 0 0;font-size:9px}
- .seg{padding:2px;border-radius:9px}.seg button{height:23px;min-width:46px;padding:0 8px;font-size:10.5px;border-radius:6px}
+ .seg{padding:2px;border-radius:9px}.seg button{height:28px;min-width:46px;padding:0 8px;font-size:10.5px;border-radius:6px}
  .switch{width:38px;height:22px}.switch i{width:16px;height:16px;top:3px;left:3px}.switch input:checked+i{transform:translateX(16px)}
  .set-note{font-size:10.5px;margin-top:4px;line-height:1.55}
  .sheet-foot{padding:6px 16px;font-size:10px}.btn-quiet{height:26px;font-size:10.5px;padding:0 11px}
@@ -133,7 +133,7 @@ kbd{display:inline-block;min-width:1.6em;padding:1px 6px;margin:0 2px;border:1px
  .menu-item:nth-child(odd){border-right:1px solid var(--sh-line)}
  .menu-item:nth-last-child(-n+2){border-bottom:0}
  .menu-item svg{width:16px;height:16px}.menu-item .chev{display:none}
- .sheet-tabs{padding:0 16px 6px}.sheet-tabs button{height:26px;padding:0 12px;font-size:10px}
+ .sheet-tabs{padding:0 16px 6px}.sheet-tabs button{height:30px;padding:0 12px;font-size:10px}
  .guide-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px}
  .guide-grid article{padding:8px 10px}.guide-grid ul{font-size:11px;gap:4px;line-height:1.4}.guide-grid h3{font-size:9px;margin-bottom:5px}
  .guide-timeline{gap:8px}.guide-timeline li{font-size:11px;line-height:1.4}
@@ -151,7 +151,7 @@ kbd{display:inline-block;min-width:1.6em;padding:1px 6px;margin:0 2px;border:1px
  .pause-menu .set-text b{font-size:12px}
  .pause-menu .set-group h3{margin:4px 0 0;font-size:9px}
  .pause-menu .seg{padding:2px;border-radius:9px}
- .pause-menu .seg button{height:23px;min-width:46px;padding:0 8px;font-size:10.5px;border-radius:6px}
+ .pause-menu .seg button{height:28px;min-width:46px;padding:0 8px;font-size:10.5px;border-radius:6px}
  .pause-menu .switch{width:38px;height:22px}
  .pause-menu .switch i{width:16px;height:16px;top:3px;left:3px}
  .pause-menu .switch input:checked+i{transform:translateX(16px)}
@@ -167,7 +167,7 @@ kbd{display:inline-block;min-width:1.6em;padding:1px 6px;margin:0 2px;border:1px
  .pause-menu .menu-item svg{width:16px;height:16px}
  .pause-menu .menu-item .chev{display:none}
  .pause-menu .sheet-tabs{padding:0 16px 6px}
- .pause-menu .sheet-tabs button{height:26px;padding:0 12px;font-size:10px}
+ .pause-menu .sheet-tabs button{height:30px;padding:0 12px;font-size:10px}
  .pause-menu .guide-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px}
  .pause-menu .guide-grid article{padding:8px 10px}
  .pause-menu .guide-grid ul{font-size:11px;gap:4px;line-height:1.4}

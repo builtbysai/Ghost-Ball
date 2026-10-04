@@ -48,7 +48,8 @@ test('safe contact fallback chooses first legal group and remains bounded',()=>{
 });
 test('match and exhibition retain their seeded opponent choices',()=>{
  const a=new Game({kind:'attract',seed:50}),b=new Game({kind:'attract',seed:50});
- a.update(.08);b.update(.08);
+ for(let i=0;i<400&&!(a.previewShot&&b.previewShot);i++){a.update(.08);b.update(.08);}
+ assert.ok(a.previewShot,'the break is planned over a few frames');
  assert.deepEqual(a.previewShot,b.previewShot);
  assert.ok(Number.isFinite(a.previewShot.angle));
 });

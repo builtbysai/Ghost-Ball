@@ -16,15 +16,13 @@
 #app .challenge-intro,#app .challenge-footnote{margin:0;color:#c7d0c0;
  font-size:clamp(9px,1.3dvh,12px);line-height:1.23}
 #app .challenge-footnote{font-size:clamp(8px,1.04dvh,10px);color:#b3c1b7}
-#app .challenge-cards{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:clamp(5px,1.2vw,11px);
- min-width:0;min-height:0}
-#app .challenge-card{grid-column:span 2;position:relative;text-align:left;display:flex;flex-direction:column;
+#app .challenge-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(2,minmax(min-content,1fr));gap:clamp(5px,1.2vw,11px);
+ min-width:0;min-height:0;overflow-y:auto}
+#app .challenge-card{position:relative;text-align:left;display:flex;flex-direction:column;
  justify-content:space-between;min-width:0;min-height:0;overflow:hidden;gap:7px;
  border:1px solid #d6c28f75;border-radius:9px;
  background:linear-gradient(155deg,#345344,#182e27);color:#fff2dc;
- padding:clamp(9px,2.5dvh,19px);transition:border-color .18s,transform .18s}
-#app .challenge-card:nth-child(4){grid-column:2 / span 2}
-#app .challenge-card:nth-child(5){grid-column:4 / span 2}
+ padding:clamp(8px,1.8dvh,14px);transition:border-color .18s,transform .18s}
 #app .challenge-card:focus-visible,#app .challenge-card:hover{border-color:#f8d999}
 #app .challenge-card-name{display:block;font:normal clamp(19px,3.6dvh,31px)/1 Georgia,serif}
 #app .challenge-card-tag{font:800 clamp(8px,1.2dvh,10px) system-ui;letter-spacing:.1em;color:#e3ce92}
@@ -46,9 +44,9 @@
 }
 @media(max-width:650px) and (orientation:portrait){
  #app .challenge-panel{height:min(760px,100%)}
- #app .challenge-cards{grid-template-columns:1fr;grid-template-rows:repeat(5,minmax(0,1fr))}
- #app .challenge-card,#app .challenge-card:nth-child(4),#app .challenge-card:nth-child(5){
-  grid-column:1;gap:2px;padding:clamp(5px,1.4vw,10px)}
+ #app .challenge-cards{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(4,minmax(min-content,1fr))}
+ #app .challenge-card{
+  gap:2px;padding:clamp(5px,1.4vw,10px)}
  #app .challenge-card-name{font-size:clamp(17px,3.3dvh,24px)}
  #app .challenge-card-rule{font-size:clamp(9px,1.25dvh,11px)}
 }

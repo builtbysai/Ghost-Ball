@@ -79,14 +79,15 @@ export function candidateShots(sim,group='open'){
  * the live browser can spread it over animation frames with no altered
  * physics or RNG behavior.
  */
-function* simulateAssessment(sim,candidate,group='open',{maxSteps=960,callEight=false}={}){
+function* simulateAssessment(sim,candidate,group='open',{maxSteps=960,callEight=false,ownPocket,oppPocket}={}){
  const predicted=new Simulation(sim.snapshot().balls);
  if(!predicted.strike(candidate.angle,candidate.power)){
    return {score:-Infinity,targetPocket:false,legalFirst:false,scratch:false,complete:false};
  }
- const nine=typeof group==='string'&&group.startsWith('low-');
+ // Rotation games and straight pool ('any') score every ball the same way and have no special 8.
+ const nine=(typeof group==='string'&&group.startsWith('low-'))||group==='any';
  let targetPocket=false,targetWrongPocket=false,scratch=false,earlyEight=false,own=0,eightDown=false,eightPocket=-1;
- let first=null,railAfterContact=false,complete=false,anyPocket=false;
+ let first=null,railAfterContact=false,complete=false,anyPocket=false,gift=0;
  const visited=new Set();
  for(let step=0;step<maxSteps;step++){
   const events=predicted.step();
@@ -99,7 +100,12 @@ function* simulateAssessment(sim,candidate,group='open',{maxSteps=960,callEight=
    if(event.id===0)scratch=true;
    else if(nine&&event.id>0){
     // Nine-ball: any ball counts as an extra pot; the 9 is simply a bonus.
-    if(event.id===candidate.target){if(event.pocket===candidate.pocket)targetPocket=true;else targetWrongPocket=true;}
+    if(ownPocket!==undefined&&event.pocket!==ownPocket){
+     // One-pocket: a ball anywhere but your own pocket earns nothing, and your opponent's pocket scores for them.
+     if(event.pocket===oppPocket)gift++;
+     if(event.id===candidate.target)targetWrongPocket=true;
+    }
+    else if(event.id===candidate.target){if(event.pocket===candidate.pocket)targetPocket=true;else targetWrongPocket=true;}
     else own++;
    }
    else if(event.id===8&&group!=='eight')earlyEight=true;
@@ -120,7 +126,7 @@ function* simulateAssessment(sim,candidate,group='open',{maxSteps=960,callEight=
  const made=legalFirst&&targetPocket&&!foul;
  const score=(made?1200:targetWrongPocket&&legalFirst&&!foul?460:0)
    +(!foul?own*170:0)+(legalFirst?160:0)
-   -(scratch?1600:0)-(earlyEight?2200:0)
+   -(scratch?1600:0)-(earlyEight?2200:0)-gift*420
    -(!legalFirst?950:0)
    -(complete&&!anyPocket&&!railAfterContact?420:0)
    -candidate.cost*.25-candidate.power*25;
@@ -248,12 +254,13 @@ function* safetyPlan(sim,group,random,targets,{maxOptions=2,maxSteps=1440,budget
  * `stalled` counts this seat's consecutive turns without a pot; it widens
  * Rookie's search so a stubborn last ball is never attempted the same
  * failing way forever. */
-export function* createShotPlanner(sim,group='open',difficulty='rookie',random=createRandom(1),{stalled=0,callEight=false,persona=PERSONAS.rookie,mood=1}={}){
+export function* createShotPlanner(sim,group='open',difficulty='rookie',random=createRandom(1),{stalled=0,callEight=false,persona=PERSONAS.rookie,mood=1,ownPocket,oppPocket}={}){
  const looseness=persona.wobble*mood;
  const cue=sim.cue();
- const assess=(plan,options={})=>simulateAssessment(sim,plan,group,{...options,callEight});
+ const assess=(plan,options={})=>simulateAssessment(sim,plan,group,{...options,callEight,ownPocket,oppPocket});
  if(!cue||cue.pocketed)return {angle:0,power:.58};
- const candidates=candidateShots(sim,group);
+ // One-pocket only ever aims at the player's own pocket.
+ const candidates=candidateShots(sim,group).filter(c=>ownPocket===undefined||c.pocket===ownPocket);
  const targets=sim.balls.filter(ball=>!ball.pocketed&&groupContains(ball.id,group))
    .map(ball=>({ball,range:distance(cue,ball)}))
    .sort((a,b)=>a.range-b.range||a.ball.id-b.ball.id);
@@ -331,4 +338,27 @@ export function* createShotPlanner(sim,group='open',difficulty='rookie',random=c
  * decision with the frame-sliced live match generator. */
 export function chooseShot(sim,group='open',difficulty='rookie',random=createRandom(1),options={}){
  return drain(createShotPlanner(sim,group,difficulty,random,options));
+}
+
+/** The CPU's break: try a few angles at the apex with the real physics and keep the one that
+ * pots or spreads the most balls (four to a cushion makes it a legal WPA break). A generator so a
+ * slow device can spread the work across frames; it never depends on the clock. */
+export function* planBreak(sim,{power=1}={}){
+ const angles=[0,.012,-.012,.026,-.026,.04,-.04];
+ let best=null;
+ for(const angle of angles){
+  const predicted=new Simulation(sim.snapshot().balls);
+  if(!predicted.strike(angle,power))continue;
+  const rails=new Set();let pots=0,scratch=false;
+  for(let step=0;step<3000&&predicted.moving;step++){
+   for(const event of predicted.step()){
+    if(event.type==='rail'&&event.id>0)rails.add(event.id);
+    if(event.type==='pocket'){if(event.id===0)scratch=true;else pots++;}
+   }
+   if(step%60===59)yield;
+  }
+  const score=pots*3+rails.size-(scratch?10:0)+(rails.size>=4||pots>0?4:0);
+  if(!best||score>best.score)best={angle,score};
+ }
+ return {angle:best?best.angle:0,power,plan:'break'};
 }

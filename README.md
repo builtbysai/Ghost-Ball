@@ -115,7 +115,7 @@ Open **Menu → Settings → Local Record** to see your completed-match totals a
 
 ## Private casual multiplayer foundation (not a playable mode)
 
-A pure shot-intent protocol gate and deterministic dual-game tests establish the first host-authoritative validation boundary. This code is intentionally not wired to a menu, signaling service or WebRTC yet. Consult [the private-match design and disconnect/rejoin acceptance criteria](docs/P6-PRIVATE-MATCH-DESIGN.md) before enabling Online. Direct WebRTC plus optional game-scoped TURN are candidates, not a deployed Ghost Ball service. Real two-device session and owner gameplay acceptance are still required.
+**Play a friend** (Menu → Play a friend) hosts a six-letter table code or invite link; both devices run the same deterministic game and exchange only inputs, with the host repairing any drift. Connections are WebRTC signalled over public Nostr relays (no account, no Ghost Ball server) and have not yet been validated on real devices or strict networks. A pure shot-intent protocol gate and deterministic dual-game tests establish the first host-authoritative validation boundary. This code is intentionally not wired to a menu, signaling service or WebRTC yet. Consult [the private-match design and disconnect/rejoin acceptance criteria](docs/P6-PRIVATE-MATCH-DESIGN.md) before enabling Online. Direct WebRTC plus optional game-scoped TURN are candidates, not a deployed Ghost Ball service. Real two-device session and owner gameplay acceptance are still required.
 
 ## Recovery
 
@@ -133,3 +133,6 @@ See [interaction research and copy boundaries](docs/REFERENCE-CONTROLS.md). Keep
 
 ## Second pass 2026-10-04: flow, personas, exhibitions, aim guide, music
 See `docs/FLOW-AND-AUDIO-RESEARCH-2026-10.md`. Turn changes are a slim chip above the table, fine aim is much finer, no dots over pockets, circular player tokens with the shot clock as the ring, a two-line aim guide (object ball and a short cue-ball deflection), four named CPU personas, watched AI-vs-AI exhibitions, lounge music, and nine-ball legal-break and three-foul rules.
+
+## Game modes
+8-ball (casual, Call the 8, Official WPA-style), 9-ball (legal break, three-foul, push-out), 10-ball (call the last ball), straight pool (race to 30) and one-pocket, all against Rookie, Dex, Vera or Club Pro, plus two-player, the Club Circuit, the Daily Rack and watched exhibitions. `node scripts/stress.mjs` stress-tests every ruleset.

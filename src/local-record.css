@@ -32,3 +32,18 @@
  .record-recent{padding:8px 10px;min-height:0;gap:4px}.record-row{padding:3px 0}.record-row strong{font-size:11px}
  .record-privacy{padding:9px;gap:6px}.record-privacy>p{font-size:10.5px;line-height:1.35}.record-privacy>button{min-height:30px;font-size:11px}
 }
+
+.record-highlights{min-height:0}
+.record-hl{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--sh-line)}
+.record-hl:last-child{border-bottom:0}
+.record-hl span{color:var(--sh-ink);font:650 12.5px system-ui;min-width:0}
+.record-hl small{display:block;color:var(--sh-muted);font:600 10px system-ui;letter-spacing:.08em}
+.record-hl button,.record-paste button{min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--sh-line);background:#ffffff10;color:var(--sh-ink);font:800 10.5px system-ui;letter-spacing:.08em;cursor:pointer}
+.record-hl .go{background:linear-gradient(#f2dcab,#d6b36e);color:#1c2b23;border-color:#f3deb0}
+.record-paste{display:flex;gap:8px;margin-top:6px}
+.record-paste input{flex:1;min-width:0;min-height:32px;padding:0 12px;border-radius:99px;border:1px solid var(--sh-line);background:#06100f;color:var(--sh-ink);font:500 12px ui-monospace,monospace}
+
+.record-crests{min-height:0}
+.crest-grid{display:flex;flex-wrap:wrap;gap:6px}
+.crest{padding:6px 11px;border-radius:99px;border:1px solid var(--sh-line);background:#ffffff08;color:var(--sh-muted);font:700 10.5px system-ui;letter-spacing:.06em;opacity:.55}
+.crest.earned{opacity:1;color:#1c2b23;background:linear-gradient(#f2dcab,#d6b36e);border-color:#f3deb0}

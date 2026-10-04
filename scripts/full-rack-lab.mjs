@@ -47,7 +47,7 @@ export function runRack(seed,{maxShots=120,tiers=['rookie','club'],ruleset='eigh
   }
   ensure(Number.isFinite(plan.angle)&&Number.isFinite(plan.power),
     `seed ${seed}, shot ${n+1}: invalid plan`);
-  ensure(game.beginShot(plan.angle,plan.power),`seed ${seed}, shot ${n+1}: strike rejected`);
+  ensure(game.beginShot(plan.angle,plan.power,0,plan.pocket??-1),`seed ${seed}, shot ${n+1}: strike rejected`);
   const shot=game.turnShot;let elapsed=0;
   while(game.turnShot&&elapsed++<MAX_SIM_STEPS)game.step();
   ensure(!game.turnShot,`seed ${seed}, shot ${n+1}: did not settle after ${MAX_SIM_STEPS} steps`);

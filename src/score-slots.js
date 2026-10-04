@@ -37,9 +37,9 @@ export function eightSlotModel(state,player){
  * credited are neutral ghosts, so the strip fills up as the rack is cleared.
  * @param {number[]} credited ball numbers 1-9 this player legally potted
  */
-export function nineSlotModels(credited=[]){
+export function nineSlotModels(credited=[],count=9){
  const taken=new Set(credited);
- return Array.from({length:9},(_,index)=>{
+ return Array.from({length:count},(_,index)=>{
   const id=index+1;
   return taken.has(id)
    ?{id,slot:null,color:BALL_COLORS[id],stripe:id>8,ghost:false,preview:false,pocketed:false}

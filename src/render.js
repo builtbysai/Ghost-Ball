@@ -55,7 +55,7 @@ export class TableRenderer{
    return {x:clamp(((sx-this.center)/(this.bw*k)+.5)*TABLE.width,0,1000),y:t*TABLE.height};
  }
  clear(){this.g.clearRect(0,0,this.w,this.h);}
- draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[],callPocket=null,targetBall=null}={}){
+ draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[],callPocket=null,callLabel=8,targetBall=null,pocketOwners=null,pocketOwnerNames=null,drillZone=null}={}){
   const g=this.g,P=(x,y)=>this.project(x,y);
   this.clear();g.save();
   if(this.cacheStatic&&typeof document!=='undefined'){
@@ -74,7 +74,9 @@ export class TableRenderer{
    g.drawImage(this.surface,0,0,this.w,this.h);
   }else this.paintSurface(g);
   if(placementZone&&!sim.moving)this.drawPlacementZone(sim,placementZone,placement);
-  if(callPocket!==null&&callPocket>=0)this.drawCalledPocket(callPocket);
+  if(drillZone)this.drawDrillZone(drillZone);
+  if(pocketOwners)this.drawPocketOwners(pocketOwners,pocketOwnerNames);
+  if(callPocket!==null&&callPocket>=0)this.drawCalledPocket(callPocket,callLabel);
   if(targetBall!==null)this.drawTargetBall(sim,targetBall);
   if(interactive&&aim&&!sim.moving&&!sim.cue()?.pocketed)this.drawAim(sim,aim);
   else if(aim?.strike&&aim.strike.progress<1)this.drawStroke(aim.strike);
@@ -243,8 +245,26 @@ export class TableRenderer{
    }
    g.restore();
  }
+ // Skill drills with a position or speed goal: a dashed ring where the ball has to finish.
+ drawDrillZone(zone){
+   const g=this.g,[x,y,k]=this.project(zone.x,zone.y),r=zone.r*this.bw/1000*(k||1);
+   g.save();g.beginPath();g.ellipse(x,y,r,r*(.77+.23*this.blend),0,0,TAU);
+   g.fillStyle='rgba(120,220,170,.10)';g.fill();g.setLineDash([6,5]);g.lineWidth=2;g.strokeStyle='rgba(150,235,190,.9)';g.stroke();g.restore();
+ }
+ // One-pocket: a coloured ring and the owner's mark at each player's pocket.
+ drawPocketOwners(owners,names){
+   const colors=['rgba(237,201,130,.95)','rgba(142,185,236,.95)'];
+   owners.forEach((index,seat)=>{
+     const target=POCKETS[index];if(!target)return;
+     const g=this.g,[x,y]=this.project(target[0],target[1]),scale=this.bw/1000,radius=Math.max(11,34*scale);
+     const cx=Math.min(Math.max(x,radius*.9),this.w-radius*.9),cy=Math.min(Math.max(y,radius*.9),this.h-radius*.9);
+     g.save();g.beginPath();g.arc(cx,cy,radius,0,TAU);g.lineWidth=2.4;g.strokeStyle=colors[seat];g.stroke();
+     g.fillStyle=colors[seat];g.font='800 '+Math.max(8,radius*.5)+'px system-ui,sans-serif';g.textAlign='center';g.textBaseline='middle';
+     g.fillText(String(names?.[seat]??seat+1),cx,cy);g.restore();
+   });
+ }
  // The pocket named for the 8 under "call the 8": a gold ring and numeral at the well.
- drawCalledPocket(index){
+ drawCalledPocket(index,label=8){
    const target=POCKETS[index];if(!target)return;
    const g=this.g,[x,y]=this.project(target[0],target[1]),scale=this.bw/1000,radius=Math.max(11,34*scale);
    // Pull the marker onto the cloth so corner wells (centred off the table) stay visible.
@@ -253,7 +273,7 @@ export class TableRenderer{
    g.beginPath();g.arc(cx,cy,radius,0,TAU);g.fillStyle='rgba(240,205,120,.16)';g.fill();
    g.lineWidth=2;g.strokeStyle='rgba(247,214,138,.95)';g.setLineDash([5,4]);g.stroke();g.setLineDash([]);
    g.fillStyle='rgba(255,236,176,.95)';g.font='800 '+Math.max(9,radius*.62)+'px system-ui,sans-serif';
-   g.textAlign='center';g.textBaseline='middle';g.fillText('8',cx,cy);
+   g.textAlign='center';g.textBaseline='middle';g.fillText(String(label),cx,cy);
    g.restore();
  }
  // Nine-ball: a soft ring marks the lowest ball, the only legal first contact.
