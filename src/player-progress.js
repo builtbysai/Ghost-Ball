@@ -8,6 +8,8 @@ import {awardRoomMatch,awardRoomDrill} from './room-mastery.js';
 
 export const PROGRESS_KEY='ghostball-progress-v1';
 export const PROGRESS_VERSION=1;
+/** The Club Circuit: beat each named opponent in turn. A win advances; a loss replays the round. */
+export const CIRCUIT=Object.freeze(['rookie','dex','vera','club']);
 const RECORD_LIMIT=80,DAILY_LIMIT=60,DAY_KEY=/^\d{4}-\d\d-\d\d$/;
 const FINISH_REASONS=new Set(['eight-cleared','early-eight','scratch-on-eight','wrong-ball-first','wrong-pocket','nine-potted','ten-potted','three-fouls']);
 
@@ -36,6 +38,8 @@ function validProgress(p){
     ['0','1','2','3','4'].includes(room)&&Number.isInteger(mask)&&mask>=0&&mask<=7)))&&
   (p.daily===undefined||(p.daily&&typeof p.daily==='object'&&!Array.isArray(p.daily)&&Object.keys(p.daily).length<=DAILY_LIMIT&&
    Object.entries(p.daily).every(([day,shots])=>DAY_KEY.test(day)&&Number.isSafeInteger(shots)&&shots>=1&&shots<=400)))&&
+  (p.circuit===undefined||(p.circuit&&typeof p.circuit==='object'&&Number.isInteger(p.circuit.stage)&&p.circuit.stage>=0&&p.circuit.stage<CIRCUIT.length&&
+   Number.isSafeInteger(p.circuit.champion)&&p.circuit.champion>=0&&p.circuit.champion<=999))&&
   Array.isArray(p.records)&&p.records.length<=RECORD_LIMIT&&
   p.records.every(e=>e&&typeof e.id==='string'&&e.id.length<=128);
 }
@@ -191,4 +195,16 @@ export function dailySummary(progress,today=dayKey()){
  let streak=0,cursor=daily[today]!==undefined?today:previousDay(today);
  while(daily[cursor]!==undefined){streak++;cursor=previousDay(cursor);}
  return {today:daily[today]??null,streak,total:Object.keys(daily).length};
+}
+
+export function circuitState(progress){
+ const c=validProgress(progress)?progress.circuit:undefined;
+ return {stage:c?.stage??0,champion:c?.champion??0};
+}
+export function recordCircuitResult(previous,{stage,won}={}){
+ if(!validProgress(previous)||!won)return previous;
+ const state=circuitState(previous);
+ if(stage!==state.stage)return previous;
+ const next=stage+1;
+ return {...previous,circuit:next>=CIRCUIT.length?{stage:0,champion:Math.min(999,state.champion+1)}:{stage:next,champion:state.champion}};
 }

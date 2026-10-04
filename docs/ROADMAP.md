@@ -28,6 +28,7 @@
 - [x] **Interactive first-match coach**: three steps (aim, pull, release) that advance on what the player actually does, then never return. **Alternating breaks** on rack-again; a pause-menu restart is a fresh match.
 - [x] **Ten-ball** (call the last ball), **last-shot replay** (the pre-stroke table is re-struck on a throwaway game; the live clock is held), an **offline-capable network-first service worker** with an offline smoke test, a versioned import map for every module, and a viewport audit (`scripts/stress.mjs` invariant stress, tap-target and clipping fixes).
 - [x] **Daily Rack**: a Practice table dealt from today's date (same rack for everyone, replayed on re-rack), fewest shots kept per day, a descriptive days-running count, all local and private. Plus focus-trapped modal sheets with an accessibility smoke test, an installable manifest (512 and maskable icons), and persona initials on the rival token.
+- [x] **Club Circuit**: the lobby tab that was a placeholder is now a four-round ladder (Rookie, Dex, Vera, Club Pro). A win advances, a loss replays the round, the last win crowns a champion count, all local.
 - [x] In-game **How to play** sheet (controls, rules, short history) reachable from the Clubhouse menu and the pause menu.
 
 **Currently playable:** only overhead **2D** gameplay. The live lobby has a decorative perspective rendering. Do not revive discarded experimental elevated/3D views or make their settings clickable before new working implementations exist.

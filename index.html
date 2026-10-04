@@ -10,7 +10,7 @@
  <header class="masthead"><div class="identity"><small>A MEMBERS' BILLIARD HALL</small><div class="wordmark">GH<span class="word-ball"></span>ST BALL</div></div><div class="header-right"><button class="round icon-button" id="menuBtn" aria-label="Open menu">☰</button></div></header>
  <section class="room-details" aria-label="Featured room"><small id="roomEyebrow">ROOM 01 · ESTABLISHED 1893</small><h1 id="roomName">The Parlor</h1><p id="roomDescription">Walnut rails · sage baize · classic pockets</p><div id="roomMastery" class="room-mastery" role="status" aria-live="polite" hidden><span>MASTERY <b id="roomMasteryCount">0 / 3</b></span><small id="roomMasteryNext">COMPLETE CENTER DROP</small></div><div class="room-switch"><button id="prevRoom" aria-label="Previous table">↑</button><span id="roomCount">01 / 03</span><button id="nextRoom" aria-label="Next table">↓</button></div></section>
  <section class="lobby-panel" id="lobby"><div class="lobby-inner">
-   <nav class="modes" aria-label="Available game modes"><button class="mode active" data-mode="match">QUICK MATCH</button><button class="mode" data-mode="practice">PRACTICE</button><button disabled title="Planned: online multiplayer">ONLINE <sup>SOON</sup></button><button disabled title="Planned: club circuit">CIRCUIT <sup>SOON</sup></button></nav>
+   <nav class="modes" aria-label="Available game modes"><button class="mode active" data-mode="match">QUICK MATCH</button><button class="mode" data-mode="practice">PRACTICE</button><button disabled title="Planned: online multiplayer">ONLINE <sup>SOON</sup></button><button class="mode" data-mode="circuit" title="Beat each named opponent in turn">CIRCUIT</button></nav>
    <button class="match-selection" id="openSetup" aria-haspopup="dialog"><span><small>TONIGHT'S MATCH</small><strong id="matchSummary">8-Ball <em>vs</em> Rookie</strong></span><span class="change-label">CHANGE ↗</span></button>
    <div class="actions"><button id="playBtn" class="primary"><span><strong id="playText">Break at The Parlor</strong><small id="playSubtitle">CASUAL 8-BALL · NO ENTRY FEE</small></span><span class="arrow">→</span></button><button id="watchBtn" class="secondary" aria-label="Watch a live AI exhibition"><span class="eye">◉</span><small>WATCH</small></button></div>
  </div></section>
@@ -122,6 +122,9 @@
       <article><h3>Ten-ball</h3><ul>
        <li>Ten balls in a triangle, the 1 at the front and the 10 in the middle. Same lowest-ball-first rule and break rule as nine-ball.</li>
        <li>The 10 only wins when it is the <b>last ball</b> and you <b>call its pocket</b> (tap a pocket or press C). Any other 10 goes back on the table.</li></ul></article>
+      <article><h3>Club Circuit and Daily Rack</h3><ul>
+       <li><b>Circuit</b> (lobby tab): beat Rookie, Dex, Vera and Club Pro in turn at casual 8-ball. A win moves you on; a loss replays the round.</li>
+       <li><b>Daily Rack</b> (Clubhouse menu): one practice rack, the same for everyone today. Clear it in as few shots as you can.</li></ul></article>
       <article><h3>Casual vs the official game</h3><ul>
        <li><b>Casual</b> (default) has no called shots, like most phone pool.</li>
        <li><b>Call the 8</b> asks you to name the 8-ball's pocket, as in WPA rules and Miniclip's game.</li>

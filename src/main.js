@@ -12,7 +12,8 @@ import {PERSONAS,PERSONA_ORDER,personaFor,exhibitionPair} from './ai-personas.js
 import {cuePlacementDraft,initialCuePlacement} from './placement-guide.js';
 import {CUES,cueUnlocked,cueById,equippedCue,equipCue,toggleFavorite,paintCuePreview} from './cue-catalog.js';
 import {readLocalProgress,writeLocalProgress,recordLiveMatch,bestLegalRun,chooseRoom,
- freshProgress,exportLocalProgress,resetLocalProgress,recordLiveDrill,dayKey,dailySeed,recordDaily,dailySummary} from './player-progress.js';
+ freshProgress,exportLocalProgress,resetLocalProgress,recordLiveDrill,dayKey,dailySeed,recordDaily,dailySummary,
+ CIRCUIT,circuitState,recordCircuitResult} from './player-progress.js';
 import {SKILL_DRILLS,skillDrillById} from './skill-drills.js';
 import {recordSummary} from './record-summary.js';
 import {decisiveShot,POCKET_LABELS} from './match-finish.js';
@@ -31,11 +32,11 @@ let settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',
 let matchElapsed=0,lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let previousShotAngles=[0,0],toastTimeout=null;
-let dailyDay=null,coach=0,exhibitionIndex=Math.floor(Math.random()*6),exhibitionTimer=null;
+let circuitRun=null,dailyDay=null,coach=0,exhibitionIndex=Math.floor(Math.random()*6),exhibitionTimer=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
 function syncEquippedCue(){const cue=equippedCue(progress);ambient.setCue(cue.id);table.setCue(cue.id);}
-function saveProgress(next){if(next===progress)return;progress=next;syncEquippedCue();renderRoomMastery();
+function saveProgress(next){if(next===progress)return;progress=next;refreshMenu();syncEquippedCue();renderRoomMastery();
  if(progressAccess.writable&&!writeLocalProgress(progress))progressAccess.writable=false;}
 const setText=(id,value)=>{$(id).textContent=value;};
 function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
@@ -140,6 +141,7 @@ function matchTurn(event){
    saveProgress(updated);
   }
   if(current.players==='ai'){clearTimeout(exhibitionTimer);exhibitionTimer=setTimeout(()=>{if(active==='game'&&current?.players==='ai'&&current.over){resetMatch(true);}},7000);}
+  if(circuitRun&&current.players==='cpu'&&event.winner===0){saveProgress(recordCircuitResult(progress,{stage:circuitRun.stage,won:true}));}
   if(event.practice&&dailyDay){saveProgress(recordDaily(progress,{date:dailyDay,shots:current.shots}));}
   audio.play({type:event.practice||current.players==='local'||current.players==='ai'||event.winner===0?'win':'loss'});
   if(current.kind==='match')setRecap(event.reason==='three-fouls'?`Three fouls in a row. ${seatName(event.winner)} ${seatName(event.winner)==='You'?'win':'wins'} the rack.`:`${seatName(event.winner)} ${seatName(event.winner)==='You'?'win':'wins'} the rack.${current.players==='cpu'?` ${current.persona.name}: “${current.persona.quips[event.winner===1?'win':'lose']}”`:''}`);
@@ -193,12 +195,12 @@ function applyRoom(){const h=halls[room];audio.music.setHall(room);ambient.setHa
  }
   document.documentElement.style.setProperty('--hall',h.felt);document.documentElement.style.setProperty('--room-aura',h.aura);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
   setText('roomPlaque',String(h.year));setText('roomArt',h.name.toUpperCase());$('roomEyebrow').dataset.short=`ROOM 0${room+1} · ${h.year}`;setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
-  setText('playText',mode==='practice'?`Practice at ${h.name}`:`Break at ${h.name}`);
+  setText('playText',mode==='practice'?`Practice at ${h.name}`:mode==='circuit'?`Take on ${personaFor(circuitOpponent()).name}`:`Break at ${h.name}`);
   renderRoomMastery();
   if(current)setText('roundLabel',h.name.toUpperCase());
 }
 function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
-function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';$('clockSetting').closest('.setting').hidden=mode==='practice';syncClock();$('gameType').closest('.setting').hidden=mode==='practice';syncGameType();syncRules();show('backdrop');show('setupSheet');$('closeSetup').focus();}
+function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice'||mode==='circuit';$('clockSetting').closest('.setting').hidden=mode==='practice';syncClock();$('gameType').closest('.setting').hidden=mode==='practice'||mode==='circuit';syncGameType();syncRules();show('backdrop');show('setupSheet');$('closeSetup').focus();}
 function closeSetup(){const wasOpen=!$('setupSheet').hidden;hide('setupSheet');if($('settingsSheet').hidden)hide('backdrop');if(wasOpen)$('openSetup').focus();}
 const SETUP_NOTES={eight:'8-ball, casual: no called shots. Call the 8: when you are down to the black, name its pocket first; any other pocket loses the rack.',
  nine:'9-ball: hit the lowest ball first, break hard (pot a ball or four to a cushion), pot the 9 to win. Three fouls in a row lose the rack.',
@@ -206,7 +208,7 @@ const SETUP_NOTES={eight:'8-ball, casual: no called shots. Call the 8: when you 
 function syncGameType(){
  all('#gameType [data-game]').forEach(b=>{const on=b.dataset.game===gameType;b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
  const rotation=gameType==='nine'||gameType==='ten';
- $('ruleset').closest('.setting').hidden=rotation||mode==='practice';
+ $('ruleset').closest('.setting').hidden=rotation||mode==='practice'||mode==='circuit';
  setText('setupNote',SETUP_NOTES[gameType]);
 }
 function syncRules(){
@@ -401,9 +403,16 @@ function closeGuide(){
 }
 function openMenu(){const d=dailySummary(progress);setText('dailySub',d.today!==null?`Cleared in ${d.today} shots today${d.streak>1?` · ${d.streak} days running`:''}`:d.streak>0?`${d.streak} days running · clear today's`:'One rack, the same for everyone today');show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){const ball=gameType==='nine'?'9-Ball':gameType==='ten'?'10-Ball':'8-Ball';
-  setText('matchSummary',mode==='practice'?'Open practice table':(rival==='local'?`${ball} · Two players`:`${ball} vs ${personaFor(rival).name}`)+(rules==='call8'&&gameType==='eight'?' · Call the 8':''));
-  setText('playSubtitle',mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`CASUAL ${ball.toUpperCase()} · NO ENTRY FEE`);
+  const circuitStage=circuitState(progress),circuitPersona=personaFor(CIRCUIT[circuitStage.stage]);
+  setText('matchSummary',mode==='circuit'?`Round ${circuitStage.stage+1} of ${CIRCUIT.length} · ${circuitPersona.name}`:mode==='practice'?'Open practice table':(rival==='local'?`${ball} · Two players`:`${ball} vs ${personaFor(rival).name}`)+(rules==='call8'&&gameType==='eight'?' · Call the 8':''));
+  setText('playSubtitle',mode==='circuit'?`${circuitPersona.style.toUpperCase()}${circuitStage.champion?` · CHAMPION ×${circuitStage.champion}`:''}`:mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`CASUAL ${ball.toUpperCase()} · NO ENTRY FEE`);
   all('.mode[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));}
+function circuitNote(){
+ if(!circuitRun||current.players!=='cpu')return '';
+ if(current.winner!==0)return ` · CIRCUIT ROUND ${circuitRun.stage+1}: TRY AGAIN`;
+ const state=circuitState(progress);
+ return state.stage===0&&state.champion>0?` · CIRCUIT CHAMPION ×${state.champion}`:` · ROUND ${circuitRun.stage+1} CLEARED · NEXT: ${personaFor(CIRCUIT[state.stage]).name.toUpperCase()}`;
+}
 function resize(){ambient.resize();table.resize();}
 let rackFlock=null;
 // Last-shot replay: the pre-stroke table is re-struck on a throwaway game. Physics is
@@ -506,7 +515,7 @@ function turnUI(){if(!current)return;
  if(completed){
   const player=current.players==='ai'?current.personaAt(current.winner).name.toUpperCase():current.winner===0?(current.players==='local'?'PLAYER ONE':'YOU'):current.players==='local'?'PLAYER TWO':current.persona.name.toUpperCase();
   setText('matchResultTitle',drill?current.drillOutcome==='completed'?'DRILL COMPLETE':'TRY AGAIN':practice?(dailyDay?'DAILY RACK CLEARED':'TABLE CLEARED'):`${player} ${player==='YOU'?'WIN':'WINS'}`);
-  setText('playAgain',drill?'RETRY DRILL ↻':current.players==='ai'?'NEXT EXHIBITION ↻':"RACK 'EM AGAIN ↻");
+  setText('playAgain',drill?'RETRY DRILL ↻':current.players==='ai'?'NEXT EXHIBITION ↻':circuitRun?(current.winner!==0?'REPLAY ROUND ↻':circuitState(progress).stage===0?'RUN THE CIRCUIT AGAIN ↻':'NEXT ROUND ↻'):"RACK 'EM AGAIN ↻");
   const finalReason=current.history.at(-1)?.reason;
   const resultKind=practice?'practice':finalReason==='eight-cleared'||finalReason==='nine-potted'||finalReason==='ten-potted'?'clean':'foul';
   $('matchResult').dataset.finish=resultKind;
@@ -530,7 +539,7 @@ function turnUI(){if(!current)return;
    }else
   setText('matchResultDetail',practice?(dailyDay?(()=>{const d=dailySummary(progress,dailyDay);return `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · BEST TODAY ${d.today??current.shots}${d.streak>1?` · ${d.streak} DAYS RUNNING`:''}`;})():`${current.shots} ${current.shots===1?'SHOT':'SHOTS'} THIS SESSION`):
      `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · `+(current.players==='local'||current.players==='ai'?'':(()=>{const s=seatStats(current.history,0);return `YOU POTTED ${s.potted} · ${s.fouls} ${s.fouls===1?'FOUL':'FOULS'} · `;})())+`${resultKind==='clean'?(current.ruleset==='nine'?'LEGAL 9':'CLEAN 8-BALL'):resultKind==='foul'&&current.history.at(-1)?.reason==='wrong-pocket'?'WRONG POCKET':'FOUL ON THE 8'}`+
-     (newlyEarnedCueCount?` · ${newlyEarnedCueCount} ${newlyEarnedCueCount===1?'CUE':'CUES'} EARNED`:''));
+     (newlyEarnedCueCount?` · ${newlyEarnedCueCount} ${newlyEarnedCueCount===1?'CUE':'CUES'} EARNED`:'')+(circuitRun?circuitNote():''));
  }
  const seconds=Math.ceil(current.shotRemaining);
  const timed=current.kind==='match'&&!current.over&&current.shotClockSeconds>0;
@@ -572,10 +581,13 @@ function turnUI(){if(!current)return;
 // A three-step first-match coach that advances on what the player actually does.
 const COACH_TEXT=['','STEP 1 OF 3 · TAP THE TABLE OR DRAG THE CUE TO AIM','STEP 2 OF 3 · PULL THE POWER BAR DOWN, OR HOLD SPACE','STEP 3 OF 3 · RELEASE TO SHOOT'];
 function coachTo(step){if(!coach||step<=coach)return;coach=step;setText('controlsHint',COACH_TEXT[step]);}
+// In Circuit mode the opponent is the next unbeaten persona, always on casual 8-ball.
+const circuitOpponent=()=>CIRCUIT[circuitState(progress).stage];
 function begin(kind,drillId=null){
  if(active!=='lobby')return;
  // The Daily Rack is a Practice table dealt from today's date: the same rack for everyone, replayed on re-rack.
  const daily=kind==='daily';if(daily)kind='practice';dailyDay=daily?dayKey():null;
+ const circuit=kind==='circuit';if(circuit)kind='match';circuitRun=circuit?{stage:circuitState(progress).stage}:null;
  // A watched exhibition is a real refereed match between two personas, with no human seat.
  const exhibit=kind==='exhibition';if(exhibit)kind='match';
  if(kind==='drill'&&!skillDrillById(drillId))return;
@@ -583,7 +595,7 @@ function begin(kind,drillId=null){
  lastScoreSignature='';newlyEarnedCueCount=0;matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();calledPocket=null;placeGesture=null;$('collectedBalls').replaceChildren();hide('clubMenu');hide('challengeSheet');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=kind==='drill'?skillDrillById(drillId).referenceAngle:0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  calledPocket=null;
- current=new Game({kind,drillId,fixedRack:daily,seed:daily?dailySeed(dailyDay):undefined,players:exhibit?'ai':rival==='local'?'local':'cpu',persona:rival==='local'?'rookie':rival,seats:exhibit?exhibitionPair(exhibitionIndex++):null,ruleset:kind==='match'?gameType:'eight',callEight:!exhibit&&rules==='call8'&&gameType==='eight',shotClock:exhibit?0:clockSeconds,notify,onPocket:animatePocket,onTurn:matchTurn});
+ current=new Game({kind,drillId,fixedRack:daily,seed:daily?dailySeed(dailyDay):undefined,players:exhibit?'ai':!circuit&&rival==='local'?'local':'cpu',persona:circuit?circuitOpponent():rival==='local'?'rookie':rival,seats:exhibit?exhibitionPair(exhibitionIndex++):null,ruleset:kind==='match'&&!circuit?gameType:'eight',callEight:!exhibit&&!circuit&&rules==='call8'&&gameType==='eight',shotClock:exhibit?0:clockSeconds,notify,onPocket:animatePocket,onTurn:matchTurn});
  matchEventId=kind==='match'&&!exhibit?newMatchId():null;
  $('gameScreen').dataset.exhibition=String(exhibit);
  drillEventId=kind==='drill'?newMatchId():null;
@@ -651,6 +663,8 @@ function finishRackFlock(){
 }
 function resetMatch(alternate=false){
  if(!current)return;clearTimeout(exhibitionTimer);
+ // Circuit: a win moves on to the next opponent, a loss replays the same round.
+ if(circuitRun){const stage=circuitState(progress).stage;circuitRun={stage};current.persona=personaFor(CIRCUIT[stage]);current.difficulty=current.persona.tier;}
  if(current.players==='ai')current.seatPersonas=exhibitionPair(exhibitionIndex++).map(personaFor);const before=cloneBalls(current.sim.balls);finishRackFlock();current.reset(alternate);startRackFlock(before);calledPocket=null;matchEventId=current.kind==='match'&&current.players!=='ai'?newMatchId():null;
  drillEventId=current.kind==='drill'?newMatchId():null;lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();
  setRecap(current.kind==='match'?(current.players==='ai'?`Exhibition: ${current.personaAt(0).name} vs ${current.personaAt(1).name}. ${current.personaAt(current.turn).name} breaks.`:current.players==='local'?`Player ${current.turn+1} breaks.`:current.turn===1?`${seatName(1)} breaks.`:(gameType==='nine'?'Your break: hit hard. Pot a ball or drive four to a cushion.':'Your break. Aim, pull the power bar and release.')):'');

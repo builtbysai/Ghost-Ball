@@ -126,3 +126,17 @@ test('two games on the same daily seed deal the same rack and a rerack replays i
  assert.deepEqual(layout(a),layout(b));
  a.reset();assert.deepEqual(layout(a),layout(b));
 });
+
+import {CIRCUIT,circuitState,recordCircuitResult} from '../src/player-progress.js';
+test('the club circuit advances on wins, replays on losses and crowns a champion',()=>{
+ let p=freshProgress();
+ assert.deepEqual(circuitState(p),{stage:0,champion:0});
+ assert.equal(recordCircuitResult(p,{stage:0,won:false}),p,'a loss changes nothing');
+ assert.equal(recordCircuitResult(p,{stage:2,won:true}),p,'only the current round can be won');
+ for(let round=0;round<CIRCUIT.length-1;round++){p=recordCircuitResult(p,{stage:round,won:true});assert.equal(circuitState(p).stage,round+1);}
+ p=recordCircuitResult(p,{stage:CIRCUIT.length-1,won:true});
+ assert.deepEqual(circuitState(p),{stage:0,champion:1},'the final win crowns and restarts the ladder');
+ const store=memoryStorage();assert.ok(writeLocalProgress(p,()=>store));
+ assert.deepEqual(readLocalProgress(()=>store).progress.circuit,{stage:0,champion:1});
+ assert.equal(readLocalProgress(()=>({getItem:()=>JSON.stringify({...p,circuit:{stage:9,champion:0}}),setItem(){}})).reason,'invalid-data','a corrupt circuit is rejected');
+});
