@@ -559,7 +559,7 @@ function circuitNote(){
 // The upright-phone layout already turns the table 90 degrees, where a tilted camera only distorts it, so it stays overhead there.
 const rotatedLayout=()=>window.matchMedia('(orientation:portrait) and (max-width:820px)').matches;
 const elevatedNow=()=>tableView==='elevated'&&!rotatedLayout();
-const applyTableView=()=>{const view=elevatedNow()?'perspective':'flat';if(table.view!==view)table.setView(view);};
+const applyTableView=()=>{const view=elevatedNow()?'perspective':'flat';if(table.view!==view)table.setView(view);$('gameScreen').dataset.view=view;};
 function resize(){applyTableView();ambient.resize();table.resize();}
 let rackFlock=null;
 // Last-shot replay: the pre-stroke table is re-struck on a throwaway game. Physics is

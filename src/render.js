@@ -33,7 +33,7 @@ export class TableRenderer{
      return;
    }
    const ratio=.375+.125*this.blend;
-   const verticalRoom=this.view==="flat"?.82:.88;let bw=Math.min(this.w*(this.view==="flat"?.93:.91),(this.h*verticalRoom)/ratio);let bh=bw*ratio;
+   const verticalRoom=this.view==="flat"?.82:.88;let bw=Math.min(this.w*(this.view==="flat"?.88:.9),(this.h*verticalRoom)/ratio);let bh=bw*ratio;
    if(bh>this.h*verticalRoom){bh=this.h*verticalRoom;bw=bh/ratio;}
    this.bw=bw;this.bh=bh;this.top=(this.h-bh)/2;this.center=this.w/2;}
  get blend(){return this.projectionBlend??(this.view==='flat'?1:0);}
@@ -195,7 +195,10 @@ export class TableRenderer{
    g.strokeStyle=sheen;g.lineWidth=Math.max(1.2,r*.85);g.stroke();g.restore();
   }
   g.save();g.globalAlpha=ball.opacity??1;g.translate(sx,sy);
+  // contact shadow: a wide soft penumbra, then a tight dark core where the ball meets the cloth
+  g.beginPath();g.ellipse(r*.16,r*.3,r*1.28,r*.95,0,0,TAU);g.fillStyle='rgba(0,0,0,.14)';g.fill();
   g.beginPath();g.ellipse(r*.10,r*.21,r*1.03,r*.85,0,0,TAU);g.fillStyle='rgba(0,0,0,.28)';g.fill();
+  g.beginPath();g.ellipse(r*.04,r*.12,r*.78,r*.58,0,0,TAU);g.fillStyle='rgba(0,0,0,.3)';g.fill();
   g.beginPath();g.arc(0,0,r,0,TAU);g.clip();
   if(ball.id>=9)g.drawImage(this.stripeTexture(ball),-r,-r,2*r,2*r);
   else{g.fillStyle=ball.color;g.fillRect(-r,-r,2*r,2*r);}
@@ -203,6 +206,11 @@ export class TableRenderer{
   light.addColorStop(0,'rgba(255,255,255,.66)');light.addColorStop(.29,'rgba(255,255,255,.12)');
   light.addColorStop(.64,'rgba(0,0,0,0)');light.addColorStop(1,'rgba(0,0,0,.7)');
   g.fillStyle=light;g.fillRect(-r,-r,r*2,r*2);
+  // bounce light from the cloth along the lower edge, then a crisp lamp glint
+  const bounce=g.createRadialGradient(r*.15,r*.95,r*.1,r*.15,r*.95,r*.9);
+  bounce.addColorStop(0,'rgba(160,215,205,.22)');bounce.addColorStop(1,'rgba(160,215,205,0)');
+  g.fillStyle=bounce;g.fillRect(-r,-r,r*2,r*2);
+  g.beginPath();g.ellipse(-r*.36,-r*.46,r*.2,r*.12,-.65,0,TAU);g.fillStyle='rgba(255,255,255,.7)';g.fill();
   const q=orientationOf(ball);
   for(const local of [[0,0,1],[0,0,-1]]){
    const n=rotateVector(q,local);
