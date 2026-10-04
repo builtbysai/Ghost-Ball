@@ -39,7 +39,7 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/cue-feel.js`: pure cue travel, contact stroke timing and tactile stage math.
 - `src/audio.js`: gesture-unlocked physical impact and restrained result sounds.
 - `src/player-progress.js`: versioned offline match, room choice, equipment and favorites ledger.
-- `src/skill-drills.js` and `src/skill-drills.css`: three fixed-layout original physics-scored pocketing challenges and compact keyboard/touch picker.
+- `src/skill-drills.js` and `src/skill-drills.css`: five fixed-layout original physics-scored pocketing challenges and compact keyboard/touch picker.
 - `src/record-summary.js` and `src/local-record.css`: compact private stats and recent results, JSON export and guarded local-only reset via Preferences.
 - `src/cue-catalog.js`: six original purely cosmetic cues, exact milestone unlocks and shared preview appearance.
 - `src/cue-locker.css`: viewport-fitted 3×2 equipment browsing in landscape and portrait.
@@ -70,11 +70,11 @@ The October 2 research pass moved **original cue choices/unlocks** and **two gen
 
 ## Playable skill challenges
 
-Open **Menu → Skill Drills** for *Center Drop*, *Corner Line* and *Rail Return*. All three use the same real shot physics and rear-cue controls as a casual match. Sink the named target into its designated pocket within **two shots without scratching**. Rail Return additionally requires a genuine non-jaw target-ball cushion rebound before the top-middle pot; the score comes from settled physics events, not the ball's final position or a button click. Real completions earn permanent local marks and personal bests. Existing halls remain selectable; positional drills and room mastery locks await real-device review.
+Open **Menu → Skill Drills** for *Center Drop*, *Corner Line*, *Rail Return*, *Glass Angle* and *Midnight Bank*. All five use the same real shot physics and rear-cue controls as a casual match. Sink the named target into its designated pocket within **two shots without scratching**. Rail Return and Midnight Bank additionally require genuine non-jaw target-ball cushion rebounds before their designated middle-pocket pots; the score comes from settled physics events, not the ball's final position or a button click. Real completions earn permanent local marks and personal bests. Existing halls remain selectable; positional drills and room mastery locks await real-device review.
 
 ## Earned founder-room mastery
 
-The Parlor, Observatory and Foundry now offer three **real** permanent local mastery steps each: complete that room's authored physics-scored drill, finish a genuine CPU match in the room, and win a legal eight-ball game against either rival there. The room selector shows current status and the next missing step. Existing local v1 match and drill records count immediately; new durable receipts persist even after old recent-match entries age out. Wintergarden and Afterhours are still playable but have no falsely advertised mastery until their distinct challenges are built. No hall or cue is locked by mastery yet.
+All five original halls now offer three **real** permanent local mastery steps each: complete that room's authored physics-scored drill, finish a genuine CPU match in the room, and win a legal eight-ball game against either rival there. The room selector shows current status and the next missing step. Existing local v1 match and drill records count immediately; new durable receipts persist even after old recent-match entries age out. Wintergarden and Afterhours have their own angle and upper-bank challenges. Their mastery is earnable now, but physical-device acceptance is still pending. No hall or cue is locked by mastery yet.
 
 ## Your local record
 

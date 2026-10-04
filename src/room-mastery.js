@@ -1,11 +1,13 @@
-/** Three founder halls have one authored real-physics drill each.
+/** All five playable halls have an authored real-physics drill each.
  * Levels are immutable receipts: 1=skill, 2=finished CPU match here,
  * 4=legal CPU eight-ball victory here. No hall is locked by this module.
  */
 export const FOUNDER_MASTERY=Object.freeze([
  Object.freeze({room:0,drillId:'center-drop',drillName:'CENTER DROP'}),
  Object.freeze({room:1,drillId:'corner-line',drillName:'CORNER LINE'}),
- Object.freeze({room:2,drillId:'rail-return',drillName:'RAIL RETURN'})
+ Object.freeze({room:2,drillId:'rail-return',drillName:'RAIL RETURN'}),
+ Object.freeze({room:3,drillId:'glass-angle',drillName:'GLASS ANGLE'}),
+ Object.freeze({room:4,drillId:'midnight-bank',drillName:'MIDNIGHT BANK'})
 ]);
 const find=room=>FOUNDER_MASTERY.find(h=>h.room===room);
 export function roomMastery(progress,room){

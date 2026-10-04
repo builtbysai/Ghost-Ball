@@ -24,7 +24,22 @@ export const SKILL_DRILLS=Object.freeze([
   requiredCushion:true,attempts:2,
   cue:Object.freeze({x:750,y:60}),target:Object.freeze({x:680,y:210}),
   // Solved with real settled physics at 40% and keyboard 53% power.
-  referenceAngle:116.5*Math.PI/180})
+  referenceAngle:116.5*Math.PI/180}),
+ // Mirrored angular read: aim through the lower half of the cloth instead of
+ // memorizing Corner Line's top-right line. The pocket/jaw geometry is mirrored.
+ Object.freeze({id:'glass-angle',name:'Glass Angle',subtitle:'The lower-corner angle',
+  instruction:'Pocket the 4 in the bottom right. No scratch.',
+  brief:'READ THE LOWER CORNER',room:3,targetId:4,targetPocket:5,attempts:2,
+  cue:Object.freeze({x:594,y:167}),target:Object.freeze({x:725,y:275}),
+  referenceAngle:Math.atan2(232,282)}),
+ // Reflect Rail Return across the table centerline: an upper-cushion bank
+ // into lower middle. True non-jaw target-ball rail contact is mandatory.
+ Object.freeze({id:'midnight-bank',name:'Midnight Bank',subtitle:'The upper-cushion bank',
+  instruction:'Bank the 5 off the top cushion into bottom middle. No scratch.',
+  brief:'TOP CUSHION → BOTTOM MIDDLE',room:4,targetId:5,targetPocket:4,
+  requiredCushion:true,attempts:2,
+  cue:Object.freeze({x:750,y:440}),target:Object.freeze({x:680,y:290}),
+  referenceAngle:-116.5*Math.PI/180})
 ]);
 export const skillDrillById=id=>SKILL_DRILLS.find(drill=>drill.id===id)||null;
 export function skillDrillBalls(id){

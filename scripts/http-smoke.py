@@ -64,7 +64,7 @@ try:
   assert page.locator('#lockerFavorite').get_attribute('aria-pressed')=='false', 'reset failed to clear favorites'
   page.locator('#closeLocker').click()
   page.locator('#menuChallenges').click()
-  assert page.locator('#challengeCards [data-drill]').count()==3
+  assert page.locator('#challengeCards [data-drill]').count()==5
   assert 'PLAY CHALLENGE' in page.locator('[data-drill="center-drop"] .challenge-card-status').inner_text()
   page.locator('[data-drill="center-drop"]').click()
   page.wait_for_timeout(1840)
@@ -109,10 +109,27 @@ try:
   page.wait_for_timeout(1850)
   assert page.locator('#roomMasteryCount').inner_text()=='1 / 3', 'the verified bank must earn Foundry skill mastery'
   assert 'RIVAL MATCH' in page.locator('#roomMasteryNext').inner_text()
+  # A real upper-cushion bank on the fifth hall earns its own permanent receipt.
+  page.locator('#menuBtn').click()
+  page.locator('#menuChallenges').click()
+  page.locator('[data-drill="midnight-bank"]').click()
+  page.wait_for_timeout(1840)
+  page.locator('#powerTrack').focus()
+  page.keyboard.press('Home')
+  for _ in range(9): page.keyboard.press('ArrowDown')
+  page.keyboard.press('Enter')
+  page.wait_for_function("!document.getElementById('matchResult').hidden",timeout=15000)
+  assert page.locator('#matchResultTitle').inner_text()=='DRILL COMPLETE', 'upper-cushion bank failed live browser physics'
+  assert page.evaluate("JSON.parse(localStorage.getItem('ghostball-progress-v1')).drills['midnight-bank']")==1
+  page.locator('#pauseButton').click()
+  page.locator('#quitMatch').click()
+  page.wait_for_timeout(1850)
+  assert page.locator('#roomMasteryCount').inner_text()=='1 / 3', 'actual upper bank must earn Afterhours mastery'
+  assert 'RIVAL MATCH' in page.locator('#roomMasteryNext').inner_text()
   page.locator('#menuBtn').click()
   page.locator('#menuSettings').click()
   page.locator('#openRecord').click()
-  assert page.locator('#recordDrills').inner_text()=='2 / 3 SKILLS','local record omitted earned drill'
+  assert page.locator('#recordDrills').inner_text()=='3 / 5 SKILLS','local record omitted earned drill'
   assert page.locator('#recordMatches').inner_text()=='0','skill artificially inflated match ledger'
   page.locator('#closeRecord').click()
   page.locator('#closeSettings').click()
@@ -120,7 +137,7 @@ try:
   page.locator('#playBtn').click()
   page.wait_for_timeout(1640)
   assert page.locator('#pauseButton').is_visible() and not errors,errors
-  print('Real HTTP equipment, export/reset, solved live straight and bank drills, earned best and match separation passed')
+  print('Real HTTP equipment, export/reset, solved live straight and both real cushion-bank drills, earned best and match separation passed')
   context.close();browser.close()
 finally:
  server.shutdown();server.server_close()
