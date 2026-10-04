@@ -125,6 +125,9 @@ export function recordLiveMatch(previous,event){
   difficulty:cpu?event.difficulty:null,
   // The named opponent, kept only when it is one of ours (older records have none).
   persona:cpu&&['rookie','dex','vera','club'].includes(event.persona)?event.persona:null,
+  // Which game it was, so crests can tell an Official win from a casual one.
+  ruleset:['eight','nine','ten','straight','onepocket'].includes(event.ruleset)?event.ruleset:'eight',
+  official:Boolean(event.official),
   winner:event.winner,room:event.room,
   shots:event.shots,reason:event.reason,bestRun:event.bestRun};
  return {...previous,matchesPlayed:previous.matchesPlayed+1,

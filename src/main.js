@@ -17,6 +17,7 @@ import {readLocalProgress,writeLocalProgress,recordLiveMatch,bestLegalRun,choose
  CIRCUIT,circuitState,recordCircuitResult} from './player-progress.js';
 import {SKILL_DRILLS,skillDrillById} from './skill-drills.js';
 import {encodeShot,decodeShot,addHighlight} from './highlights.js';
+import {crestSummary} from './crests.js';
 import {recordSummary} from './record-summary.js';
 import {decisiveShot,POCKET_LABELS} from './match-finish.js';
 import {roomMastery} from './room-mastery.js';
@@ -27,7 +28,7 @@ const progressAccess=readLocalProgress();
 let progress=progressAccess.progress;
 const newMatchId=()=>globalThis.crypto?.randomUUID?.()||
   `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-let matchEventId=null,drillEventId=null,lockerSelected='house',newlyEarnedCueCount=0;
+let matchEventId=null,drillEventId=null,lockerSelected='house',newlyEarnedCueCount=0,newlyEarnedCueNames=[];
 let room=clamp(progress.selectedRoom,0,halls.length-1),mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
 let current=null,active='lobby',motion=true,placement=null,pointerMode=null,placeGesture=null;
 let pendingHighlight=null,highlightRun=false,pushOutArmed=false,safetyArmed=false,callManual=false,lastTurnSeen=-1,settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',rules='casual',calledPocket=null,guideMode='full',wheelFine=false,clockSeconds=45,spinKeep=false,gameType='eight';
@@ -38,7 +39,13 @@ let tableView='overhead',circuitRun=null,dailyDay=null,coach=0,exhibitionIndex=M
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
 function syncEquippedCue(){const cue=equippedCue(progress);ambient.setCue(cue.id);table.setCue(cue.id);}
-function saveProgress(next){if(next===progress)return;progress=next;refreshMenu();syncEquippedCue();renderRoomMastery();
+function saveProgress(next){if(next===progress)return;
+ // A room reaching its third mastery step is acknowledged once, quietly, with a note instead of a popup.
+ const wasMastered=roomMastery(progress,room)?.complete,crestsBefore=crestSummary(progress).earned;
+ progress=next;
+ if(roomMastery(progress,room)?.complete&&wasMastered===false&&active==='game')setTimeout(()=>tableToast(`ROOM MASTERED · ${halls[room].name.toUpperCase()}`,'turn',2400),1800);
+ if(crestSummary(progress).earned>crestsBefore&&active==='game')setTimeout(()=>notify('A new crest was earned. See Preferences, Local record.'),2200);
+refreshMenu();syncEquippedCue();renderRoomMastery();
  if(progressAccess.writable&&!writeLocalProgress(progress))progressAccess.writable=false;}
 const setText=(id,value)=>{$(id).textContent=value;};
 function savePreference(key,value){try{localStorage.setItem(key,value);}catch{}}
@@ -143,6 +150,7 @@ function matchTurn(event){
     kind:'match',source:'live',id:matchEventId,
     at:new Date().toISOString(),shots:current.shots,winner:current.winner,
     players:current.players,difficulty:current.difficulty,persona:current.persona.id,room,
+    ruleset:current.ruleset,official:current.official,
     reason:event.reason,
     bestRun:current.ruleset==='straight'||current.ruleset==='onepocket'?Math.min(15,straightBestRun(current.history,0)):current.rotation?nineBestRun(current.history,0):current.players==='local'
       ?Math.max(bestLegalRun(current.history,0),bestLegalRun(current.history,1))
@@ -155,7 +163,8 @@ function matchTurn(event){
      shot:encodeShot({balls:current.bestShot.balls,angle:current.bestShot.angle,power:current.bestShot.power,spin:current.bestShot.spin,room,ruleset:current.ruleset,pots:current.bestShot.pots})}));
    }
    matchEventId=null;
-   newlyEarnedCueCount=CUES.filter(cue=>cueUnlocked(updated,cue)&&!previouslyOwned.includes(cue.id)).length;
+   const earnedCues=CUES.filter(cue=>cueUnlocked(updated,cue)&&!previouslyOwned.includes(cue.id));
+   newlyEarnedCueCount=earnedCues.length;newlyEarnedCueNames=earnedCues.map(cue=>cue.name);
    saveProgress(updated);
   }
   if(current.players==='ai'){clearTimeout(exhibitionTimer);exhibitionTimer=setTimeout(()=>{if(active==='game'&&current?.players==='ai'&&current.over){resetMatch(true);}},7000);}
@@ -310,6 +319,14 @@ function closeLocker(){
  if($('lockerSheet').hidden)return;
  hide('lockerSheet');show('clubMenu');$('menuLocker').focus();
 }
+function showCrests(){
+ const summary=crestSummary(progress);
+ setText('recordCrestCount',`${summary.earned} / ${summary.total}`);
+ $('recordCrests').replaceChildren(...summary.list.map(c=>{
+  const el=document.createElement('span');el.className='crest'+(c.earned?' earned':'');el.setAttribute('role','listitem');
+  el.textContent=c.name;el.title=c.hint;el.setAttribute('aria-label',`${c.name}: ${c.hint}${c.earned?' (earned)':''}`);return el;
+ }));
+}
 function showHighlights(){
  const list=progress.highlights||[];
  setText('recordHighlightCount',String(list.length));
@@ -357,7 +374,7 @@ function showRecord(){
   rows.push(empty);
  }
  $('recordHistory').replaceChildren(...rows);
- showHighlights();
+ showHighlights();showCrests();
  let label='THIS DEVICE ONLY',reason='';
  if(!progressAccess.writable){
   label=progressAccess.reason==='unsupported-version'?'NEWER SAVED FORMAT':
@@ -613,7 +630,7 @@ function turnUI(){if(!current)return;
    }else
   setText('matchResultDetail',practice?(dailyDay?(()=>{const d=dailySummary(progress,dailyDay);return `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · BEST TODAY ${d.today??current.shots}${d.streak>1?` · ${d.streak} DAYS RUNNING`:''}`;})():`${current.shots} ${current.shots===1?'SHOT':'SHOTS'} THIS SESSION`):
      `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · `+(current.players==='local'||current.players==='ai'?'':(()=>{const s=seatStats(current.history,0);return `YOU POTTED ${s.potted} · ${s.fouls} ${s.fouls===1?'FOUL':'FOULS'} · `;})())+finishText(finalReason)+
-     (newlyEarnedCueCount?` · ${newlyEarnedCueCount} ${newlyEarnedCueCount===1?'CUE':'CUES'} EARNED`:'')+(circuitRun?circuitNote():''));
+     (newlyEarnedCueCount?` · NEW ${newlyEarnedCueCount===1?'CUE':'CUES'}: ${newlyEarnedCueNames.join(', ').toUpperCase()} · EQUIP IN THE LOCKER`:'')+(circuitRun?circuitNote():''));
  }
  const seconds=Math.ceil(current.shotRemaining);
  const timed=current.kind==='match'&&!current.over&&current.shotClockSeconds>0;
@@ -668,7 +685,7 @@ function begin(kind,drillId=null){
  const exhibit=kind==='exhibition';if(exhibit)kind='match';
  if(kind==='drill'&&!skillDrillById(drillId))return;
  if(kind==='drill')room=skillDrillById(drillId).room;
- lastScoreSignature='';newlyEarnedCueCount=0;matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();calledPocket=null;placeGesture=null;$('collectedBalls').replaceChildren();hide('clubMenu');hide('challengeSheet');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
+ lastScoreSignature='';newlyEarnedCueCount=0;newlyEarnedCueNames=[];matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();calledPocket=null;placeGesture=null;$('collectedBalls').replaceChildren();hide('clubMenu');hide('challengeSheet');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=kind==='drill'?skillDrillById(drillId).referenceAngle:0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  calledPocket=null;
  current=new Game({kind,drillId,fixedRack:daily,seed:daily?dailySeed(dailyDay):undefined,players:exhibit?'ai':!circuit&&rival==='local'?'local':'cpu',persona:circuit?circuitOpponent():rival==='local'?'rookie':rival,seats:exhibit?exhibitionPair(exhibitionIndex++):null,ruleset:kind==='match'&&!circuit?gameType:'eight',official:!exhibit&&!circuit&&rules==='official'&&gameType==='eight',callEight:!exhibit&&!circuit&&rules==='call8'&&gameType==='eight',shotClock:exhibit?0:clockSeconds,notify,onPocket:animatePocket,onTurn:matchTurn});
