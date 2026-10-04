@@ -1,6 +1,7 @@
 import {Simulation,rack,rackNine,POCKETS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
 import {resolveCasualEight,resolveNineBall,groupContains,lowestGroup} from './casual-rules.js';
+import {personaFor,moodScale} from './ai-personas.js';
 import {chooseShot,chooseAiCuePlacement,createShotPlanner,candidateShots} from './ai.js';
 import {skillDrillById,skillDrillBalls,gradeSkillDrill} from './skill-drills.js';
 import {impactEffectFor} from './impact-effects.js';
@@ -11,12 +12,16 @@ export const AI_PLACEMENT_PAUSE=1.1;
 export const HEAD_STRING=265;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 export class Game {
- constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),drillId=null,ruleset='eight',callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
+ constructor({kind='attract',players='cpu',difficulty='rookie',persona=null,seats=null,seed=Date.now(),drillId=null,ruleset='eight',callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
   this.ruleset=ruleset==='nine'&&(kind==='match'||kind==='attract')?'nine':'eight';
   this.callEight=Boolean(callEight)&&kind==='match'&&this.ruleset==='eight';
   // 0 turns the shot clock off (relaxed games); any positive value is whole seconds per shot.
   this.shotClockSeconds=Number.isFinite(shotClock)&&shotClock>0?Math.round(shotClock):0;
-  this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;
+  this.kind=kind;this.players=players;
+  // `persona` picks the named CPU; `difficulty` stays the planner tier that records and unlocks see.
+  // An exhibition (players:'ai') seats two personas and plays a fully refereed match with no human.
+  this.persona=personaFor(persona||difficulty);this.seatPersonas=seats?seats.map(personaFor):null;
+  this.difficulty=this.persona.tier;this.notify=notify;this.human=0;
    if(kind==='drill'&&!skillDrillById(drillId))throw new RangeError('Unknown skill drill');
    this.drillId=kind==='drill'?drillId:null;
   this.onPocket=onPocket;this.onTurn=onTurn;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
@@ -31,7 +36,19 @@ export class Game {
  get group(){
   if(this.ruleset==='nine')return lowestGroup(this.sim.balls.filter(b=>!b.pocketed).map(b=>b.id));
   const group=this.groups[this.turn];if(!group)return 'open';return this.sim.balls.some(b=>!b.pocketed&&(group==='solids'?b.id<8&&b.id>0:b.id>8))?group:'eight';}
- isAI(){return this.kind==='attract'||(this.players==='cpu'&&this.turn===1);}
+ isAI(){return this.kind==='attract'||this.players==='ai'||(this.players==='cpu'&&this.turn===1);}
+ /** Seconds the CPU spends lining up; personas have their own tempo. */
+ thinkTime(){return this.kind==='attract'?2.4:1.35*this.personaAt().think;}
+ /** The persona sitting at the table for `turn`. */
+ personaAt(turn=this.turn){return this.seatPersonas?this.seatPersonas[turn]:this.persona;}
+ /** Balls-remaining lead of the CPU's opponent, for the casual dynamic-difficulty nudge. */
+ moodLead(){
+   if(this.kind!=='match'||this.ruleset!=='eight'||this.players!=='cpu')return 0;
+   const left=seat=>{const g=this.groups[seat];if(!g)return null;
+     return this.sim.balls.filter(b=>!b.pocketed&&(g==='solids'?b.id>0&&b.id<8:b.id>8)).length;};
+   const human=left(0),cpu=left(1);
+   return human===null||cpu===null?0:human-cpu;
+ }
   /** `call` is the pocket index named for the 8 (-1: none named). Required on the 8 when callEight is on. */
   beginShot(angle,power,spin=0,call=null){
   const callRequired=this.callEight&&this.group==='eight';
@@ -79,7 +96,7 @@ export class Game {
    }
    const shot=this.previewShot||this.planningPose;
    if(!shot||this.sim.moving)return null;
-   const duration=this.kind==='attract'?2.4:1.35;
+   const duration=this.thinkTime();
    const ready=Math.min(1,this.timer/duration);
    let visualAngle=shot.angle;
    if(this.previewShot&&this.planningPose){
@@ -110,7 +127,7 @@ export class Game {
          // A visible beat before the CPU takes ball in hand lets the human
          // register that the turn changed hands.
          if(this.timer<AI_PLACEMENT_PAUSE)return;
-         const placement=chooseAiCuePlacement(this.sim,this.group,this.difficulty,{kitchen:this.kitchen});
+         const placement=chooseAiCuePlacement(this.sim,this.group,this.personaAt().tier,{kitchen:this.kitchen});
          if(placement&&this.placeCue(placement.x,placement.y)){
            // Reusing Game.placeCue ensures the actual AI follows the same
            // referee and event-history path as local play and our bench.
@@ -124,10 +141,10 @@ export class Game {
          else{
            const attract=this.kind==='attract';
            const group=attract?'open':this.group;
-           const tier=attract?(this.turn===0?'club':'rookie'):this.difficulty;
+           const persona=attract?personaFor(this.turn===0?'club':'rookie'):this.personaAt(),tier=persona.tier;
            if(!this.planIterator){
              this.planIterator=createShotPlanner(this.sim,group,tier,this.random,
-               {stalled:this.dryTurns[this.turn]||0,callEight:this.callEight});
+               {stalled:this.dryTurns[this.turn]||0,callEight:this.callEight,persona,mood:moodScale(this.moodLead())});
              const guess=candidateShots(this.sim,group)[0],cue=this.sim.cue();
              const legal=this.sim.balls.filter(b=>!b.pocketed&&groupContains(b.id,group))
                .sort((a,b)=>Math.hypot(a.x-cue.x,a.y-cue.y)-
@@ -147,7 +164,7 @@ export class Game {
            }
          }
        }
-       if(this.previewShot&&this.timer>=(this.kind==='attract'?2.4:1.35)&&
+       if(this.previewShot&&this.timer>=this.thinkTime()&&
            (!this.planningPose||this.timer-this.planSettledAt>=.22)){
          const shot=this.previewShot, cue=this.sim.cue();
          if(cue&&!cue.pocketed&&this.beginShot(shot.angle,shot.power,0,shot.pocket??-1)){

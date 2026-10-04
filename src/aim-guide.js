@@ -23,7 +23,7 @@ function firstBallDistance(origin,dx,dy,balls,excluded,radius){
  return {distance:closest,target};
 }
 /** First-contact aim assist for the current layout. No spin, throw or cushion prediction. */
-export function projectAim(balls,cue,angle,{maxObjectLength=150,maxCueLength=1300}={}){
+export function projectAim(balls,cue,angle,{maxObjectLength=180,maxCueLength=1300,maxDeflectLength=90}={}){
  if(!cue||cue.pocketed||!Number.isFinite(angle))return null;
  const r=TABLE.radius,dx=Math.cos(angle),dy=Math.sin(angle);
  const wall=firstWallDistance(cue.x,cue.y,dx,dy,r);
@@ -39,5 +39,14 @@ export function projectAim(balls,cue,angle,{maxObjectLength=150,maxCueLength=130
  const rail=firstWallDistance(target.x,target.y,vx,vy,r);
  const obstruction=firstBallDistance(target,vx,vy,balls,[0,target.id],r).distance;
  const path=Math.max(0,Math.min(maxObjectLength,rail,obstruction));
- return {cueEnd,ghost:cueEnd,target,objectEnd:{x:target.x+vx*path,y:target.y+vy*path}};
+ // Stun-shot deflection: with no spin the cue ball leaves along the tangent line,
+ // and keeps energy in proportion to how thin the cut is (sin of the cut angle).
+ const along=dx*vx+dy*vy,tx=dx-along*vx,ty=dy-along*vy,tl=Math.hypot(tx,ty);
+ let cueAfter=null;
+ if(tl>.06){
+  const ux=tx/tl,uy=ty/tl,reach=Math.max(0,Math.min(maxDeflectLength*Math.min(1,tl*1.15),firstWallDistance(cueEnd.x,cueEnd.y,ux,uy,r),
+   firstBallDistance(cueEnd,ux,uy,balls,[0,target.id],r).distance));
+  cueAfter={x:cueEnd.x+ux*reach,y:cueEnd.y+uy*reach};
+ }
+ return {cueEnd,ghost:cueEnd,target,objectEnd:{x:target.x+vx*path,y:target.y+vy*path},cueAfter};
 }

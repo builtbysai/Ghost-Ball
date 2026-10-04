@@ -64,3 +64,13 @@ test('a missed aim has no fictional object-ball projection',()=>{
  assert.equal(guide.objectEnd,null);
  assert.ok(guide.cueEnd.x<1000);
 });
+
+test('aim guide shows a short cue-ball deflection only on a cut shot',()=>{
+ const cue=makeBall(0,200,250),straight=makeBall(1,400,250),cut=makeBall(1,400,265);
+ assert.equal(projectAim([cue,straight],cue,0).cueAfter,null);
+ const g=projectAim([cue,cut],cue,0);
+ assert.ok(g.cueAfter,'a cut sends the cue ball off the tangent');
+ // The cue ball peels away from the object ball's path, on the opposite side.
+ assert.ok(g.cueAfter.y<g.cueEnd.y);
+ assert.ok(Math.hypot(g.cueAfter.x-g.cueEnd.x,g.cueAfter.y-g.cueEnd.y)<=90);
+});

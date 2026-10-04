@@ -79,7 +79,7 @@ with sync_playwright() as p:
         suggestion=state['placement']['suggestion']
         assert suggestion and suggestion['distance']<=48, 'nearby legal landing preview absent'
         page.screenshot(path=str(root/'screenshots'/f'foul-placement-{width}x{height}.png'))
-        page.wait_for_timeout(3100)
+        page.wait_for_timeout(2300)
         assert page.locator('#turnBanner').is_hidden(),'temporary foul banner did not dismiss'
         assert page.locator('#turnRecap').is_visible(),'the recap must outlive the banner'
         assert page.locator('#guideBadge').is_visible(),'placement hint did not return'

@@ -35,16 +35,16 @@ test('the short aim guide stops early and drops the object-ball line',()=>{
  assert.ok(projectAim(near.balls,near.cue(),0,{maxObjectLength:60,maxCueLength:230}).target,'a near contact is still shown');
 });
 test('the fine wheel speed turns the cue less per drag',()=>{
- const normal=Math.abs(wheelAngle(0,50,.004)),fine=Math.abs(wheelAngle(0,50,.0022));
+ const normal=Math.abs(wheelAngle(0,50,.0015)),fine=Math.abs(wheelAngle(0,50,.0006));
  assert.ok(fine<normal&&fine>0);
  const listeners={},element={addEventListener:(k,fn)=>listeners[k]=fn,setPointerCapture(){},releasePointerCapture(){}};
- let angle=0,sens=.004;
+ let angle=0,sens=.0015;
  const old=globalThis.window;globalThis.window={matchMedia:()=>({matches:false})};
  try{
   bindAimWheel({element,canAim:()=>true,getAngle:()=>angle,setAngle:n=>{angle=n;},getSensitivity:()=>sens});
   const ev=y=>({pointerId:1,clientY:y,clientX:0,preventDefault(){}});
   listeners.pointerdown(ev(100));listeners.pointermove(ev(150));const coarse=angle;listeners.pointerup(ev(150));
-  angle=0;sens=.0022;listeners.pointerdown(ev(100));listeners.pointermove(ev(150));
+  angle=0;sens=.0006;listeners.pointerdown(ev(100));listeners.pointermove(ev(150));
   assert.ok(Math.abs(angle)<Math.abs(coarse));
  }finally{if(old===undefined)delete globalThis.window;else globalThis.window=old;}
 });

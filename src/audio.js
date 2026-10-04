@@ -2,6 +2,7 @@
  * unlocks the audio context. Impact loudness is derived from physics events,
  * not FPS or cosmetic cue/table selection.
  */
+import {Music} from './music.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function impactFor(event){
  if(!event)return null;
@@ -25,14 +26,35 @@ export function impactFor(event){
  return null;
 }
 export class Audio {
- constructor(){this.ctx=null;this.enabled=true;this.lastImpact=Object.create(null);}
+ constructor(){this.ctx=null;this.music=new Music();this.musicOn=true;this.noiseBuffer=null;this.enabled=true;this.lastImpact=Object.create(null);}
+ // Mute is absolute: it silences effects and music together.
+ get enabled(){return this._enabled;}
+ set enabled(value){this._enabled=!!value;this.syncMusic();}
+ setMusic(on){this.musicOn=!!on;this.syncMusic();}
+ syncMusic(){
+  if(!this.music?.ctx)return;
+  if(this._enabled&&this.musicOn)this.music.start();else this.music.stop();
+ }
  unlock(){
   if(!this.enabled)return;
   if(!this.ctx){
    const C=window.AudioContext||window.webkitAudioContext;
-   if(C)this.ctx=new C();
+   if(C){
+    this.ctx=new C();
+    const len=this.ctx.sampleRate>>1;this.noiseBuffer=this.ctx.createBuffer(1,len,this.ctx.sampleRate);
+    const data=this.noiseBuffer.getChannelData(0);for(let i=0;i<len;i++)data[i]=Math.random()*2-1;
+    this.music.attach(this.ctx);
+   }
   }
-  this.resume();
+  this.resume();this.syncMusic();
+ }
+ /** A short filtered noise burst: the phenolic click of a ball, the thud of a cushion. */
+ click({type='bandpass',frequency=3000,q=1.2,volume=.05,length=.02}){
+  if(!this.noiseBuffer||!this.enabled||this.ctx?.state!=='running')return;
+  const ctx=this.ctx,now=ctx.currentTime,src=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();
+  src.buffer=this.noiseBuffer;f.type=type;f.frequency.value=frequency;f.Q.value=q;
+  g.gain.setValueAtTime(Math.max(.0001,volume),now);g.gain.exponentialRampToValueAtTime(.0001,now+length);
+  src.connect(f).connect(g).connect(ctx.destination);src.start(now,Math.random()*.3,length+.01);
  }
  resume(){if(this.enabled&&this.ctx?.state==='suspended')this.ctx.resume().catch(()=>{});}
  suspend(){if(this.ctx?.state==='running')this.ctx.suspend().catch(()=>{});}
@@ -90,6 +112,10 @@ export class Audio {
   if(now-last<hit.spacing)return; // one audible transient per close impact cluster
   this.lastImpact[hit.family]=now;
   this.tone(hit);
+  // Real balls are a bright click, cushions a dull thud, pockets a hollow drop and roll.
+  if(hit.family==='contact')this.click({frequency:3400-900*(hit.frequency<500?1:0),q:1.6,volume:hit.volume*.9,length:.016});
+  else if(hit.family==='rail')this.click({type:'lowpass',frequency:520,q:.7,volume:hit.volume*1.1,length:.05});
+  else if(hit.family==='pocket'){this.click({type:'lowpass',frequency:340,q:.6,volume:.12,length:.16});this.click({type:'bandpass',frequency:900,q:.8,volume:.03,length:.5});}
   if(hit.family==='contact'&&hit.volume>.09){
    // Hard ball-to-ball collisions receive a crisp, very short upper click.
    this.tone({frequency:hit.frequency*1.7,end:hit.frequency*1.05,

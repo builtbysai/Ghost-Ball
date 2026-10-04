@@ -22,7 +22,7 @@ export function alignedMaxPull(point,rect,{rotated=false,margin=18,endInset=8}={
   ?point.y>=rect.top-margin&&point.y<=rect.bottom+margin&&point.x<=rect.left+endInset
   :point.x>=rect.left-margin&&point.x<=rect.right+margin&&point.y>=rect.bottom-endInset;
 }
-export function wheelAngle(startAngle,deltaY,sensitivity=.004){return Math.atan2(Math.sin(startAngle-deltaY*sensitivity),Math.cos(startAngle-deltaY*sensitivity));}
+export function wheelAngle(startAngle,deltaY,sensitivity=.0015){return Math.atan2(Math.sin(startAngle-deltaY*sensitivity),Math.cos(startAngle-deltaY*sensitivity));}
 /**
  * Every shot must start on the pull handle, travel downward beyond the safety
  * threshold. Near-maximum travel fires at the end of the rail before a
@@ -115,7 +115,7 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
    else return;e.preventDefault();});
  return {reset:()=>{track.classList.remove('held','releasing');draw(0);},setProgress:p=>draw(p),isDragging:()=>pointer!==null,getProgress:()=>current};
 }
-export function bindAimWheel({element,canAim,getAngle,setAngle,onReset=()=>{},getSensitivity=()=>.004}){
+export function bindAimWheel({element,canAim,getAngle,setAngle,onReset=()=>{},getSensitivity=()=>.0015}){
  let pointer=null,lastY=0,travel=0,lastTap=0;
  const axis=e=>typeof window!=='undefined'&&window.matchMedia('(orientation:portrait) and (max-width:820px)').matches?-e.clientX:e.clientY;
  element.addEventListener('pointerdown',e=>{
@@ -140,7 +140,7 @@ export function bindAimWheel({element,canAim,getAngle,setAngle,onReset=()=>{},ge
  element.addEventListener('pointerup',e=>stop(e));
  element.addEventListener('pointercancel',e=>stop(e,true));
  element.addEventListener('lostpointercapture',()=>{pointer=null;});
- element.addEventListener('wheel',e=>{if(!canAim())return;lastTap=0;setAngle(wheelAngle(getAngle(),e.deltaY*.45,getSensitivity()));e.preventDefault();},{passive:false});
+ element.addEventListener('wheel',e=>{if(!canAim())return;lastTap=0;setAngle(wheelAngle(getAngle(),e.deltaY*.25,getSensitivity()));e.preventDefault();},{passive:false});
  element.addEventListener('keydown',e=>{
   if(!canAim())return;
   // Same direction as the window-level keys: left turns the aim counter-clockwise.

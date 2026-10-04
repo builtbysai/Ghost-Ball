@@ -1,3 +1,4 @@
+import {PERSONAS} from './ai-personas.js';
 import {Simulation,POCKETS,JAWS,TABLE} from './physics.js';
 import {createRandom} from './random.js';
 import {groupContains} from './casual-rules.js';
@@ -247,7 +248,8 @@ function* safetyPlan(sim,group,random,targets,{maxOptions=2,maxSteps=1440,budget
  * `stalled` counts this seat's consecutive turns without a pot; it widens
  * Rookie's search so a stubborn last ball is never attempted the same
  * failing way forever. */
-export function* createShotPlanner(sim,group='open',difficulty='rookie',random=createRandom(1),{stalled=0,callEight=false}={}){
+export function* createShotPlanner(sim,group='open',difficulty='rookie',random=createRandom(1),{stalled=0,callEight=false,persona=PERSONAS.rookie,mood=1}={}){
+ const looseness=persona.wobble*mood;
  const cue=sim.cue();
  const assess=(plan,options={})=>simulateAssessment(sim,plan,group,{...options,callEight});
  if(!cue||cue.pocketed)return {angle:0,power:.58};
@@ -269,8 +271,13 @@ export function* createShotPlanner(sim,group='open',difficulty='rookie',random=c
     if(!best||verdict.score>best.verdict.score)best={plan,verdict};
     if(verdict.made&&verdict.score>1120)break;
    }
+   // Patient players (Vera) decline a pot that is not a sure thing and play safe.
+   if(persona.safety>0&&!best.verdict.made&&targets.length&&(persona.safety>=1||random()<persona.safety)){
+    const safe=yield* safetyPlan(sim,group,random,targets,{legacy:true,maxOptions:2,callEight});
+    if(safe)return safe;
+   }
    const selected=best.plan;
-   return {angle:selected.angle+(random()-.5)*.004,power:selected.power,
+   return {angle:selected.angle+(random()-.5)*.004*looseness,power:clamp(selected.power*persona.power,.2,.95),
      target:selected.target,pocket:selected.pocket,
      predictedLegal:best.verdict.legalFirst,
      predictedPot:best.verdict.made,predictedComplete:best.verdict.complete,
@@ -280,7 +287,9 @@ export function* createShotPlanner(sim,group='open',difficulty='rookie',random=c
   // it. The first makeable line wins; otherwise the best non-fouling one.
   // Aim and power are blurred afterwards, so Rookie still misses like a
   // casual player but never walks into an avoidable foul.
-  const pool=candidates.slice(0,Math.min(candidates.length,stalled>=2?8:4));
+  let pool=candidates.slice(0,Math.min(candidates.length,stalled>=2?8:4));
+  // Aggressive players reach for the hardest makeable pot instead of the easiest.
+  if(persona.aggression>=1&&stalled<2)pool=candidates.slice(0,Math.min(candidates.length,8)).reverse().slice(0,4);
   let best=null;
   for(const base of pool){
    const verdict=yield* assess(base);
@@ -289,12 +298,15 @@ export function* createShotPlanner(sim,group='open',difficulty='rookie',random=c
    if(verdict.made)break;
   }
   if(best&&!best.verdict.foul){
-   const selected=best.plan,wobble=stalled>=2?.02:.035;
+   const selected=best.plan;
+   // An occasional honest misread keeps Rookie human; Dex misreads more spectacularly.
+   const misread=random()<(persona.aggression>=1?.14:.07)&&stalled<2?2.4:1;
+   const wobble=(stalled>=2?.02:.035)*looseness*misread;
    // Blur the aim like a casual player, but re-draw (bounded) when the
    // blurred stroke itself would be a foul: Rookie misses pots, not rules.
    for(let draw=0;draw<3;draw++){
     const plan={...selected,angle:selected.angle+(random()-.5)*wobble,
-     power:clamp(selected.power*(.92+random()*.15),.23,.92)};
+     power:clamp(selected.power*persona.power*(.92+random()*.15),.23,.95)};
     const verdict=yield* assess(plan);
     if(verdict.foul)continue;
     return {angle:plan.angle,power:plan.power,target:selected.target,

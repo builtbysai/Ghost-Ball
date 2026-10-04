@@ -215,3 +215,7 @@ kbd{display:inline-block;min-width:1.6em;padding:1px 6px;margin:0 2px;border:1px
 .setup-sheet .set-row{min-height:clamp(48px,8dvh,60px)}
 .setup-sheet .sheet-foot span{line-height:1.5;max-width:100%}
 .club-sheet [hidden]{display:none!important}
+
+/* opponent personas */
+#rivals{flex-wrap:wrap;justify-content:flex-end}
+.rival-blurb{margin:-2px 0 6px;font:500 12px/1.4 system-ui,sans-serif;color:var(--sh-dim,#9fb0b8)}
