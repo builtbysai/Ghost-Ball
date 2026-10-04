@@ -104,9 +104,17 @@ kbd{display:inline-block;min-width:1.6em;padding:1px 6px;margin:0 2px;border:1px
 @media (prefers-reduced-motion:reduce){.club-sheet,.sheet-card{animation:none}.seg button,.switch i,.switch input{transition:none}}
 
 /* --- compact landscape phones --- */
-@media (max-width:460px) and (orientation:landscape){.sheet-cols{grid-template-columns:minmax(0,1fr)}}
-/* Short landscape screens and the rotated portrait layout share one compact set. */
-@media (max-height:440px),(orientation:portrait) and (max-width:820px){
+@media (max-width:520px){.sheet-cols{grid-template-columns:minmax(0,1fr)}}
+/* Narrow upright phones stack each row: label above, control full width. */
+@media (max-width:480px) and (min-height:441px){
+ .set-row{flex-direction:column;align-items:stretch;gap:8px;padding:10px 0}
+ .set-row .seg{width:100%}.set-row .seg button{min-width:0}
+ .switch{align-self:flex-end;margin-top:-30px}
+ .set-row:has(.switch){flex-direction:row;align-items:center}.set-row:has(.switch) .switch{margin:0;align-self:center}
+ .menu-item small{display:none}
+}
+/* Short landscape screens use a compact set for every sheet. */
+@media (max-height:440px){
  .sheet-card{--sh-radius:14px;border-radius:14px}
  .sheet-head{padding:10px 16px 6px}.sheet-head h2{font-size:22px;margin-top:4px}
  .eyebrow{font-size:8.5px}
@@ -129,6 +137,43 @@ kbd{display:inline-block;min-width:1.6em;padding:1px 6px;margin:0 2px;border:1px
  .guide-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px}
  .guide-grid article{padding:8px 10px}.guide-grid ul{font-size:11px;gap:4px;line-height:1.4}.guide-grid h3{font-size:9px;margin-bottom:5px}
  .guide-timeline{gap:8px}.guide-timeline li{font-size:11px;line-height:1.4}
+}
+/* The pause menu sits inside the rotated portrait game screen, so it shares the compact set. */
+@media (orientation:portrait) and (max-width:820px){
+ .pause-menu .sheet-card{--sh-radius:14px;border-radius:14px}
+ .pause-menu .sheet-head{padding:10px 16px 6px}
+ .pause-menu .sheet-head h2{font-size:22px;margin-top:4px}
+ .pause-menu .eyebrow{font-size:8.5px}
+ .pause-menu .sheet-done{height:30px;padding:0 13px;font-size:11px}
+ .pause-menu .sheet-body{padding:0 16px 8px}
+ .pause-menu .set-row{min-height:30px;padding:2px 0}
+ .pause-menu .set-text small{display:none}
+ .pause-menu .set-text b{font-size:12px}
+ .pause-menu .set-group h3{margin:4px 0 0;font-size:9px}
+ .pause-menu .seg{padding:2px;border-radius:9px}
+ .pause-menu .seg button{height:23px;min-width:46px;padding:0 8px;font-size:10.5px;border-radius:6px}
+ .pause-menu .switch{width:38px;height:22px}
+ .pause-menu .switch i{width:16px;height:16px;top:3px;left:3px}
+ .pause-menu .switch input:checked+i{transform:translateX(16px)}
+ .pause-menu .set-note{font-size:10.5px;margin-top:4px;line-height:1.55}
+ .pause-menu .sheet-foot{padding:6px 16px;font-size:10px}
+ .pause-menu .btn-quiet{height:26px;font-size:10.5px;padding:0 11px}
+ .pause-menu .pause-summary{font-size:11px;margin-bottom:7px}
+ .pause-menu .menu-primary{height:38px;font-size:12px;border-radius:10px}
+ .pause-menu .menu-list{margin-top:7px;border-radius:10px;grid-template-columns:1fr 1fr}
+ .pause-menu .menu-item{min-height:34px;font-size:12px;padding:0 11px;gap:8px}
+ .pause-menu .menu-item:nth-child(odd){border-right:1px solid var(--sh-line)}
+ .pause-menu .menu-item:nth-last-child(-n+2){border-bottom:0}
+ .pause-menu .menu-item svg{width:16px;height:16px}
+ .pause-menu .menu-item .chev{display:none}
+ .pause-menu .sheet-tabs{padding:0 16px 6px}
+ .pause-menu .sheet-tabs button{height:26px;padding:0 12px;font-size:10px}
+ .pause-menu .guide-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px}
+ .pause-menu .guide-grid article{padding:8px 10px}
+ .pause-menu .guide-grid ul{font-size:11px;gap:4px;line-height:1.4}
+ .pause-menu .guide-grid h3{font-size:9px;margin-bottom:5px}
+ .pause-menu .guide-timeline{gap:8px}
+ .pause-menu .guide-timeline li{font-size:11px;line-height:1.4}
 }
 
 /* --- clubhouse menu rows with a right-hand hint, and the round close button --- */
