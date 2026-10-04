@@ -111,7 +111,7 @@ function matchTurn(event){
 function renderRoomMastery(){
  const badge=$('roomMastery'),model=roomMastery(progress,room);
  badge.hidden=!model;
- if(!model)return; // The other two halls stay free until authored skills ship.
+ if(!model)return; // Preserve this guard if later venues have no authored mastery.
  setText('roomMasteryCount',model.count+' / '+model.total);
  setText('roomMasteryNext',model.complete?'ROOM MASTERED':'NEXT · '+model.next);
  badge.dataset.mastered=String(model.complete);
