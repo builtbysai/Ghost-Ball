@@ -64,7 +64,7 @@ try:
   assert page.locator('#lockerFavorite').get_attribute('aria-pressed')=='false', 'reset failed to clear favorites'
   page.locator('#closeLocker').click()
   page.locator('#menuChallenges').click()
-  assert page.locator('#challengeCards [data-drill]').count()==5
+  assert page.locator('#challengeCards [data-drill]').count()==8
   assert 'PLAY CHALLENGE' in page.locator('[data-drill="center-drop"] .challenge-card-status').inner_text()
   page.locator('[data-drill="center-drop"]').click()
   page.wait_for_timeout(1840)
@@ -129,7 +129,7 @@ try:
   page.locator('#menuBtn').click()
   page.locator('#menuSettings').click()
   page.locator('#openRecord').click()
-  assert page.locator('#recordDrills').inner_text()=='3 / 5 SKILLS','local record omitted earned drill'
+  assert page.locator('#recordDrills').inner_text()=='3 / 8 SKILLS','local record omitted earned drill'
   assert page.locator('#recordMatches').inner_text()=='0','skill artificially inflated match ledger'
   page.locator('#closeRecord').click()
   page.locator('#closeSettings').click()

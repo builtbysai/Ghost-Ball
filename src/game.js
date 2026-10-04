@@ -284,7 +284,10 @@ export class Game {
    const potted=shot.pots.filter(id=>id>0).length;
    if(this.kind==='match'&&potted>=2&&this.lastShot&&potted>(this.bestShot?.pots||0))this.bestShot={...this.lastShot,pots:potted};this.planIterator=null;if(this.kind==='attract'){this.turn=1-this.turn;this.timer=0;this.break=false;this.previewShot=null;return;}
    if(this.kind==='drill'){
-     const grade=gradeSkillDrill(this.drillId,{shots:this.shots,shot});
+     // Final resting positions let skill drills judge cue-ball position and speed, not only pockets.
+     const end={cue:(()=>{const c=this.sim.cue();return c?{x:c.x,y:c.y,pocketed:c.pocketed}:null;})(),
+       balls:Object.fromEntries(this.sim.balls.map(b=>[b.id,{x:b.x,y:b.y,pocketed:b.pocketed}]))};
+     const grade=gradeSkillDrill(this.drillId,{shots:this.shots,shot,end});
      this.history.push({kind:'drill-ruling',drillId:this.drillId,shot:this.shots,
        reason:grade.reason,status:grade.status,potRecords:[...(shot.potRecords||[])],
        cushionBalls:[...(shot.cushionBalls||[])]});

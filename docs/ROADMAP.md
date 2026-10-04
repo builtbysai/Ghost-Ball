@@ -31,6 +31,7 @@
 - [x] **Club Circuit**: the lobby tab that was a placeholder is now a four-round ladder (Rookie, Dex, Vera, Club Pro). A win advances, a loss replays the round, the last win crowns a champion count, all local.
 - [x] **Straight pool** (a race to 30, a pocket called on every shot, one point per called-pocket ball, foul -1 and -16 on the third in a row, the 14-ball re-rack around the last ball) and **one-pocket** (own corner pocket each, first to eight, rival-pocket balls count for them, strays are spotted, a foul costs a ball). Both have referee tests, CPU play and stress coverage.
 - [x] **Highlights**: the best multi-ball shot of each finished match is saved locally (best twelve kept) and replays exactly from the stored table plus stroke. Local record lists them with REPLAY and COPY CODE, and any shot code can be pasted to watch it, so sharing needs no server. Codes are validated and bounded.
+- [x] **Crests** (14 descriptive marks computed from the real local record, never time-limited), a quiet **room-mastered** note, the names of newly earned cues on the result card, and **three new skill drills** solved on the real physics: Draw Shot (backspin and a cue-ball ring), Ghost Ball Cut and Soft Touch (speed control into a ring). The drill grader now judges final resting positions.
 - [x] In-game **How to play** sheet (controls, rules, short history) reachable from the Clubhouse menu and the pause menu.
 
 **Currently playable:** only overhead **2D** gameplay. The live lobby has a decorative perspective rendering. Do not revive discarded experimental elevated/3D views or make their settings clickable before new working implementations exist.
@@ -75,9 +76,9 @@
 - [ ] Physically verify all five venues' ball-number contrast, touch fit and entrance on real Android devices.
 - [x] First founder-room mastery slice: Parlor, Observatory and Foundry now track three earned steps each: a real settled authored drill, an actual completed CPU match at that hall, and a legal eight-ball win there. Durable, backward-compatible local mastery receipts survive bounded recent-record pruning. No fake achievements, physics change or room locks.
 - [x] Author distinct physics-verified Glass Angle and Midnight Bank challenges for Wintergarden/Afterhours.
-- [ ] Add tasteful first-mastery recognition and only consider locks after real touch/device validation. Practice and starter tables remain open.
+- [x] (a quiet room-mastered note shipped; locks stay off until real-device review) Add tasteful first-mastery recognition and only consider locks after real touch/device validation. Practice and starter tables remain open.
 - [x] Completed matches can append a restrained earned-cue count to the result copy, never a blocking reward popup. The Locker is secondary to Play, not a separate storefront.
-- [ ] Add one tasteful equipment-focused first-unlock treatment after real-device review and avoid interfering with rematch.
+- [x] (the result card names newly earned cues and points to the Locker; no popup) Add one tasteful equipment-focused first-unlock treatment after real-device review and avoid interfering with rematch.
 
 **Exit:** a new player can earn, select and actually see a different cue and a different room in one/two short sessions; normal tables and cosmetics produce **identical deterministic shot physics**; equipped state and achievements persist; no overlap or scroll traps.
 
@@ -86,10 +87,10 @@
 
 - [x] First **Practice Lab** slice ([PR #25](https://github.com/builtbysai/Ghost-Ball/pull/25)): two genuine settled-physics skills, Center Drop and Corner Line, with two attempts, permanent local personal best and responsive picker.
 - [x] Third **Rail Return** authored drill ([PR #26](https://github.com/builtbysai/Ghost-Ball/pull/26)): bank the 3 off the bottom cushion into top middle. Target-ball non-jaw cushion proof is required; no false completion from a direct pot or incidental pocket-jaw impact. Real physics produced solved 40% and keyboard 53% reference strokes. Normal rack physics is unchanged.
-- [ ] Physically validate all five authored skills with players on real Android touch devices, then expand with cue-ball position, safety/defense, repeat-shot seed, ghost-ball teaching and spin experiments. Require physically solvable fixtures and real player review before release.
+- [ ] Physically validate the authored skills with players on real Android touch devices (cue-ball position, ghost-ball teaching and speed control are now authored; safety/defense and repeat-shot seeds remain). Require physically solvable fixtures and real player review before release.
 - [x] Three simple evidence-backed mastery steps for all five original halls, with concise status on the actual room selector and permanent receipts from genuine live activity.
 - [x] Expand 3-stage mastery to the last two halls with new authored physics challenges. Add Circuit/Workshop only after real underlying states exist. Use curated challenges, then bounded procedural variation if playtests justify it.
-- [ ] Add optional achievements/crests and a private local match ledger (streak is descriptive only, never an attendance obligation). Consider short “one perfect shot” challenges and sharable compact seed challenges once replays are trustworthy.
+- [x] (crests shipped; short "one perfect shot" challenges are the three new drills; seed sharing is the shot code) Add optional achievements/crests and a private local match ledger (streak is descriptive only, never an attendance obligation). Consider short “one perfect shot” challenges and sharable compact seed challenges once replays are trustworthy.
 - [x] (first slice shipped: four personas with distinct selection, miss style and tempo) Improve opponent identity: distinguish named rivals by legal shot selection, positional play, mistakes, safety tactics and shot cadence. Profile every change so Rookie still offers hope and Club Pro still makes humanly plausible mistakes.
 - [x] (the highlights list, replay and shareable shot codes are in; whole-match replays remain out of scope) Introduce the full replay browser and selectable highlights only when reliable event-based recording, replay-state visuals, finite storage and share/privacy controls work together.
 

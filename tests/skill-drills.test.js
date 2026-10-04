@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Game} from '../src/game.js';
-import {SKILL_DRILLS,skillDrillById,skillDrillBalls,gradeSkillDrill} from '../src/skill-drills.js';
+import {SKILL_DRILLS,FOUNDER_DRILLS,EXTRA_DRILLS,skillDrillById,skillDrillBalls,gradeSkillDrill} from '../src/skill-drills.js';
 import {freshProgress,recordLiveDrill,readLocalProgress,writeLocalProgress} from '../src/player-progress.js';
 
 const result=(drillId,evidence,extra={})=>({
@@ -20,8 +20,9 @@ function takeShot(id,angle,power){
  return {g,before,announcements,steps};
 }
 test('five original drill layouts have valid distinct cues, pockets and rules',()=>{
- assert.equal(SKILL_DRILLS.length,5);
- assert.equal(new Set(SKILL_DRILLS.map(d=>d.id)).size,5);
+ assert.equal(FOUNDER_DRILLS.length,5);
+ assert.equal(SKILL_DRILLS.length,FOUNDER_DRILLS.length+EXTRA_DRILLS.length);
+ assert.equal(new Set(SKILL_DRILLS.map(d=>d.id)).size,SKILL_DRILLS.length);
  for(const drill of SKILL_DRILLS){
   assert.equal(skillDrillById(drill.id),drill);
   assert.equal(skillDrillBalls(drill.id).length,2);
@@ -33,7 +34,7 @@ test('five original drill layouts have valid distinct cues, pockets and rules',(
  assert.throws(()=>new Game({kind:'drill',drillId:'fictional'}),RangeError);
 });
 test('each authored drill is finishable with actual settled fixed-step shots',()=>{
- for(const drill of SKILL_DRILLS){
+ for(const drill of FOUNDER_DRILLS){
   // Multiple human-plausible pull strengths: accept only actual pocket events
   // scored by Game, never a decorative/mock completed state.
   let success=null;
@@ -137,4 +138,35 @@ test('verified personal best and achievement persist but never inflate match sta
  const old=freshProgress();delete old.drills;delete old.drillEvents;
  storage.set('ghostball-progress-v1',JSON.stringify(old));
  assert.deepEqual(readLocalProgress(()=>store).progress.drills,{});
+});
+
+function strike(id,{angle,power,spin}){
+ const events=[],g=new Game({kind:'drill',drillId:id,seed:31,onTurn:e=>events.push(e)});
+ assert.equal(g.beginShot(angle,power,spin),true);
+ let k=0;while(g.turnShot&&k++<12000)g.step();
+ return {g,events};
+}
+test('the extra skills are physically solvable by their authored solution, and only by skill',()=>{
+ for(const drill of EXTRA_DRILLS){
+  const ok=strike(drill.id,drill.solution);
+  assert.equal(ok.g.drillOutcome,'completed',drill.id+' is not solvable by its own solution');
+  assert.equal(ok.g.history.at(-1).status,'completed');
+ }
+ // Draw Shot: the pot without backspin leaves the cue ball outside the ring
+ const draw=skillDrillById('draw-shot');
+ assert.equal(strike('draw-shot',{...draw.solution,spin:{x:0,y:0}}).g.drillOutcome,'failed','no backspin, no position');
+ assert.equal(strike('draw-shot',{...draw.solution,spin:{x:0,y:-.4}}).g.history.at(-1).reason,'position');
+ // Soft Touch: too hard and the 9 runs past the ring; potting it fails outright
+ const touch=skillDrillById('soft-touch');
+ assert.notEqual(strike('soft-touch',{...touch.solution,power:.5}).g.drillOutcome,'completed');
+ // Ghost Ball Cut: a slightly wrong angle misses
+ const cut=skillDrillById('ghost-cut');
+ assert.notEqual(strike('ghost-cut',{...cut.solution,angle:cut.solution.angle+.08}).g.drillOutcome,'completed');
+});
+test('the grader needs final positions for position and speed skills',()=>{
+ const shot={pots:[],potRecords:[],first:9,cushionBalls:[]};
+ assert.equal(gradeSkillDrill('soft-touch',{shots:1,shot}).status,'continue','no end positions: nothing to judge');
+ const end={cue:{x:0,y:0,pocketed:false},balls:{9:{x:850,y:250,pocketed:false}}};
+ assert.equal(gradeSkillDrill('soft-touch',{shots:1,shot,end}).status,'completed');
+ assert.equal(gradeSkillDrill('soft-touch',{shots:1,shot:{...shot,first:null},end}).status,'continue','the cue ball must have hit the 9');
 });

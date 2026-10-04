@@ -319,6 +319,7 @@ function closeLocker(){
  if($('lockerSheet').hidden)return;
  hide('lockerSheet');show('clubMenu');$('menuLocker').focus();
 }
+setText('drillCount',`${SKILL_DRILLS.length} playable`);
 function showCrests(){
  const summary=crestSummary(progress);
  setText('recordCrestCount',`${summary.earned} / ${summary.total}`);
@@ -433,7 +434,7 @@ function ensureChallengeCards(){
   const instruction=document.createElement('span');instruction.className='challenge-card-rule';
   instruction.textContent=drill.instruction;
   const pockets=['TOP LEFT','TOP MIDDLE','TOP RIGHT','BOTTOM LEFT','BOTTOM MIDDLE','BOTTOM RIGHT'];
-  instruction.dataset.compact=drill.targetId+' → '+(drill.requiredCushion?'RAIL → ':'')+pockets[drill.targetPocket];
+  instruction.dataset.compact=drill.goal?.kind==='ball-zone'?drill.targetId+' → REST IN THE RING':drill.targetId+' → '+(drill.requiredCushion?'RAIL → ':'')+pockets[drill.targetPocket]+(drill.goal?' + RING':'');
   const status=document.createElement('span');status.className='challenge-card-status';
   button.append(top,instruction,status);$('challengeCards').append(button);
  }
@@ -626,7 +627,7 @@ function turnUI(){if(!current)return;
      `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · ${best?progressAccess.writable?'SAVED BEST: '+best:'SESSION BEST: '+best:'COMPLETED'}`:
      ({scratch:'SCRATCH · RESET AND TRY AGAIN','wrong-pocket':'WRONG POCKET · TRY AGAIN',
        'out-of-shots':'TWO SHOTS USED · TRY AGAIN',
-        'no-bank':'NO CUSHION BANK · TRY AGAIN'})[current.history.at(-1)?.reason]||'RESET AND TRY AGAIN');
+        'no-bank':'NO CUSHION BANK · TRY AGAIN','position':'CUE BALL OUT OF THE RING · TRY AGAIN','potted':'THE BALL WAS POTTED · TRY AGAIN'})[current.history.at(-1)?.reason]||'RESET AND TRY AGAIN');
    }else
   setText('matchResultDetail',practice?(dailyDay?(()=>{const d=dailySummary(progress,dailyDay);return `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · BEST TODAY ${d.today??current.shots}${d.streak>1?` · ${d.streak} DAYS RUNNING`:''}`;})():`${current.shots} ${current.shots===1?'SHOT':'SHOTS'} THIS SESSION`):
      `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · `+(current.players==='local'||current.players==='ai'?'':(()=>{const s=seatStats(current.history,0);return `YOU POTTED ${s.potted} · ${s.fouls} ${s.fouls===1?'FOUL':'FOULS'} · `;})())+finishText(finalReason)+
@@ -1402,7 +1403,7 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
    const cpuPose=g.isAI()?g.presentedCue:null;
    const zone=active==='game'&&!g.over&&!g.sim.moving&&!g.isAI()
      ?g.ballInHand?(g.kitchen?'break':'all'):pointerMode==='break-place'?'break':null:null;
-    const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over&&!g.ballInHand&&pointerMode!=='break-place',aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike,marker:liveMarker(now),guideMode},placement,placementZone:zone,fx:motion?g.fx:[],targetBall:g.rotation&&!g.over&&!g.sim.moving&&!g.ballInHand?Number(g.group.slice(4)):null,callPocket:g.official&&g.callsEveryShot?(g.isAI()?(g.previewShot?.pocket??null):(g.sim.moving||g.over?null:(()=>{const c=callForShot();return c>=0?c:null;})())):g.needsCall()?(g.isAI()?(g.previewShot?.pocket??null):calledPocket):null,callLabel:g.official&&g.callsEveryShot?'':g.ruleset==='ten'?10:8,pocketOwners:g.ruleset==='onepocket'?g.ownerPockets:null,pocketOwnerNames:g.ruleset==='onepocket'?[g.players==='ai'?g.personaAt(0).initial:g.players==='local'?'1':'YOU',g.players==='ai'?g.personaAt(1).initial:g.players==='local'?'2':g.persona.initial]:null};
+    const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over&&!g.ballInHand&&pointerMode!=='break-place',aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike,marker:liveMarker(now),guideMode},placement,placementZone:zone,fx:motion?g.fx:[],targetBall:g.rotation&&!g.over&&!g.sim.moving&&!g.ballInHand?Number(g.group.slice(4)):null,callPocket:g.official&&g.callsEveryShot?(g.isAI()?(g.previewShot?.pocket??null):(g.sim.moving||g.over?null:(()=>{const c=callForShot();return c>=0?c:null;})())):g.needsCall()?(g.isAI()?(g.previewShot?.pocket??null):calledPocket):null,callLabel:g.official&&g.callsEveryShot?'':g.ruleset==='ten'?10:8,drillZone:g.kind==='drill'?(skillDrillById(g.drillId)?.goal||null):null,pocketOwners:g.ruleset==='onepocket'?g.ownerPockets:null,pocketOwnerNames:g.ruleset==='onepocket'?[g.players==='ai'?g.personaAt(0).initial:g.players==='local'?'1':'YOU',g.players==='ai'?g.personaAt(1).initial:g.players==='local'?'2':g.persona.initial]:null};
    table.draw(g.sim,frame);uiTimer+=elapsed;if(uiTimer>.2){turnUI();uiTimer=0;}}
 }
 requestAnimationFrame(frame);

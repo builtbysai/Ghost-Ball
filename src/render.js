@@ -55,7 +55,7 @@ export class TableRenderer{
    return {x:clamp(((sx-this.center)/(this.bw*k)+.5)*TABLE.width,0,1000),y:t*TABLE.height};
  }
  clear(){this.g.clearRect(0,0,this.w,this.h);}
- draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[],callPocket=null,callLabel=8,targetBall=null,pocketOwners=null,pocketOwnerNames=null}={}){
+ draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[],callPocket=null,callLabel=8,targetBall=null,pocketOwners=null,pocketOwnerNames=null,drillZone=null}={}){
   const g=this.g,P=(x,y)=>this.project(x,y);
   this.clear();g.save();
   if(this.cacheStatic&&typeof document!=='undefined'){
@@ -74,6 +74,7 @@ export class TableRenderer{
    g.drawImage(this.surface,0,0,this.w,this.h);
   }else this.paintSurface(g);
   if(placementZone&&!sim.moving)this.drawPlacementZone(sim,placementZone,placement);
+  if(drillZone)this.drawDrillZone(drillZone);
   if(pocketOwners)this.drawPocketOwners(pocketOwners,pocketOwnerNames);
   if(callPocket!==null&&callPocket>=0)this.drawCalledPocket(callPocket,callLabel);
   if(targetBall!==null)this.drawTargetBall(sim,targetBall);
@@ -243,6 +244,12 @@ export class TableRenderer{
      }
    }
    g.restore();
+ }
+ // Skill drills with a position or speed goal: a dashed ring where the ball has to finish.
+ drawDrillZone(zone){
+   const g=this.g,[x,y,k]=this.project(zone.x,zone.y),r=zone.r*this.bw/1000*(k||1);
+   g.save();g.beginPath();g.ellipse(x,y,r,r*(.77+.23*this.blend),0,0,TAU);
+   g.fillStyle='rgba(120,220,170,.10)';g.fill();g.setLineDash([6,5]);g.lineWidth=2;g.strokeStyle='rgba(150,235,190,.9)';g.stroke();g.restore();
  }
  // One-pocket: a coloured ring and the owner's mark at each player's pocket.
  drawPocketOwners(owners,names){

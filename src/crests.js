@@ -1,6 +1,7 @@
 /** Crests: quiet, descriptive marks for things the player has actually done. Computed from the
  * local record every time, never stored, never time-limited and never a reason to come back. */
 import {circuitState,dailySummary} from './player-progress.js';
+import {SKILL_DRILLS} from './skill-drills.js';
 
 const wonAs=(progress,test)=>(progress.records||[]).some(r=>r.players==='cpu'&&r.winner===0&&test(r));
 export const CRESTS=Object.freeze([
@@ -17,7 +18,7 @@ export const CRESTS=Object.freeze([
  {id:'circuit',name:'Circuit Champion',hint:'Win the Club Circuit',test:p=>circuitState(p).champion>=1},
  {id:'daily-3',name:'Three Days Running',hint:'Clear the Daily Rack three days in a row',test:p=>dailySummary(p).streak>=3||Object.keys(p.daily||{}).length>=3},
  {id:'reel',name:'Highlight Reel',hint:'Save a three-ball highlight',test:p=>(p.highlights||[]).some(h=>h.pots>=3)},
- {id:'drills',name:'Skilled',hint:'Complete every skill drill',test:p=>Object.keys(p.drills||{}).length>=5}
+ {id:'drills',name:'Skilled',hint:'Complete every skill drill',test:p=>Object.keys(p.drills||{}).length>=SKILL_DRILLS.length}
 ]);
 export function crestSummary(progress){
  const list=CRESTS.map(c=>({id:c.id,name:c.name,hint:c.hint,earned:Boolean(progress&&c.test(progress))}));
