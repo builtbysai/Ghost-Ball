@@ -1199,6 +1199,8 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('keyup',e=>{
  if(e.code==='Space'&&keyPull){e.preventDefault();releaseKeyPull(e.timeStamp);}
 });
+// The first touch, click or key anywhere unlocks audio so the room's music starts straight away.
+for(const type of ['pointerdown','keydown'])window.addEventListener(type,()=>audio.unlock(),{once:true,capture:true});
 window.addEventListener('blur',cancelKeyPull);
 window.addEventListener('pagehide',()=>audio.suspend());
  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelKeyPull();audio.suspend();}else audio.resume();});
