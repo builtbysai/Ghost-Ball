@@ -45,6 +45,8 @@ No dependencies or build step. Code is grouped by responsibility:
 - `src/cue-locker.css`: viewport-fitted 3×2 equipment browsing in landscape and portrait.
 - `src/main.js`: app wiring, responsive controls, lifecycle.
 - `src/touch-controls.js`: tested rear-shaft hit testing, pointer pull, wheel aim and spin-contact math.
+- `src/aim-gestures.js`: pure smart-aim logic (stick vs table press, tap-to-aim, ball picking, touch lead).
+- `src/guide.css`, `src/match-ui.css`: How to play sheet; match HUD, banner, trays and preference layout.
 - `src/table-transition.js`: live-to-play table motion and deterministic rack assembly.
 - `src/landscape.css`: isolated pool gameplay layout.
 - `src/feel.css`: responsive, motion-aware power rail feedback.
@@ -62,6 +64,14 @@ Addresses the verified play-test findings (see [docs/OVERHAUL-2026-10-04.md](doc
 - **HUD mute button** beside Pause, persisted and synced with Settings.
 - **Rookie can finish a rack:** pot lines now respect the rubber jaws and impossible cuts, a bounded look-ahead vets each shot so Rookie misses pots but not rules, blocked shots fall back to a real safety, and stalled turns widen the search. Unforced fouls fell from ~24% of shots to ~2%, and seeded Rookie-vs-Rookie racks finish in ~80 shots.
 - Slow balls creeping over a pocket lip now drop instead of balancing; `favicon.ico` added.
+
+## Touch, rules and guide update (2026-10-04)
+
+- **Smart aiming:** the table accepts both ways of aiming without a mode switch. Grab the cue behind the ball to turn it, or tap or drag anywhere on the cloth to aim at that spot, or tap a ball to aim straight through it. A crosshair confirms the touch; on touch screens the aim point leads the finger so it never hides the target. Preferences → Table touch → *Stick only* restores the old behaviour. Aiming never fires a shot.
+- **Quick spin:** drag on the little cue ball to set the contact point without opening the sheet.
+- **Rules:** a scratch on the break gives ball in hand behind the head string. Match setup adds **Call the 8** (name the 8-ball's pocket; any other pocket loses; tap the pocket or press C) and a **shot clock** switch (45 s or off). Preferences add Aim guide (Full / Short / Off) and Wheel speed.
+- **How to play** in the Clubhouse and pause menus: controls, rules and a short history of pool.
+- Research and decisions: [docs/COMPETITOR-STUDY-2026-10.md](docs/COMPETITOR-STUDY-2026-10.md).
 
 ## P3: Physical impact and match finish polish
 

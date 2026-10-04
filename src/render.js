@@ -244,7 +244,9 @@ export class TableRenderer{
  drawAim(sim,aim){
    const {angle}=aim,g=this.g,cue=sim.cue();if(!cue)return;
    if(aim.showGuide===false){this.drawCue(cue,angle,aim.drawback||0);return;}
-   const guide=projectAim(sim.balls,cue,angle);if(!guide)return;
+   const guideMode=aim.guideMode||'full';
+   if(guideMode==='off'){this.drawCue(cue,angle,aim.drawback||0);if(aim.marker)this.drawAimMarker(aim.marker);return;}
+   const guide=projectAim(sim.balls,cue,angle,guideMode==='short'?{maxObjectLength:60,maxCueLength:230}:{});if(!guide)return;
    const [sx,sy]=this.project(cue.x,cue.y),[ex,ey]=this.project(guide.cueEnd.x,guide.cueEnd.y);
    const scale=this.bw/1000;
    g.save();g.lineCap='round';
@@ -259,19 +261,20 @@ export class TableRenderer{
      g.setLineDash([Math.max(3,4*scale),Math.max(4,6*scale)]);
      g.strokeStyle='rgba(245,219,156,.85)';g.lineWidth=Math.max(1.15,1.9*scale);g.stroke();g.setLineDash([]);
    }
-   if(aim.marker){
-     // Where a tap or drag asked the cue to point: a fading crosshair so the
-     // player sees what the touch was understood as.
-     const [mx,my]=this.project(aim.marker.x,aim.marker.y),size=Math.max(6,9*scale+3);
-     g.globalAlpha=Math.max(0,Math.min(1,aim.marker.alpha??1));
-     g.strokeStyle='rgba(255,236,176,.95)';g.lineWidth=1.4;
-     g.beginPath();g.arc(mx,my,size,0,TAU);
-     g.moveTo(mx-size*1.5,my);g.lineTo(mx-size*.55,my);g.moveTo(mx+size*.55,my);g.lineTo(mx+size*1.5,my);
-     g.moveTo(mx,my-size*1.5);g.lineTo(mx,my-size*.55);g.moveTo(mx,my+size*.55);g.lineTo(mx,my+size*1.5);
-     g.stroke();g.globalAlpha=1;
-   }
+   if(aim.marker)this.drawAimMarker(aim.marker,scale);
    g.restore();
    this.drawCue(cue,angle,aim.drawback||0);
+ }
+ // Where a tap or drag asked the cue to point: a fading crosshair so the
+ // player sees what the touch was understood as.
+ drawAimMarker(marker,scale=this.bw/1000){
+   const g=this.g,[mx,my]=this.project(marker.x,marker.y),size=Math.max(6,9*scale+3);
+   g.save();g.globalAlpha=Math.max(0,Math.min(1,marker.alpha??1));
+   g.strokeStyle='rgba(255,236,176,.95)';g.lineWidth=1.4;
+   g.beginPath();g.arc(mx,my,size,0,TAU);
+   g.moveTo(mx-size*1.5,my);g.lineTo(mx-size*.55,my);g.moveTo(mx+size*.55,my);g.lineTo(mx+size*1.5,my);
+   g.moveTo(mx,my-size*1.5);g.lineTo(mx,my-size*.55);g.moveTo(mx,my+size*.55);g.lineTo(mx,my+size*1.5);
+   g.stroke();g.restore();
  }
  // The dot is an aim-only contact-point indicator, not simulated 3D impact.
  drawCueStrike(cue,spin){

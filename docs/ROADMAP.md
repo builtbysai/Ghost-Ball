@@ -1,6 +1,6 @@
 # Ghost Ball: active development roadmap
 
-**Updated October 3, 2026 following the five-hall authored skill pass.** This is the authoritative **future delivery order**. For why, competitor features, source links, cue designs and room unlock proposals see [ENGAGEMENT-RESEARCH.md](ENGAGEMENT-RESEARCH.md). Completed technical work and unresolved defects are recorded in [FINDINGS-VALIDATION.md](FINDINGS-VALIDATION.md). The [previous roadmap is archived](ROADMAP-ARCHIVE-2026-10-02.md) to prevent its obsolete unchecked items and removed 2.5D code from masquerading as active tasks.
+**Updated October 4, 2026 following the controls/clarity overhaul and the competitor, rules and history study ([COMPETITOR-STUDY-2026-10.md](COMPETITOR-STUDY-2026-10.md), [OVERHAUL-2026-10-04.md](OVERHAUL-2026-10-04.md)).** This is the authoritative **future delivery order**. For why, competitor features, source links, cue designs and room unlock proposals see [ENGAGEMENT-RESEARCH.md](ENGAGEMENT-RESEARCH.md). Completed technical work and unresolved defects are recorded in [FINDINGS-VALIDATION.md](FINDINGS-VALIDATION.md). The [previous roadmap is archived](ROADMAP-ARCHIVE-2026-10-02.md) to prevent its obsolete unchecked items and removed 2.5D code from masquerading as active tasks.
 
 **Direction:** Make Ghost Ball an exceptionally tactile, fair, replayable pool game with its own clubhouse identity. **A satisfying shot and a completed match come before reward systems.** Then let players earn genuinely desirable cues and venues through skill, practice, fair rivalry and social matches, without an advertising/currency treadmill. Miniclip-style familiarity is a control/flow reference, not a license to copy its assets or every monetization system.
 
@@ -16,6 +16,11 @@
 - [x] P3 first audio feedback pass ([PR #19](https://github.com/builtbysai/Ghost-Ball/pull/19)): velocity-aware contact, rail and pocket timbres, safe transient clustering and brief win/loss cues. First P3 factual finish and impulse glints are implemented. Further tuning awaits touch feedback.
 - [x] P4 five playable halls ([PR #21](https://github.com/builtbysai/Ghost-Ball/pull/21)), trustworthy local progression ([PR #22](https://github.com/builtbysai/Ghost-Ball/pull/22)) and six original previewable/equippable cosmetic cues ([PR #23](https://github.com/builtbysai/Ghost-Ball/pull/23)). All five authored room skills and mastery paths are implemented; real-device certification and recognition polish remain.
 
+- [x] **Overhaul 2026-10-04 ([PR #32](https://github.com/builtbysai/Ghost-Ball/pull/32))**: hold-Space shooting; 2° aim steps with a visible readout; large 45 s shot clock; persistent recap and turn banner; CPU placement pause; honest open-table trays and an 8-ball slot; HUD mute; favicon; Rookie that actually finishes racks (foul rate 24% → 2%); slow balls drop off pocket lips.
+- [x] **Smart touch aiming**: one table surface with two intents. Grab the cue to turn it, or tap/drag the cloth to aim there, or tap a ball to aim through it. Touch lead offset, crosshair feedback, Smart / Stick-only preference, quick-drag spin on the cue-ball icon. Pure tested logic in `src/aim-gestures.js`.
+- [x] **Rules from the WPA/Miniclip study**: scratch on the break → ball in hand behind the head string (player and CPU); optional **Call the 8** (CPU names its pocket; wrong pocket loses); optional shot-clock OFF; Full/Short/Off aim guide; Fine wheel speed.
+- [x] In-game **How to play** sheet (controls, rules, short history) reachable from the Clubhouse menu and the pause menu.
+
 **Currently playable:** only overhead **2D** gameplay. The live lobby has a decorative perspective rendering. Do not revive discarded experimental elevated/3D views or make their settings clickable before new working implementations exist.
 
 ## Active order: dependencies and acceptance
@@ -23,7 +28,7 @@
 ### P2.1 — Close gameplay reliability and verify fun at the table
 **Next engineering milestone; blocks progression and online release.**
 
-- [ ] Run **real Android and desktop touch/mouse playtests** for the rear-cue, aiming wheel, spin, full-power screen-edge gestures (including display cutouts), foul-placement and portrait-rotated/568x320 UI. Test pause, shot clock, result, rematch and two players sharing one device. Treat emulated Chromium success as useful but not physical-device proof.
+- [ ] Run **real Android and desktop touch/mouse playtests** for the rear-cue, **tap/drag-to-aim on the cloth**, tap-a-ball aiming, quick-drag spin, aiming wheel, spin, full-power screen-edge gestures (including display cutouts), foul-placement and portrait-rotated/568x320 UI. Test pause, shot clock, result, rematch and two players sharing one device. Treat emulated Chromium success as useful but not physical-device proof.
 - [x] Validate **12 fixed-step full-rack** CPU matches: eight seeds and four reversed-seat fixtures legally complete with identical replay histories, rulings, and ball snapshots. CI now requires 12 legal finishes. See [reliability lab](P2-1-RELIABILITY-LAB.md).
 - [x] Correct observed slow/unfinished CPU games with legal shot assessment, strategic ball-in-hand placement and frame-sliced Club Pro planning, without changing competition physics. Preserve the visible opponent cue as plans complete.
 - [ ] Expand fixture diversity further and repeat true complete matches with **real human input**. Check result/rematch, difficult late layouts and safety-shot clarity, rather than generalizing from 12 scripted CPU games.
@@ -36,7 +41,8 @@
 **Prioritize before expanding content; can be tuned concurrently with P2.1 findings.**
 
 - [ ] Polish contact timing, cue recoil/resistance at partial and max charge, actual visible cue tip, ball roll/deceleration, clean numbered balls, pocket collection, cushion/contact sounds, concise turn/foul feedback and subtle optional haptics. Respect global mute, reduced motion and tab lifecycle.
-- [ ] Make first-break and first-foul guidance learnable without modal clutter; refine optional first-contact aid, separate fine adjustment from the primary touch area, handedness and aim controls using real playtest observations. Never promise a physically impossible target path.
+- [x] Learnable first-break/first-foul guidance without modal clutter: one-time controls hint, contextual guide badge, persistent recap and the How to play sheet. Fine adjustment is separate from the table surface; power side, Table touch, Aim guide and Wheel speed are configurable.
+- [ ] Tune those controls with **real touch observations**: does the 34 px lead feel right, does Smart mode cause accidental retargeting, is Fine wheel speed the right ratio? Add configurable aim sensitivity only if testers ask. Never promise a physically impossible target path.
 - [x] First P3 visual/result slice: actual contact/cushion glints capped by event strength; factual last decisive shot from the referee log; legal-eight pocket spotlight; focused Rematch and existing Change Table route. Honor reduced motion and short screens.
 - [ ] Refine opponent reactions and shot/result timing from real touch notes without slowing rematch; add actual last-shot replay only after event recording is validated.
 - [ ] Add a minimal **last-shot replay / saveable deterministic match record** only after event timestamps, initial seed and input validation are sufficient; the replay must be visibly distinguishable from live play and cost-bounded on mobile.
@@ -93,6 +99,7 @@
 ### P7 — Formal competitive rules and additional modes
 **A separate track: can begin pure-rules design after P2.1, but do not delay casual cue/room rewards or private casual matches to ship a half-finished tournament mode. Official-rules ranked play is blocked until this phase passes.**
 
+- [x] Two real WPA conventions already live in casual play: kitchen-only ball in hand after a break scratch, and the optional **Call the 8** (pocket must match, tap a pocket or press C). The CPU names its pocket and avoids safeties that would sink the 8 elsewhere.
 - [ ] Add an **explicit tournament/WPA 8-ball ruleset** alongside the existing casual referee, with legal/illegal break and player choices, correct open-table assignment, called ball/pocket, safety, 8-ball conditions and ball-in-hand restrictions. Include an actual compact pre-shot call/choice UI for human, CPU and network players. See [P2-RULES-ARCHITECTURE.md](P2-RULES-ARCHITECTURE.md). Don't claim full WPA officiating for physics events we can't detect.
 - [ ] Ensure score/HUD, AI/legal-shot planner, rules engine, history, replay and spectators understand the selected mode version. Full-rack integration plus physical phone tests are required before enabling.
 - [ ] Next add **9-ball** as a truly independent rules module and targeted UX, then optional straight pool. Alternate arcade modes, timed trick-shot runs, local tournaments and broader official-ranked modes follow actual player interest and validated fairness.
@@ -114,4 +121,4 @@
 5. **Meaningful evidence:** competitor descriptions are features, not proof of what causes success. Use small, consented novice/experienced playtests to measure misfires, comprehension, voluntary rematch, first unlock comprehension and frustration. Track no manipulative retention tricks. Profile AI seed sets and slow devices before claiming improvement.
 6. **Parallel work without blockers:** UI/art exploration and networking architecture can progress alongside reliability, but cannot replace verification or sneak unreleased settings into the clickable UI. Let user-provided future references override speculative camera styling.
 
-**Next concrete build:** owner performs real-device testing and reports concrete defects. Verify all five authored skills on real touch devices, refine the first mastery celebration, and consider any hall locks only after device acceptance. Investigate private turn-based online transport and finish P3 result feel in parallel.
+**Next concrete build:** owner performs real-device testing of the new touch controls and reports concrete defects. Then, in order: (1) legal-break test and re-rack choice inside the P7 ruleset, (2) last-shot replay once event recording is validated, (3) an interactive first-match coach, (4) named rival personalities. Also: Verify all five authored skills on real touch devices, refine the first mastery celebration, and consider any hall locks only after device acceptance. Investigate private turn-based online transport and finish P3 result feel in parallel.

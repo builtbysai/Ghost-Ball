@@ -25,7 +25,7 @@ const newMatchId=()=>globalThis.crypto?.randomUUID?.()||
 let matchEventId=null,drillEventId=null,lockerSelected='house',newlyEarnedCueCount=0;
 let room=clamp(progress.selectedRoom,0,halls.length-1),mode='match',rival='rookie',spin={x:0,y:0},angle=0,power=.50;
 let current=null,active='lobby',motion=true,placement=null,pointerMode=null,placeGesture=null;
-let settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',rules='casual',calledPocket=null;
+let settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',rules='casual',calledPocket=null,guideMode='full',wheelFine=false,clockSeconds=45;
 let matchElapsed=0,lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let previousShotAngles=[0,0],toastTimeout=null;
@@ -181,10 +181,17 @@ function applyRoom(){const h=halls[room];ambient.setHall(room);table.setHall(roo
   if(current)setText('roundLabel',h.name.toUpperCase());
 }
 function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
-function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';$('ruleset').closest('.setting').hidden=mode==='practice';syncRules();show('backdrop');show('setupSheet');$('closeSetup').focus();}
+function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice';$('clockSetting').closest('.setting').hidden=mode==='practice';syncClock();$('ruleset').closest('.setting').hidden=mode==='practice';syncRules();show('backdrop');show('setupSheet');$('closeSetup').focus();}
 function closeSetup(){const wasOpen=!$('setupSheet').hidden;hide('setupSheet');if($('settingsSheet').hidden)hide('backdrop');if(wasOpen)$('openSetup').focus();}
 function syncRules(){
  all('#ruleset [data-rules]').forEach(b=>{b.classList.toggle('selected',b.dataset.rules===rules);b.setAttribute('aria-pressed',String(b.dataset.rules===rules));});
+}
+function syncGuideMode(){
+ all('[data-guide-mode]').forEach(b=>{const on=b.dataset.guideMode===guideMode;b.setAttribute('aria-pressed',String(on));b.classList.toggle('selected',on);});
+ all('[data-wheel]').forEach(b=>{const on=(b.dataset.wheel==='fine')===wheelFine;b.setAttribute('aria-pressed',String(on));b.classList.toggle('selected',on);});
+}
+function syncClock(){
+ all('#clockSetting [data-clock]').forEach(b=>{const on=Number(b.dataset.clock)===clockSeconds;b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
 }
 function syncAimMode(){
  all('[data-aim-mode]').forEach(b=>{const pressed=b.dataset.aimMode===aimMode;b.setAttribute('aria-pressed',String(pressed));b.classList.toggle('selected',pressed);});
@@ -193,7 +200,7 @@ function syncPowerSide(){
  $('gameScreen').classList.toggle('power-right',powerSide==='right');
  all('[data-power-side]').forEach(b=>{const pressed=b.dataset.powerSide===powerSide;b.setAttribute('aria-pressed',String(pressed));b.classList.toggle('selected',pressed);});
 }
-function openSettings(){syncPowerSide();syncAimMode();settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('motionToggle').checked=motion;$('closeSettings').focus();}
+function openSettings(){syncPowerSide();syncAimMode();syncGuideMode();settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('motionToggle').checked=motion;$('closeSettings').focus();}
 function closeSettings(){if($('settingsSheet').hidden)return;hide('settingsSheet');hide('backdrop');if(settingsOrigin==='menu'&&active==='lobby'){show('clubMenu');$('menuSettings').focus();}else if(active==='paused')$('pauseSettings').focus();else if(active==='lobby')$('menuBtn').focus();}
 function ensureLockerCards(){
  if($('lockerGrid').children.length)return;
@@ -348,6 +355,21 @@ function closeChallenges(){
  if($('challengeSheet').hidden)return;
  hide('challengeSheet');show('clubMenu');$('menuChallenges').focus();
 }
+let guideOrigin='menu';
+function selectGuideTab(name,focus=false){
+ all('[data-guide-tab]').forEach(tab=>{const on=tab.dataset.guideTab===name;tab.setAttribute('aria-selected',String(on));tab.tabIndex=on?0:-1;if(on&&focus)tab.focus();});
+ all('[data-guide-panel]').forEach(panel=>{panel.hidden=panel.dataset.guidePanel!==name;});
+ $('guideSheet').querySelector('.guide-body').scrollTop=0;
+}
+function openGuide(origin){
+ guideOrigin=origin;hide('clubMenu');hide('pauseMenu');selectGuideTab('controls');show('guideSheet');$('closeGuide').focus();
+}
+function closeGuide(){
+ if($('guideSheet').hidden)return;
+ hide('guideSheet');
+ if(guideOrigin==='pause'){show('pauseMenu');$('pauseGuide').focus();}
+ else{show('clubMenu');$('menuGuide').focus();}
+}
 function openMenu(){show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){setText('matchSummary',mode==='practice'?'Open practice table':(rival==='local'?'8-Ball · Two players':`8-Ball vs ${rival==='rookie'?'Rookie':'Club Pro'}`)+(rules==='call8'?' · Call the 8':''));
   setText('playSubtitle',mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':'CASUAL 8-BALL · NO ENTRY FEE');
@@ -383,6 +405,16 @@ function ballSlots(container,player){
  container.replaceChildren(...slots,last);
  container.setAttribute('role','list');
  container.setAttribute('aria-label',group?`${group}: ${models.filter(b=>!b.pocketed).length} balls remaining${eight.state==='active'?', on the 8':''}`:'Open table. Groups are not assigned yet.');
+}
+/** Honest per-seat numbers from the referee log: balls potted and fouls committed. */
+function seatStats(history,seat){
+ let potted=0,fouls=0;
+ for(const entry of history){
+  if(entry?.kind!=='ruling'||entry.shooter!==seat)continue;
+  potted+=(entry.potRecords||[]).filter(p=>p.id>0&&p.id!==8).length;
+  if(entry.result==='foul')fouls++;
+ }
+ return {potted,fouls};
 }
 function turnUI(){if(!current)return;
  const ai=current.isAI(),busy=current.sim.moving,drill=current.kind==='drill',practice=current.kind==='practice'||drill;
@@ -428,11 +460,12 @@ function turnUI(){if(!current)return;
         'no-bank':'NO CUSHION BANK · TRY AGAIN'})[current.history.at(-1)?.reason]||'RESET AND TRY AGAIN');
    }else
   setText('matchResultDetail',practice?`${current.shots} ${current.shots===1?'SHOT':'SHOTS'} THIS SESSION`:
-     `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · ${resultKind==='clean'?'CLEAN 8-BALL':'FOUL ON THE 8'}`+
+     `${current.shots} ${current.shots===1?'SHOT':'SHOTS'} · `+(current.players==='local'?'':(()=>{const s=seatStats(current.history,0);return `YOU POTTED ${s.potted} · ${s.fouls} ${s.fouls===1?'FOUL':'FOULS'} · `;})())+`${resultKind==='clean'?'CLEAN 8-BALL':resultKind==='foul'&&current.history.at(-1)?.reason==='wrong-pocket'?'WRONG POCKET':'FOUL ON THE 8'}`+
      (newlyEarnedCueCount?` · ${newlyEarnedCueCount} ${newlyEarnedCueCount===1?'CUE':'CUES'} EARNED`:''));
  }
- const seconds=Math.ceil(current.shotRemaining);const timed=current.kind==='match'&&!current.over;
- const pct=timed?`${Math.max(0,current.shotRemaining/45)*100}%`:'100%';
+ const seconds=Math.ceil(current.shotRemaining);
+ const timed=current.kind==='match'&&!current.over&&current.shotClockSeconds>0;
+ const pct=timed?`${Math.max(0,current.shotRemaining/current.shotClockSeconds)*100}%`:'100%';
  const clockLive=timed&&!current.ballInHand&&!busy;
  for(const [i,id,clock] of [[0,'oneCard','clockOne'],[1,'twoCard','clockTwo']]){
   $(id).style.setProperty('--turn-progress',current.turn===i?pct:'100%');
@@ -471,7 +504,7 @@ function begin(kind,drillId=null){
  lastScoreSignature='';newlyEarnedCueCount=0;matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();calledPocket=null;placeGesture=null;$('collectedBalls').replaceChildren();hide('clubMenu');hide('challengeSheet');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=kind==='drill'?skillDrillById(drillId).referenceAngle:0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  calledPocket=null;
- current=new Game({kind,drillId,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',callEight:rules==='call8',notify,onPocket:animatePocket,onTurn:matchTurn});
+ current=new Game({kind,drillId,players:rival==='local'?'local':'cpu',difficulty:rival==='club'?'club':'rookie',callEight:rules==='call8',shotClock:clockSeconds,notify,onPocket:animatePocket,onTurn:matchTurn});
  matchEventId=kind==='match'?newMatchId():null;
  drillEventId=kind==='drill'?newMatchId():null;
  if(kind==='attract'){current.turn=0;notify('An exhibition between our house rivals.');}
@@ -549,7 +582,7 @@ function animatePocket(event){
 let lastTickSecond=-1;
 // The human's own clock ticks audibly through its last five seconds.
 function tickShotClock(){
- const live=current.kind==='match'&&!current.over&&current.turn===0&&!current.isAI()&&
+ const live=current.kind==='match'&&current.shotClockSeconds>0&&!current.over&&current.turn===0&&!current.isAI()&&
   !current.ballInHand&&!current.sim.moving;
  const left=Math.ceil(current.shotRemaining);
  if(!live||left>5||left<1){lastTickSecond=-1;return;}
@@ -752,6 +785,8 @@ function onPull(amount){
  else setText('powerValue','PULL ↓');
 }
 function setPower(n){power=clamp(Number(n)/100,.08,1);setText('powerValue',`${Math.round(power*100)}%`);}
+$('menuGuide').onclick=()=>openGuide('menu');$('pauseGuide').onclick=()=>openGuide('pause');$('closeGuide').onclick=closeGuide;
+all('[data-guide-tab]').forEach(tab=>tab.onclick=()=>selectGuideTab(tab.dataset.guideTab));
 $('menuBtn').onclick=openMenu;$('closeMenu').onclick=()=>hide('clubMenu');
 $('menuPractice').onclick=()=>begin('practice');$('menuSettings').onclick=openSettings;
 $('menuChallenges').onclick=openChallenges;$('closeChallenges').onclick=closeChallenges;
@@ -780,6 +815,9 @@ $('cancelRecordReset').onclick=()=>{
 };
 $('confirmRecordReset').onclick=confirmLocalReset;
  all('[data-power-side]').forEach(b=>b.onclick=()=>{powerSide=b.dataset.powerSide;savePreference('ghostball-power-side',powerSide);syncPowerSide();});
+all('[data-guide-mode]').forEach(b=>b.onclick=()=>{guideMode=b.dataset.guideMode;savePreference('ghostball-guide',guideMode);syncGuideMode();});
+all('[data-wheel]').forEach(b=>b.onclick=()=>{wheelFine=b.dataset.wheel==='fine';savePreference('ghostball-wheel',wheelFine?'fine':'normal');syncGuideMode();});
+all('#clockSetting [data-clock]').forEach(b=>b.onclick=()=>{clockSeconds=Number(b.dataset.clock);savePreference('ghostball-clock',String(clockSeconds));syncClock();});
 all('[data-aim-mode]').forEach(b=>b.onclick=()=>{aimMode=b.dataset.aimMode;savePreference('ghostball-aim-mode',aimMode);syncAimMode();});
 $('soundToggle').onchange=event=>setSound(event.target.checked);
 $('muteButton').onclick=event=>{setSound(!audio.enabled);if(event.detail)$('gameCanvas').focus({preventScroll:true});};
@@ -803,7 +841,7 @@ const powerControl=bindPower({
  onCancel:()=>{setPower(50);}
 });
 bindAimWheel({element:$('aimWheel'),canAim:()=>Boolean(canAct()),getAngle:()=>angle,
- setAngle:n=>{angle=n;syncAim();},
+ setAngle:n=>{angle=n;syncAim();},getSensitivity:()=>wheelFine?.0022:.004,
  onReset:()=>{angle=previousShotAngles[current?.turn||0]||0;syncAim();
   notify('Aim restored to the previous shot direction.');}});
 function syncSpin(){
@@ -945,6 +983,20 @@ function cancelTablePointer(e){
 $('gameCanvas').addEventListener('pointercancel',cancelTablePointer);
 $('gameCanvas').addEventListener('lostpointercapture',cancelTablePointer);
 window.addEventListener('keydown',e=>{
+  if(!$('guideSheet').hidden){
+   if(e.key==='Escape'){e.preventDefault();closeGuide();return;}
+   const tabs=[...$('guideSheet').querySelectorAll('[data-guide-tab]')],index=tabs.findIndex(t=>t===document.activeElement);
+   if(index>=0&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){
+    e.preventDefault();selectGuideTab(tabs[(index+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length].dataset.guideTab,true);return;
+   }
+   if(e.key==='Tab'){
+    const focusable=[...$('guideSheet').querySelectorAll('button:not([tabindex="-1"]),[tabindex="0"]')].filter(el=>el.offsetParent!==null);
+    const first=focusable[0],last=focusable.at(-1);
+    if(e.shiftKey&&document.activeElement===first){last.focus();e.preventDefault();}
+    else if(!e.shiftKey&&document.activeElement===last){first.focus();e.preventDefault();}
+   }
+   return;
+  }
   if(!$('challengeSheet').hidden){
    if(e.key==='Escape'){e.preventDefault();closeChallenges();return;}
    if(e.key==='Tab'){
@@ -1022,8 +1074,8 @@ window.addEventListener('keyup',e=>{
 window.addEventListener('blur',cancelKeyPull);
 window.addEventListener('pagehide',()=>audio.suspend());
  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelKeyPull();audio.suspend();}else audio.resume();});
- try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';const savedAim=localStorage.getItem('ghostball-aim-mode');if(AIM_MODES.includes(savedAim))aimMode=savedAim;rules=localStorage.getItem('ghostball-rules')==='call8'?'call8':'casual';}catch{}
- syncPowerSide();syncAimMode();syncRules();syncMute();syncAim();
+ try{audio.enabled=localStorage.getItem('ghostball-sound')!=='off';motion=localStorage.getItem('ghostball-motion')!=='off';powerSide=localStorage.getItem('ghostball-power-side')==='right'?'right':'left';const savedAim=localStorage.getItem('ghostball-aim-mode');if(AIM_MODES.includes(savedAim))aimMode=savedAim;rules=localStorage.getItem('ghostball-rules')==='call8'?'call8':'casual';const g=localStorage.getItem('ghostball-guide');if(['full','short','off'].includes(g))guideMode=g;wheelFine=localStorage.getItem('ghostball-wheel')==='fine';clockSeconds=localStorage.getItem('ghostball-clock')==='0'?0:45;}catch{}
+ syncPowerSide();syncAimMode();syncGuideMode();syncClock();syncRules();syncMute();syncAim();
 syncSpin();syncEquippedCue();
 applyRoom();refreshMenu();hide('gameScreen');
 let previous=performance.now(),acc=0,uiTimer=0;
@@ -1043,7 +1095,7 @@ function frame(now){requestAnimationFrame(frame);let elapsed=Math.min((now-previ
    const cpuPose=g.isAI()?g.presentedCue:null;
    const zone=active==='game'&&!g.over&&!g.sim.moving&&!g.isAI()
      ?g.ballInHand?(g.kitchen?'break':'all'):pointerMode==='break-place'?'break':null:null;
-    const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over&&!g.ballInHand&&pointerMode!=='break-place',aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike,marker:liveMarker(now)},placement,placementZone:zone,fx:motion?g.fx:[],callPocket:g.callEight&&g.group==='eight'?(g.isAI()?(g.previewShot?.pocket??null):calledPocket):null};
+    const frame={interactive:(!g.isAI()||!!cpuPose)&&!g.over&&!g.ballInHand&&pointerMode!=='break-place',aim:cpuPose||{angle,power,spin,drawback:pullProgress,strike,marker:liveMarker(now),guideMode},placement,placementZone:zone,fx:motion?g.fx:[],callPocket:g.callEight&&g.group==='eight'?(g.isAI()?(g.previewShot?.pocket??null):calledPocket):null};
    table.draw(g.sim,frame);uiTimer+=elapsed;if(uiTimer>.2){turnUI();uiTimer=0;}}
 }
 requestAnimationFrame(frame);

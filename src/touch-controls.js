@@ -115,7 +115,7 @@ export function bindPower({track,handle,canShoot,onPower,onShoot,onPull=()=>{},o
    else return;e.preventDefault();});
  return {reset:()=>{track.classList.remove('held','releasing');draw(0);},setProgress:p=>draw(p),isDragging:()=>pointer!==null,getProgress:()=>current};
 }
-export function bindAimWheel({element,canAim,getAngle,setAngle,onReset=()=>{}}){
+export function bindAimWheel({element,canAim,getAngle,setAngle,onReset=()=>{},getSensitivity=()=>.004}){
  let pointer=null,lastY=0,travel=0,lastTap=0;
  const axis=e=>typeof window!=='undefined'&&window.matchMedia('(orientation:portrait) and (max-width:820px)').matches?-e.clientX:e.clientY;
  element.addEventListener('pointerdown',e=>{
@@ -130,7 +130,7 @@ export function bindAimWheel({element,canAim,getAngle,setAngle,onReset=()=>{}}){
  element.addEventListener('pointermove',e=>{
   if(e.pointerId!==pointer)return;
   const delta=axis(e)-lastY;travel+=Math.abs(delta);
-  setAngle(wheelAngle(getAngle(),delta));lastY=axis(e);e.preventDefault();
+  setAngle(wheelAngle(getAngle(),delta,getSensitivity()));lastY=axis(e);e.preventDefault();
  });
  function stop(e,cancel=false){
   if(e.pointerId!==pointer)return;
@@ -140,7 +140,7 @@ export function bindAimWheel({element,canAim,getAngle,setAngle,onReset=()=>{}}){
  element.addEventListener('pointerup',e=>stop(e));
  element.addEventListener('pointercancel',e=>stop(e,true));
  element.addEventListener('lostpointercapture',()=>{pointer=null;});
- element.addEventListener('wheel',e=>{if(!canAim())return;lastTap=0;setAngle(wheelAngle(getAngle(),e.deltaY*.45));e.preventDefault();},{passive:false});
+ element.addEventListener('wheel',e=>{if(!canAim())return;lastTap=0;setAngle(wheelAngle(getAngle(),e.deltaY*.45,getSensitivity()));e.preventDefault();},{passive:false});
  element.addEventListener('keydown',e=>{
   if(!canAim())return;
   // Same direction as the window-level keys: left turns the aim counter-clockwise.

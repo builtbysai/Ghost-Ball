@@ -11,8 +11,11 @@ export const AI_PLACEMENT_PAUSE=1.1;
 export const HEAD_STRING=265;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 export class Game {
- constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),drillId=null,callEight=false,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
-  this.callEight=Boolean(callEight)&&kind==='match';this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;
+ constructor({kind='attract',players='cpu',difficulty='rookie',seed=Date.now(),drillId=null,callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
+  this.callEight=Boolean(callEight)&&kind==='match';
+  // 0 turns the shot clock off (relaxed games); any positive value is whole seconds per shot.
+  this.shotClockSeconds=Number.isFinite(shotClock)&&shotClock>0?Math.round(shotClock):0;
+  this.kind=kind;this.players=players;this.difficulty=difficulty;this.notify=notify;this.human=0;
    if(kind==='drill'&&!skillDrillById(drillId))throw new RangeError('Unknown skill drill');
    this.drillId=kind==='drill'?drillId:null;
   this.onPocket=onPocket;this.onTurn=onTurn;this.random=createRandom(seed);this.seed=seed;this.history=[];this.reset();}
@@ -22,7 +25,7 @@ export class Game {
    this.foul=false;this.ballInHand=false;this.kitchen=false;this.over=false;this.winner=null;
    this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;this.drillOutcome=null;
   this.history=[];this.previewShot=null;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.activeStroke=null;
-  this.shotRemaining=SHOT_CLOCK_SECONDS;this.shotClockKey='';this.dryTurns=[0,0];
+  this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';this.dryTurns=[0,0];
   this.notify('A fresh rack. Take your time.');}
  get group(){const group=this.groups[this.turn];if(!group)return 'open';return this.sim.balls.some(b=>!b.pocketed&&(group==='solids'?b.id<8&&b.id>0:b.id>8))?group:'eight';}
  isAI(){return this.kind==='attract'||(this.players==='cpu'&&this.turn===1);}
@@ -58,7 +61,7 @@ export class Game {
    // seat becomes CPU-controlled again later in the same rack.
    this.previewShot=null;this.planIterator=null;this.planningPose=null;
    this.planSettledAt=0;
-   this.timer=0;this.shotRemaining=SHOT_CLOCK_SECONDS;this.shotClockKey='';
+   this.timer=0;this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';
    this.notify(`Shot clock expired. Player ${this.turn+1} has ball in hand.`);
    this.onTurn({type:'foul',reason:'shot-clock',turn:this.turn,offender});
    return true;
@@ -151,9 +154,9 @@ export class Game {
      }
    }
    // The rule is owned by Game, not by a decorative HUD counter.
-   if(this.kind==='match'&&!this.over&&!this.sim.moving&&!this.ballInHand){
+   if(this.kind==='match'&&this.shotClockSeconds>0&&!this.over&&!this.sim.moving&&!this.ballInHand){
      const key=`${this.turn}:${this.shots}:${this.break}`;
-     if(key!==this.shotClockKey){this.shotClockKey=key;this.shotRemaining=SHOT_CLOCK_SECONDS;}
+     if(key!==this.shotClockKey){this.shotClockKey=key;this.shotRemaining=this.shotClockSeconds;}
      else if(this.shotRemaining>0){
        this.shotRemaining=Math.max(0,this.shotRemaining-dt);
        if(this.shotRemaining===0)this.expireShotClock();

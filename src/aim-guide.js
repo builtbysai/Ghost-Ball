@@ -23,14 +23,14 @@ function firstBallDistance(origin,dx,dy,balls,excluded,radius){
  return {distance:closest,target};
 }
 /** First-contact aim assist for the current layout. No spin, throw or cushion prediction. */
-export function projectAim(balls,cue,angle,{maxObjectLength=150}={}){
+export function projectAim(balls,cue,angle,{maxObjectLength=150,maxCueLength=1300}={}){
  if(!cue||cue.pocketed||!Number.isFinite(angle))return null;
  const r=TABLE.radius,dx=Math.cos(angle),dy=Math.sin(angle);
  const wall=firstWallDistance(cue.x,cue.y,dx,dy,r);
  const collision=firstBallDistance(cue,dx,dy,balls,[0],r);
- const distance=Math.max(0,Math.min(1300,wall,collision.distance));
+ const distance=Math.max(0,Math.min(maxCueLength,wall,collision.distance));
  const cueEnd={x:cue.x+dx*distance,y:cue.y+dy*distance};
- if(!collision.target||collision.distance>wall)return {cueEnd,ghost:null,target:null,objectEnd:null};
+ if(!collision.target||collision.distance>wall||collision.distance>maxCueLength)return {cueEnd,ghost:null,target:null,objectEnd:null};
  const target=collision.target;
  const ox=(target.x-cueEnd.x)/(r*2),oy=(target.y-cueEnd.y)/(r*2);
  const normalization=Math.hypot(ox,oy);
