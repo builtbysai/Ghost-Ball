@@ -42,7 +42,7 @@ window.__ghostTest={
     return url
 def html_source():
     doc=(root/'index.html').read_text()
-    for name in ['style.css','landscape.css','transition.css','feel.css','polish.css','responsive-ui.css']:
+    for name in ['style.css','landscape.css','transition.css','feel.css','polish.css','responsive-ui.css','match-ui.css']:
         doc=re.sub(fr'<link rel="stylesheet" href="src/{re.escape(name)}(?:\?[^"]*)?">',
                    f'<style>{(root/"src"/name).read_text()}</style>',doc)
     doc=doc.replace('<link rel="manifest" href="manifest.webmanifest">','')
@@ -64,7 +64,9 @@ with sync_playwright() as p:
         assert page.locator('#gameScreen').is_visible(), 'match failed to load'
         foul=page.evaluate('window.__ghostTest.simulateFoul()')
         assert foul=={'worked':True,'turn':0,'ballInHand':True},foul
-        assert page.locator('#tableToast').is_visible(),'foul event toast missing'
+        assert page.locator('#turnBanner').is_visible(),'foul turn banner missing'
+        assert 'BALL IN HAND' in page.locator('#turnBannerKicker').inner_text(),'banner must say who has ball in hand'
+        assert 'ball in hand' in page.locator('#turnRecap').inner_text().lower(),'persistent recap missing'
         assert page.locator('#guideBadge').is_hidden(),'temporary foul cue must not overlap the placement hint'
         assert page.locator('#placementTools').is_visible(),'ball-in-hand tools absent'
         assert page.locator('#spinButton').is_hidden(),'spin controls must give way to placement'
@@ -77,8 +79,9 @@ with sync_playwright() as p:
         suggestion=state['placement']['suggestion']
         assert suggestion and suggestion['distance']<=48, 'nearby legal landing preview absent'
         page.screenshot(path=str(root/'screenshots'/f'foul-placement-{width}x{height}.png'))
-        page.wait_for_timeout(1800)
-        assert page.locator('#tableToast').is_hidden(),'temporary foul cue did not dismiss'
+        page.wait_for_timeout(3100)
+        assert page.locator('#turnBanner').is_hidden(),'temporary foul banner did not dismiss'
+        assert page.locator('#turnRecap').is_visible(),'the recap must outlive the banner'
         assert page.locator('#guideBadge').is_visible(),'placement hint did not return'
         page.screenshot(path=str(root/'screenshots'/f'placement-hint-{width}x{height}.png'))
         page.mouse.up()

@@ -77,6 +77,8 @@
  90%{opacity:1;transform:translate(-50%,0) scale(1)}
  100%{opacity:0;transform:translate(-50%,-6px) scale(.98)}
 }
+/* A banner owns the top of the table while it shows; the placement hint waits. */
+#gameScreen .table-play-area:has(.turn-banner:not([hidden])) .guide-badge{display:none!important}
 #gameScreen .table-toast[data-kind="hint"]{background:#10283eef;border-color:#b9d8ef99;color:#e8f4ff;max-width:min(94%,520px);letter-spacing:.05em}
 
 /* --- ball trays: neutral open state, real groups, a home for the 8 ----- */

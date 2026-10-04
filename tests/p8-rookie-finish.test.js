@@ -45,3 +45,12 @@ test('stalled turns widen Rookie\'s search without changing its legality guarant
  assert.ok(Number.isFinite(plan.angle)&&Number.isFinite(plan.power));
  assert.notEqual(plan.plan,'none');
 });
+
+test('look-ahead treats sinking the 8 without hitting it first as a lost rack',()=>{
+ // The 13 sits between the cue ball and the 8, which is lined up on a pocket.
+ const sim=new Simulation([makeBall(0,300,250),makeBall(13,400,250),makeBall(8,560,250)]);
+ const verdict=assessShot(sim,{angle:0,power:.9,cost:0,target:8,pocket:-1},'eight',{maxSteps:1440});
+ assert.equal(verdict.legalFirst,false);
+ assert.equal(verdict.foul,true);
+ if(verdict.first!==8)assert.ok(verdict.score<0);
+});

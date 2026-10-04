@@ -37,7 +37,7 @@ window.__ghostRules={
 
 def html_source():
     doc=(root/'index.html').read_text()
-    for name in ['style.css','landscape.css','transition.css','feel.css','polish.css','responsive-ui.css']:
+    for name in ['style.css','landscape.css','transition.css','feel.css','polish.css','responsive-ui.css','match-ui.css']:
         doc=re.sub(fr'<link rel="stylesheet" href="src/{re.escape(name)}(?:\?[^"]*)?">',
                f'<style>{(root/"src"/name).read_text()}</style>',doc)
     doc=doc.replace('<link rel="manifest" href="manifest.webmanifest">','')
@@ -63,7 +63,8 @@ with sync_playwright() as p:
         assert wrong['last']['reason']=='wrong-ball-first'
         assert page.locator('#turnLabel').inner_text()=='P2 PLACING'
         assert page.locator('#turnLabel').evaluate('(el)=>el.scrollWidth<=el.clientWidth+2'), 'pass-and-play turn truncated'
-        assert 'WRONG BALL' in page.locator('#tableToast').inner_text()
+        assert 'WRONG BALL' in page.locator('#turnBannerKicker').inner_text()
+        assert 'wrong ball first' in page.locator('#turnRecap').inner_text().lower()
         assert page.locator('#placementTools').is_visible()
         page.screenshot(path=str(root/'screenshots'/f'p2-foul-{width}x{height}.png'))
         assignment=page.evaluate("""window.__ghostRules.stage(

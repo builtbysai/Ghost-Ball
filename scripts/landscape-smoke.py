@@ -19,7 +19,7 @@ def module_data(name, cache=None):
 
 def html_source():
     doc = (root / 'index.html').read_text()
-    for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css', 'responsive-ui.css', 'cue-locker.css', 'local-record.css', 'skill-drills.css']:
+    for name in ['style.css', 'landscape.css', 'transition.css', 'feel.css', 'polish.css', 'responsive-ui.css', 'match-ui.css', 'cue-locker.css', 'local-record.css', 'skill-drills.css']:
         doc = re.sub(fr'<link rel="stylesheet" href="src/{re.escape(name)}(?:\?[^"]*)?">',
                      f'<style>{(root / "src" / name).read_text()}</style>', doc)
     doc = doc.replace('<link rel="manifest" href="manifest.webmanifest">', '')
@@ -164,8 +164,13 @@ with sync_playwright() as p:
         for card,token,slots in [('#oneCard','#oneCard .player-token','#ballsOne'),('#twoCard','#twoCard .player-token','#ballsTwo')]:
             separate(page.locator(token).bounding_box(),page.locator(slots).bounding_box(),f'{width}x{height}: {card} token/balls')
             within(page.locator(slots).bounding_box(),page.locator(card).bounding_box(),f'{width}x{height}: {card} slots')
-        assert page.locator('#ballsOne .ball-number').all_text_contents()==['1','2','3','4','5','6','7']
-        assert page.locator('#ballsTwo .ball-number').all_text_contents()==['9','10','11','12','13','14','15']
+        # Open table: neutral ghost slots only (no numbered sample balls) plus the 8-ball slot.
+        for tray in ('#ballsOne','#ballsTwo'):
+            assert page.locator(f'{tray} .ball-slot.ghost').count()==7, f'{tray}: open table must show 7 ghost slots'
+            assert page.locator(f'{tray} .ball-number').all_text_contents()==['8'], f'{tray}: only the 8 slot is numbered while open'
+            assert page.locator(f'{tray} .eight-slot').get_attribute('data-state')=='inactive'
+        assert page.locator('#shotClock').is_visible(), 'the shot clock is the prominent timer'
+        assert page.locator('#muteButton').is_visible(), 'in-match mute control missing'
         page.screenshot(path=str((root / 'screenshots' / f'match-{width}x{height}.png').resolve()))
         page.locator('#pauseButton').click()
         assert page.locator('#pauseMenu').is_visible(), 'pause panel missing'

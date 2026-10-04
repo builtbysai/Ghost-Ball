@@ -83,7 +83,7 @@ function* simulateAssessment(sim,candidate,group='open',{maxSteps=960}={}){
  if(!predicted.strike(candidate.angle,candidate.power)){
    return {score:-Infinity,targetPocket:false,legalFirst:false,scratch:false,complete:false};
  }
- let targetPocket=false,targetWrongPocket=false,scratch=false,earlyEight=false,own=0;
+ let targetPocket=false,targetWrongPocket=false,scratch=false,earlyEight=false,own=0,eightDown=false;
  let first=null,railAfterContact=false,complete=false,anyPocket=false;
  const visited=new Set();
  for(let step=0;step<maxSteps;step++){
@@ -96,6 +96,7 @@ function* simulateAssessment(sim,candidate,group='open',{maxSteps=960}={}){
    visited.add(event.id);anyPocket=true;
    if(event.id===0)scratch=true;
    else if(event.id===8&&group!=='eight')earlyEight=true;
+   else if(event.id===8)eightDown=true;
    else if(event.id===candidate.target){
     if(event.pocket===candidate.pocket)targetPocket=true;
     else targetWrongPocket=true;
@@ -105,6 +106,8 @@ function* simulateAssessment(sim,candidate,group='open',{maxSteps=960}={}){
   yield; // cooperative browser scheduling without wall-clock-dependent decisions
  }
  const legalFirst=first!==null&&groupContains(first,group);
+ // Sinking the 8 without hitting it first, or with the cue ball, loses the rack.
+ if(eightDown&&(first!==8||scratch))earlyEight=true;
  const foul=scratch||earlyEight||!legalFirst||
    (complete&&!anyPocket&&!railAfterContact);
  const made=legalFirst&&targetPocket&&!foul;
@@ -217,6 +220,12 @@ function* safetyPlan(sim,group,random,targets,{maxOptions=2,maxSteps=1440,budget
   }
   if(!legacy&&safest&&safest.verdict.complete&&!safest.verdict.foul)break;
   if(spent>=budget)break;
+ }
+ if(legacy&&safest&&(safest.verdict.foul||!safest.verdict.complete)){
+  // Club Pro's original three strokes found nothing legal: widen to the
+  // same bounded search Rookie uses rather than play a known foul.
+  const wider=yield* safetyPlan(sim,group,random,targets,{maxOptions,maxSteps,budget});
+  if(wider&&wider.predictedLegal&&!wider.predictedEarlyEight)return wider;
  }
  if(!safest)return null;
  const {plan,verdict}=safest;
