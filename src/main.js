@@ -10,6 +10,7 @@ import {projectAim} from './aim-guide.js';
 import {flyTable} from './table-transition.js';
 import {cueGeometry,tensionStage} from './cue-feel.js';
 import {PERSONAS,PERSONA_ORDER,personaFor,exhibitionPair} from './ai-personas.js';
+import {TRICK_LABELS} from './trick-shots.js';
 import {cuePlacementDraft,initialCuePlacement} from './placement-guide.js';
 import {CUES,cueUnlocked,cueById,equippedCue,equipCue,toggleFavorite,paintCuePreview} from './cue-catalog.js';
 import {readLocalProgress,writeLocalProgress,recordLiveMatch,bestLegalRun,chooseRoom,
@@ -126,6 +127,7 @@ function setRecap(text,tone=''){
 }
 function matchTurn(event){
  if(active!=='game')return;
+ if(event.type==='trick'){tableToast(`${TRICK_LABELS[event.kind]||'TRICK SHOT'} · ${seatName(event.seat).toUpperCase()}`,'turn',2200);return;}
  if(event.type==='rerack'){
   // The referee re-racked: the same balls glide back into a fresh triangle.
   finishRackFlock();startRackFlock(event.before);calledPocket=null;lastScoreSignature='';clearTableToast();clearTurnBanner();
@@ -322,8 +324,8 @@ function syncPowerSide(){
  $('gameScreen').classList.toggle('power-right',powerSide==='right');
  all('[data-power-side]').forEach(b=>{const pressed=b.dataset.powerSide===powerSide;b.setAttribute('aria-pressed',String(pressed));b.classList.toggle('selected',pressed);});
 }
-function openSettings(){syncTableView();syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('musicToggle').checked=audio.musicOn;$('motionToggle').checked=motion;$('closeSettings').focus();}
-function closeSettings(){if($('settingsSheet').hidden)return;hide('settingsSheet');hide('backdrop');if(settingsOrigin==='menu'&&active==='lobby'){show('clubMenu');$('menuSettings').focus();}else if(active==='paused')$('pauseSettings').focus();else if(active==='lobby')$('menuBtn').focus();}
+function openSettings(){syncTableView();syncPowerSide();syncAimMode();syncGuideMode();syncSpinKeep();settingsOrigin=active==='paused'?'pause':!$('clubMenu').hidden?'menu':'lobby';hide('clubMenu');hide('setupSheet');if(settingsOrigin==='pause')$('pauseMenu').inert=true;show('backdrop');show('settingsSheet');$('soundToggle').checked=audio.enabled;$('musicToggle').checked=audio.musicOn;$('motionToggle').checked=motion;$('closeSettings').focus();}
+function closeSettings(){if($('settingsSheet').hidden)return;$('pauseMenu').inert=false;hide('settingsSheet');hide('backdrop');if(settingsOrigin==='menu'&&active==='lobby'){show('clubMenu');$('menuSettings').focus();}else if(active==='paused')$('pauseSettings').focus();else if(active==='lobby')$('menuBtn').focus();}
 function ensureLockerCards(){
  if($('lockerGrid').children.length)return;
  for(const cue of CUES){
@@ -451,14 +453,17 @@ function showRecord(){
  $('resetRecord').disabled=!progressAccess.writable;
  $('recordConfirm').hidden=true;$('resetRecord').hidden=false;
 }
-function openRecord(){
- if($('settingsSheet').hidden)return;
- hide('settingsSheet');showRecord();show('recordSheet');$('closeRecord').focus();
+let recordOrigin='settings';
+function openRecord(from='settings'){
+ if(from==='settings'&&$('settingsSheet').hidden)return;
+ recordOrigin=from;
+ hide('settingsSheet');hide('clubMenu');showRecord();show('backdrop');show('recordSheet');$('closeRecord').focus();
 }
 function closeRecord(){
  if($('recordSheet').hidden)return;
  hide('recordSheet');$('recordConfirm').hidden=true;$('resetRecord').hidden=false;
- show('settingsSheet');$('openRecord').focus();
+ if(recordOrigin==='menu'){hide('backdrop');show('clubMenu');$('menuRecord').focus();}
+ else{show('settingsSheet');$('openRecord').focus();}
 }
 function downloadRecord(){
  const contents=exportLocalProgress(progress);
@@ -531,11 +536,12 @@ function closeGuide(){
  if(guideOrigin==='pause'){show('pauseMenu');$('pauseGuide').focus();}
  else{show('clubMenu');$('menuGuide').focus();}
 }
+function closeMenu(){if($('clubMenu').hidden)return;hide('clubMenu');$('menuBtn').focus();}
 function openMenu(){const d=dailySummary(progress);setText('dailySub',d.today!==null?`Cleared in ${d.today} shots today${d.streak>1?` · ${d.streak} days running`:''}`:d.streak>0?`${d.streak} days running · clear today's`:'One rack, the same for everyone today');show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){const ball=gameType==='nine'?'9-Ball':gameType==='ten'?'10-Ball':gameType==='straight'?'Straight pool':gameType==='onepocket'?'One-pocket':'8-Ball';
   const circuitStage=circuitState(progress),circuitPersona=personaFor(CIRCUIT[circuitStage.stage]);
   setText('matchSummary',mode==='circuit'?`Round ${circuitStage.stage+1} of ${CIRCUIT.length} · ${circuitPersona.name}`:mode==='practice'?'Open practice table':(rival==='local'?`${ball} · Two players`:`${ball} vs ${personaFor(rival).name}`)+(gameType==='eight'&&rules!=='casual'?` · ${rules==='official'?'Official':'Call the 8'}`:''));
-  setText('playSubtitle',mode==='circuit'?`${circuitPersona.style.toUpperCase()}${circuitStage.champion?` · CHAMPION ×${circuitStage.champion}`:''}`:mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`CASUAL ${ball.toUpperCase()} · NO ENTRY FEE`);
+  setText('playSubtitle',mode==='circuit'?`${circuitPersona.style.toUpperCase()}${circuitStage.champion?` · CHAMPION ×${circuitStage.champion}`:''}`:mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`${gameType==='eight'&&rules!=='casual'?(rules==='official'?'OFFICIAL':'CALL THE 8'):'CASUAL'} ${ball.toUpperCase()} · NO ENTRY FEE`);
   all('.mode[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));}
 /** One short phrase for how the rack ended, from the referee's own reason. */
 function finishText(reason){
@@ -553,7 +559,7 @@ function circuitNote(){
 // The upright-phone layout already turns the table 90 degrees, where a tilted camera only distorts it, so it stays overhead there.
 const rotatedLayout=()=>window.matchMedia('(orientation:portrait) and (max-width:820px)').matches;
 const elevatedNow=()=>tableView==='elevated'&&!rotatedLayout();
-const applyTableView=()=>{const view=elevatedNow()?'perspective':'flat';if(table.view!==view)table.setView(view);};
+const applyTableView=()=>{const view=elevatedNow()?'perspective':'flat';if(table.view!==view)table.setView(view);$('gameScreen').dataset.view=view;};
 function resize(){applyTableView();ambient.resize();table.resize();}
 let rackFlock=null;
 // Last-shot replay: the pre-stroke table is re-struck on a throwaway game. Physics is
@@ -699,21 +705,20 @@ function turnUI(){if(!current)return;
   $(id).style.setProperty('--turn-progress',current.turn===i?pct:'100%');
  }
  // The 45-second shot clock is THE timer during a turn; elapsed match time is demoted.
+ // One indicator: the ring around the active player's token drains, turns amber at 10 s and red at 5 s, and
+ // the token shows the seconds only once they matter. The numeric clock stays as a screen-reader timer.
  const big=$('shotClock');
  big.hidden=!timed;
- if(timed){
-  setText('shotClock',String(seconds));
-  big.classList.toggle('clock-warning',clockLive&&seconds<=10);
-  big.classList.toggle('is-idle',!clockLive);
-  big.style.setProperty('--clock-progress',pct);
-  big.dataset.owner=current.turn===0?'one':'two';
- }
+ if(timed)setText('shotClock',String(seconds));
+ const urgency=clockLive&&seconds<=5?'late':clockLive&&seconds<=10?'warn':'calm';
+ for(const [i,id] of [[0,'oneCard'],[1,'twoCard']])$(id).dataset.urgency=current.turn===i&&timed?urgency:'calm';
+ const countdown=timed&&clockLive&&seconds<=10?seconds:null;
  $('gameScreen').dataset.timed=String(timed);
  if(current.kind!=='match')setRecap('');
  else $('turnRecap').hidden=!$('turnRecap').textContent;
  // Tokens carry the opponent's initial when the seat is a named CPU, otherwise the seat number.
  const tokenText=seat=>current.players==='ai'?current.personaAt(seat).initial:seat===1&&current.players==='cpu'?current.persona.initial:String(seat+1);
- $('oneCard').querySelector('.player-token').textContent=tokenText(0);$('twoCard').querySelector('.player-token').textContent=tokenText(1);
+ $('oneCard').querySelector('.player-token').textContent=countdown!==null&&current.turn===0?String(countdown):tokenText(0);$('twoCard').querySelector('.player-token').textContent=countdown!==null&&current.turn===1?String(countdown):tokenText(1);
  $('oneCard').classList.toggle('playing',current.turn===0);$('twoCard').classList.toggle('playing',current.turn===1);
  $('replayButton').hidden=!current.lastShot||current.kind==='drill'||current.sim.moving||active!=='game';
  $('replayButton').classList.toggle('on',Boolean(replay));
@@ -744,7 +749,7 @@ function begin(kind,drillId=null){
  const exhibit=kind==='exhibition';if(exhibit)kind='match';
  if(kind==='drill'&&!skillDrillById(drillId))return;
  if(kind==='drill')room=skillDrillById(drillId).room;
- lastScoreSignature='';newlyEarnedCueCount=0;newlyEarnedCueNames=[];matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();calledPocket=null;placeGesture=null;$('collectedBalls').replaceChildren();hide('clubMenu');hide('challengeSheet');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
+ lastScoreSignature='';newlyEarnedCueCount=0;newlyEarnedCueNames=[];matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();calledPocket=null;placeGesture=null;$('flightLayer').replaceChildren();hide('clubMenu');hide('challengeSheet');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=kind==='drill'?skillDrillById(drillId).referenceAngle:0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  calledPocket=null;
  const net=onlineBoot;onlineBoot=null;
@@ -824,32 +829,52 @@ function resetMatch(alternate=false){
  if(current.players==='ai')current.seatPersonas=exhibitionPair(exhibitionIndex++).map(personaFor);const before=cloneBalls(current.sim.balls);finishRackFlock();current.reset(alternate);startRackFlock(before);calledPocket=null;matchEventId=current.kind==='match'&&current.players!=='ai'?newMatchId():null;
  drillEventId=current.kind==='drill'?newMatchId():null;lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();
  setRecap(current.kind==='match'?(current.players==='ai'?`Exhibition: ${current.personaAt(0).name} vs ${current.personaAt(1).name}. ${current.personaAt(current.turn).name} breaks.`:current.players==='local'?`Player ${current.turn+1} breaks.`:current.turn===1?`${seatName(1)} breaks.`:(gameType!=='eight'||rules==='official'?'Your break: hit hard. Pot a ball or drive four to a cushion.':'Your break. Aim, pull the power bar and release.')):'');
- newlyEarnedCueCount=0;$('collectedBalls').replaceChildren();placement=null;placeGesture=null;angle=current.kind==='drill'?skillDrillById(current.drillId).referenceAngle:0;
+ newlyEarnedCueCount=0;$('flightLayer').replaceChildren();placement=null;placeGesture=null;angle=current.kind==='drill'?skillDrillById(current.drillId).referenceAngle:0;
  spin={x:0,y:0};syncAim();syncSpin();
  setPower(50);powerControl.reset();$('powerTrack').classList.remove('impact');turnUI();
 }
 const pocketColors=['#f4f3e9','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d','#191918','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d'];
 const POCKET_DROP_MS=300; // the ball sinks on the table first (see Renderer pocket fx)
+/** A pocketed ball re-emerges from its hole and rolls up a curved path into its owner's tray, so the tray
+ * (not a bar under the table) is where potted balls live. Everything is placed in the canvas's own local frame,
+ * so the rotated phone layout behaves exactly like landscape. */
+function trayTarget(event){
+ const seat=(()=>{
+  if(event.id>0&&event.id!==8&&!current.rotation&&current.ruleset==='eight'){
+   const g=groupOwner(event.id);if(g!==null)return g;
+  }
+  return current.turn;
+ })();
+ const tray=$(seat===0?'ballsOne':'ballsTwo');
+ const slot=[...tray.querySelectorAll('.ball-slot')].find(el=>el.getAttribute('aria-label')?.startsWith(`Ball ${event.id}`))||tray;
+ const r=slot.getBoundingClientRect(),c=localCanvasPoint(r.left+r.width/2,r.top+r.height/2);
+ return {x:c.x,y:c.y,slot,size:Math.max(10,Math.min(r.width,r.height))};
+}
+const groupOwner=id=>{const g=id<8?'solids':'stripes';const seat=current.groups.indexOf(g);return seat===-1?null:seat;};
 function animatePocket(event){
- if(active!=='game'||!current)return;
- const dock=$('collectedBalls'),ball=document.createElement('span');ball.className='return-ball'+(event.id>=9?' striped':'');
- if(event.id)dock.querySelectorAll(`[data-ball="${event.id}"]`).forEach(old=>old.remove()); // a re-spotted 8 never duplicates
- ball.dataset.ball=String(event.id);
- ball.style.setProperty('--ball-color',pocketColors[event.id]);ball.textContent=event.id||'';
- ball.setAttribute('aria-label',event.id?'Ball '+event.id+' pocketed':'Cue ball scratched');dock.append(ball);
- // After the drop the ball comes out of the gate at the far end of the return
- // rail and rolls along it to the next free place. Local layout units only, so
- // the rotated portrait layout behaves the same.
- const rail=$('ballReturn'),travel=Math.max(0,rail.clientWidth-18-(ball.offsetLeft+ball.offsetWidth));
- if(motion&&ball.animate&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
-  const roll=travel/(Math.PI*Math.max(6,ball.offsetWidth))*360;
-  const flight=ball.animate([
-   {transform:`translateX(${travel}px) rotate(${roll}deg) scale(.6)`,opacity:0,offset:0},
-   {transform:`translateX(${travel*.92}px) rotate(${roll*.92}deg) scale(1)`,opacity:1,offset:.1},
-   {transform:'translateX(0) rotate(0deg) scale(1)',opacity:1,offset:1}
-  ],{duration:420+travel*1.15,delay:POCKET_DROP_MS,easing:'cubic-bezier(.25,.75,.3,1)',fill:'backwards'});
-  if(event.id===0)flight.onfinish=()=>ball.remove();
- }else if(event.id===0)ball.remove();
+ if(active!=='game'||!current||event.id===0)return;
+ const layer=$('flightLayer'),[px,py]=table.project(POCKETS[event.pocket][0],POCKETS[event.pocket][1]);
+ const to=trayTarget(event);
+ const ball=document.createElement('span');ball.className='return-ball flight-ball'+(event.id>=9?' striped':'');
+ ball.style.setProperty('--ball-color',pocketColors[event.id]);ball.textContent=String(event.id);
+ const size=Math.max(14,Math.min(26,table.bw/1000*24));ball.style.width=ball.style.height=size+'px';ball.style.fontSize=Math.round(size*.46)+'px';
+ const reduce=!motion||!ball.animate||window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+ if(reduce){to.slot.classList.add('slot-land');setTimeout(()=>to.slot.classList.remove('slot-land'),500);return;}
+ layer.append(ball);
+ // Quadratic path: out of the hole, a graceful arc along the cushion side, then up into the tray.
+ const dx=to.x-px,dy=to.y-py,len=Math.hypot(dx,dy)||1;
+ const bow=Math.min(120,len*.28),cx=(px+to.x)/2-dy/len*bow,cy=(py+to.y)/2+dx/len*bow;
+ const frames=[],steps=18,roll=len/(Math.PI*size)*360*1.15;
+ for(let i=0;i<=steps;i++){
+  const t=i/steps,e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2,u=1-e;
+  const x=u*u*px+2*u*e*cx+e*e*to.x,y=u*u*py+2*u*e*cy+e*e*to.y;
+  const scale=.45+.55*Math.min(1,t*5)-(t>.78?(t-.78)/.22*(1-to.size/size)*.9:0);
+  frames.push({transform:`translate(${x-size/2}px,${y-size/2}px) rotate(${roll*e}deg) scale(${Math.max(.3,scale)})`,opacity:t<.06?t/.06:1,offset:t});
+ }
+ const duration=700+Math.min(500,len*.6);
+ const flight=ball.animate(frames,{duration,delay:POCKET_DROP_MS,easing:'linear',fill:'both'});
+ flight.onfinish=()=>{ball.remove();to.slot.classList.add('slot-land');setTimeout(()=>to.slot.classList.remove('slot-land'),600);audio.play({type:'tray'});};
+ flight.oncancel=()=>ball.remove();
 }
 let lastTickSecond=-1;
 // The human's own clock ticks audibly through its last five seconds.
@@ -963,8 +988,8 @@ function syncAim(){
  setText('aimReadout',shown+'°');
  $('aimWheel').style.setProperty('--wheel-turn',(degrees*3)%10+'px');
 }
-// On-screen fine-aim buttons are genuinely fine: half a degree, a tenth with Shift.
-function nudgeAim(direction,fine,button=false){angle+=direction*(button?(fine?Math.PI/1800:Math.PI/360):aimStep(fine));syncAim();}
+// On-screen fine-aim buttons are genuinely fine: a tenth of a degree, a fiftieth with Shift.
+function nudgeAim(direction,fine,button=false){angle+=direction*(button?(fine?Math.PI/9000:Math.PI/1800):aimStep(fine));syncAim();}
 // Hold-to-pull keyboard shot. Power ramps on a timer, never on OS key repeat.
 let keyPull=null;
 function beginKeyPull(stamp=performance.now()){
@@ -1109,9 +1134,9 @@ function onPull(amount){
 function setPower(n){power=clamp(Number(n)/100,.08,1);setText('powerValue',`${Math.round(power*100)}%`);}
 $('menuGuide').onclick=()=>openGuide('menu');$('pauseGuide').onclick=()=>openGuide('pause');$('closeGuide').onclick=closeGuide;
 all('[data-guide-tab]').forEach(tab=>tab.onclick=()=>selectGuideTab(tab.dataset.guideTab));
-$('menuBtn').onclick=openMenu;$('closeMenu').onclick=()=>hide('clubMenu');
+$('menuBtn').onclick=openMenu;$('closeMenu').onclick=closeMenu;
 $('menuPractice').onclick=()=>begin('practice');$('menuDaily').onclick=()=>begin('daily');$('menuSettings').onclick=openSettings;
-$('menuOnline').onclick=openOnline;$('closeOnline').onclick=closeOnline;$('onlineHost').onclick=()=>hostOnline();$('onlineJoin').onclick=()=>joinOnline($('onlineCode').value);
+$('menuOnline').onclick=openOnline;$('modeOnline').onclick=openOnline;$('menuRecord').onclick=()=>openRecord('menu');$('closeOnline').onclick=closeOnline;$('onlineHost').onclick=()=>hostOnline();$('onlineJoin').onclick=()=>joinOnline($('onlineCode').value);
 $('onlineCode').onkeydown=e=>{if(e.key==='Enter')joinOnline($('onlineCode').value);};
 $('onlineCancel').onclick=()=>{closeOnlineSession();show('onlineStart');hide('onlineWait');onlineStatus('');};
 $('onlineCopy').onclick=async()=>{const link=online?.link;if(!link)return;try{await navigator.clipboard.writeText(link);onlineStatus('Invite link copied.');}catch{onlineStatus(link);}};
@@ -1179,7 +1204,7 @@ const powerControl=bindPower({
  onCancel:()=>{setPower(50);}
 });
 bindAimWheel({element:$('aimWheel'),canAim:()=>Boolean(canAct()),getAngle:()=>angle,
- setAngle:n=>{angle=n;syncAim();},getSensitivity:()=>wheelFine?.0006:.0015,
+ setAngle:n=>{angle=n;syncAim();},getSensitivity:()=>wheelFine?.00011:.00042,
  onReset:()=>{angle=previousShotAngles[current?.turn||0]||0;syncAim();
   notify('Aim restored to the previous shot direction.');}});
 function syncSpin(){
@@ -1386,7 +1411,7 @@ window.addEventListener('keydown',e=>{
     }
     return;
   }
-  if(e.key==='Escape'){if(keyPull){e.preventDefault();cancelKeyPull();return;}if(!$('spinSheet').hidden){closeSpin();return;}if(!$('settingsSheet').hidden)closeSettings();else if(!$('setupSheet').hidden)closeSetup();else if(!$('clubMenu').hidden)hide('clubMenu');else if(active==='paused')resumeMatch();else if(active==='game')pauseMatch();return;}
+  if(e.key==='Escape'){if(keyPull){e.preventDefault();cancelKeyPull();return;}if(!$('spinSheet').hidden){closeSpin();return;}if(!$('settingsSheet').hidden)closeSettings();else if(!$('setupSheet').hidden)closeSetup();else if(!$('clubMenu').hidden)closeMenu();else if(active==='paused')resumeMatch();else if(active==='game')pauseMatch();return;}
   if(!$('settingsSheet').hidden||!$('setupSheet').hidden||!$('clubMenu').hidden||!$('spinSheet').hidden)return;
   if(active!=='game'||['INPUT','BUTTON','TEXTAREA'].includes(document.activeElement?.tagName)&&document.activeElement?.type==='range')return;
   if(placementActive()){

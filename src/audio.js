@@ -79,6 +79,11 @@ export class Audio {
    this.tone({frequency:event.last?980:820,end:event.last?820:700,volume:.03,length:.04,wave:'sine'});
    return;
   }
+  if(event.type==='tray'){
+   // A potted ball settling into its tray: one soft, wooden tok.
+   this.tone({frequency:560,end:360,volume:.02,length:.07,wave:'sine'});
+   return;
+  }
   if(event.type==='turn'){
    this.tone({frequency:420,end:540,volume:.024,length:.075,wave:'sine'});
    return;

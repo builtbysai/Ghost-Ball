@@ -170,7 +170,9 @@ export class Game {
    return true;
  }
  /** The CPU previews the real shot it will take, including cue motion. */
- get presentedCue(){
+ /** The pose shown for whoever is shooting, tagged with the cue the CPU (or online opponent) uses. */
+ get presentedCue(){const pose=this.rawCue;if(!pose||!this.isAI())return pose;return {...pose,cueId:this.players==='online'?'smoke':this.personaAt(this.turn).cue};}
+ get rawCue(){
    // Online: show the other player's live aim, then their stroke.
    if(this.isRemote()&&!this.activeStroke)return this.remotePose&&!this.sim.moving?{angle:this.remotePose.angle,power:this.remotePose.power,drawback:this.remotePose.drawback,showGuide:false}:null;
    if(this.activeStroke&&this.activeStroke.elapsed<.18){
@@ -265,7 +267,8 @@ export class Game {
          const shot=this.previewShot, cue=this.sim.cue();
          // A CPU that cannot plan a pot on the shot after a clean break pushes out.
          const pushOut=this.pushOutAvailable&&!shot.predictedPot;
-         if(cue&&!cue.pocketed&&this.beginShot(shot.angle,shot.power,0,shot.pocket??-1,{pushOut})){
+         if(cue&&!cue.pocketed&&this.beginShot(shot.angle,shot.power,shot.spin||0,shot.pocket??-1,{pushOut})){
+           if(shot.trick&&this.kind==='match')this.onTurn({type:'trick',kind:shot.trick,seat:this.turn,target:shot.target});
            this.activeStroke={cue:{x:cue.x,y:cue.y},angle:shot.angle,power:shot.power,elapsed:0};
            if(this.kind==='match')audio?.play({type:'strike',power:shot.power});
          }

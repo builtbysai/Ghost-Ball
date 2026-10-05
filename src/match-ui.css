@@ -137,18 +137,12 @@
 #gameScreen #gameCanvas:focus{outline:none}
 #gameScreen #gameCanvas:focus-visible{outline:none}
 
-/* --- Ball return rail: the pocketed balls roll in at the gate and queue along it --- */
-#gameScreen .ball-return{bottom:clamp(0px,.4dvh,4px);width:clamp(230px,50%,540px);height:clamp(17px,3.3dvh,26px);
- padding:0 clamp(5px,.8vw,9px);gap:clamp(1px,.25vw,3px);border:0;border-radius:99px;overflow:hidden;
- background:linear-gradient(#0a121b,#162636 38%,#0c1722 62%,#1b2c3c);
- box-shadow:inset 0 3px 5px #000d,inset 0 -1px 2px #fff1,0 1px 0 #d7bd8a66,0 5px 12px #0008}
-#gameScreen .ball-return::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
- box-shadow:inset 0 0 0 1px #c9ad7a55;background:linear-gradient(90deg,transparent 88%,#d9bd8a1f)}
-#gameScreen .return-gate{order:2;position:absolute;right:0;top:0;bottom:0;width:clamp(16px,2.4vw,24px);display:grid;place-items:center;
- border-left:1px solid #c9ad7a66;background:linear-gradient(90deg,#08111a00,#090f17);color:#d9bd8a;font-size:clamp(8px,1.2vw,11px)}
-#gameScreen .collected-balls{order:1;gap:clamp(1px,.22vw,3px);padding-right:clamp(16px,2.4vw,24px)}
-#gameScreen .return-ball{width:clamp(10px,2.4dvh,18px);height:clamp(10px,2.4dvh,18px);font-size:clamp(5px,1.1dvh,8px);
- border-color:#fffc;box-shadow:0 1px 2px #000b,inset -1px -2px 3px #0005}
+/* --- Potted balls roll out of their hole, along an arc, and into the owner's tray --- */
+#gameScreen .flight-layer{position:absolute;inset:0;pointer-events:none;z-index:6;overflow:visible}
+#gameScreen .flight-ball{position:absolute;left:0;top:0;border-width:1px;font-weight:800;
+ box-shadow:0 6px 10px #0009,0 1px 2px #000b,inset -2px -3px 5px #0006;will-change:transform,opacity}
+#gameScreen .ball-slot.slot-land{animation:slot-land .6s cubic-bezier(.2,.9,.25,1.3)}
+@keyframes slot-land{0%{transform:scale(1)}28%{transform:scale(1.5);filter:brightness(1.6) drop-shadow(0 0 8px #f1d9a1)}100%{transform:scale(1)}}
 
 /* --- the match room takes its colour from the hall --- */
 #gameScreen.game-screen,#gameScreen.game-screen.entering::before{background:
@@ -202,3 +196,10 @@
 
 /* straight pool shows points instead of ball trays */
 #gameScreen .ball-slots[data-game="straight"]{display:none}
+
+/* --- one clock: the ring on the active token (calm green, amber at 10 s, red at 5 s); the number is for screen readers --- */
+#gameScreen .shot-clock,#gameScreen .shot-clock[hidden]{position:absolute;width:1px;height:1px;min-width:0;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0;opacity:0;pointer-events:none;display:block}
+#gameScreen .opponent-card[data-urgency="warn"].playing .player-token::after{background:conic-gradient(#f1c46a 0 var(--turn-progress,100%),#30415a var(--turn-progress,100%) 100%)}
+#gameScreen .opponent-card[data-urgency="late"].playing .player-token::after{background:conic-gradient(#ff7a5a 0 var(--turn-progress,100%),#30415a var(--turn-progress,100%) 100%)}
+#gameScreen .opponent-card[data-urgency="warn"].playing .player-token,#gameScreen .opponent-card[data-urgency="late"].playing .player-token{font-variant-numeric:tabular-nums}
+#gameScreen .opponent-card[data-urgency="late"].playing .player-token{animation:clock-pulse 1s ease-in-out infinite}

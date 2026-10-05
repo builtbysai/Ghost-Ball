@@ -4,7 +4,7 @@ import {Game} from '../src/game.js';
 import {PERSONAS,PERSONA_ORDER,personaFor,exhibitionPair,moodScale} from '../src/ai-personas.js';
 
 test('personas map to planner tiers and unknown ids fall back to Rookie',()=>{
- assert.deepEqual(PERSONA_ORDER.map(id=>PERSONAS[id].tier),['rookie','rookie','club','club']);
+ assert.deepEqual(PERSONA_ORDER.map(id=>PERSONAS[id].tier),['rookie','rookie','club','club','club']);
  assert.equal(personaFor('nobody').id,'rookie');
  for(const id of PERSONA_ORDER){assert.ok(PERSONAS[id].blurb&&PERSONAS[id].style&&PERSONAS[id].name);}
 });
@@ -32,4 +32,11 @@ test('the breaker alternates each rack in a match, and practice always starts on
  const g=new Game({kind:'match',players:'cpu',seed:5});
  assert.equal(g.turn,0);g.reset(true);assert.equal(g.turn,1);g.reset(true);assert.equal(g.turn,0);g.reset(true);g.reset();assert.equal(g.turn,0,'a restart is a fresh match');
  const p=new Game({kind:'practice',seed:5});p.reset(true);p.reset(true);assert.equal(p.turn,0);
+});
+
+import {OPPONENT_CUES,CUES,cueById} from '../src/cue-catalog.js';
+test('every named opponent shoots with a unique cue that is not in the locker',()=>{
+ const used=PERSONA_ORDER.map(id=>PERSONAS[id].cue);
+ assert.equal(new Set(used).size,used.length,'cues must be unique per opponent');
+ for(const id of used){assert.ok(OPPONENT_CUES.some(c=>c.id===id),id);assert.ok(!CUES.some(c=>c.id===id),'opponent cues are never equippable');assert.equal(cueById(id).id,id);}
 });

@@ -1,0 +1,22 @@
+/* The room around the table, seen only from the pitched (Elevated) camera: panelled wall, skirting, a plank floor
+   and the pool of light from the lamp above. Everything takes its colour from the hall. */
+#gameScreen .room-decor{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;display:none}
+#gameScreen[data-view="perspective"] .room-decor{display:block}
+.room-decor i{position:absolute;left:0;right:0;display:block}
+.rd-wall{top:0;height:66%;
+ background:
+  repeating-linear-gradient(90deg,transparent 0 11.6%,rgba(0,0,0,.2) 11.6% 11.9%,rgba(255,235,200,.045) 11.9% 12.1%,transparent 12.1% 12.5%),
+  linear-gradient(180deg,rgba(255,235,200,.05),transparent 55%,rgba(0,0,0,.22))}
+.rd-panel{top:40%;height:26%;
+ background:linear-gradient(180deg,rgba(0,0,0,.26),rgba(0,0,0,.4));
+ border-top:2px solid rgba(255,226,170,.16);box-shadow:inset 0 3px 8px #0006,0 -2px 0 #0007}
+.rd-skirt{top:64.2%;height:2.4%;background:linear-gradient(180deg,rgba(255,226,170,.2),rgba(0,0,0,.55));box-shadow:0 3px 10px #000a}
+.rd-floor{top:66.5%;bottom:0;
+ background:
+  repeating-linear-gradient(90deg,rgba(0,0,0,.28) 0 2px,transparent 2px 7.2%),
+  repeating-linear-gradient(180deg,rgba(255,226,170,.035) 0 1px,transparent 1px 38px),
+  linear-gradient(180deg,color-mix(in srgb,var(--room-aura,#25456b) 20%,#2a1b12),#0a0605 105%)}
+.rd-lamp{top:0;height:100%;
+ background:radial-gradient(ellipse 52% 46% at 50% 58%,rgba(255,226,160,.13),rgba(255,226,160,.04) 55%,transparent 75%)}
+@media (prefers-reduced-motion:no-preference){.rd-lamp{animation:lamp-breathe 9s ease-in-out infinite}}
+@keyframes lamp-breathe{50%{opacity:.82}}

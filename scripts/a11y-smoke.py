@@ -32,6 +32,25 @@ try:
         page.click('#playBtn');page.wait_for_timeout(3800)
         page.click('#pauseButton');page.wait_for_timeout(500)
         assert escaped('pauseMenu')==0,'Tab left the pause menu'
+        # Preferences opened over Pause owns Tab (the Pause menu behind it is inert)
+        page.click('#pauseSettings');page.wait_for_timeout(400)
+        for _ in range(12):
+            page.keyboard.press('Tab')
+            assert page.evaluate("(document.activeElement.closest('[role=dialog]')||{}).id")=='settingsSheet','Tab escaped Preferences into the Pause menu'
+        page.keyboard.press('Escape');page.wait_for_timeout(300)
+        assert page.evaluate("document.activeElement.id")=='pauseSettings','closing Preferences did not return focus to Pause'
+        page.click('#quitMatch');page.wait_for_timeout(2500)
+        # closing the Clubhouse returns focus to the menu button
+        page.click('#menuBtn');page.wait_for_timeout(300);page.click('#closeMenu');page.wait_for_timeout(200)
+        assert page.evaluate("document.activeElement.id")=='menuBtn','closing the Clubhouse stranded focus'
+        page.click('#menuBtn');page.wait_for_timeout(300);page.keyboard.press('Escape');page.wait_for_timeout(200)
+        assert page.evaluate("document.activeElement.id")=='menuBtn','Escape from the Clubhouse stranded focus'
+        # the live lobby tab opens Play a friend; My record opens from the Clubhouse
+        page.click('#modeOnline');page.wait_for_timeout(300)
+        assert page.locator('#onlineSheet').is_visible(),'the ONLINE tab did not open Play a friend'
+        page.keyboard.press('Escape');page.click('#closeOnline') if page.locator('#onlineSheet').is_visible() else None
+        page.click('#menuBtn');page.wait_for_timeout(300);page.click('#menuRecord');page.wait_for_timeout(300)
+        assert page.locator('#recordSheet').is_visible(),'My record did not open from the Clubhouse'
         assert not errors,errors
         print('a11y: Tab is trapped and Escape closes every sheet OK')
         browser.close()

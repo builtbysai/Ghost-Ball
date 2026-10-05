@@ -33,7 +33,7 @@ export class TableRenderer{
      return;
    }
    const ratio=.375+.125*this.blend;
-   const verticalRoom=this.view==='flat'?.82:.88;let bw=Math.min(this.w*.89,(this.h*verticalRoom)/ratio);let bh=bw*ratio;
+   const verticalRoom=this.view==="flat"?.82:.88;let bw=Math.min(this.w*(this.view==="flat"?.88:.9),(this.h*verticalRoom)/ratio);let bh=bw*ratio;
    if(bh>this.h*verticalRoom){bh=this.h*verticalRoom;bw=bh/ratio;}
    this.bw=bw;this.bh=bh;this.top=(this.h-bh)/2;this.center=this.w/2;}
  get blend(){return this.projectionBlend??(this.view==='flat'?1:0);}
@@ -57,7 +57,7 @@ export class TableRenderer{
  clear(){this.g.clearRect(0,0,this.w,this.h);}
  draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[],callPocket=null,callLabel=8,targetBall=null,pocketOwners=null,pocketOwnerNames=null,drillZone=null}={}){
   const g=this.g,P=(x,y)=>this.project(x,y);
-  this.clear();g.save();
+  this.clear();g.save();this.cueQueue=[];this.cueStyleNow=aim?.cueId?cueById(aim.cueId):this.cueStyle;
   if(this.cacheStatic&&typeof document!=='undefined'){
    const key=[this.canvas.width,this.canvas.height,this.hall,this.blend,this.portrait].join(':');
    if(!this.surface||this.surfaceKey!==key){
@@ -87,6 +87,7 @@ export class TableRenderer{
     this.drawBall(ball);
   }
   if(interactive&&aim?.showGuide!==false&&!sim.moving&&!sim.cue()?.pocketed)this.drawCueStrike(sim.cue(),aim.spin);
+  {const queued=this.cueQueue;this.cueQueue=null;for(const args of queued)this.paintCueNow(...args);}
   if(placement){
     const [sx,sy,k]=P(placement.x,placement.y);
     const r=Math.max(5,TABLE.radius*this.bw/1000*k);
@@ -139,14 +140,16 @@ export class TableRenderer{
         const e=t*t*(3-2*t),slide=Math.min(1,t*1.25);
         const wx=effect.sourceX+(effect.x-effect.sourceX)*(slide*slide*(3-2*slide));
         const wy=effect.sourceY+(effect.y-effect.sourceY)*(slide*slide*(3-2*slide));
+        g.save();this.clipToClothAndHole(effect);
         this.drawBall({id:effect.id,color:effect.color,x:wx,y:wy,rotation:0,
           orientation:effect.orientation||[1,0,0,0],opacity:Math.max(0,1-.55*e*e)},1-.46*e,Math.min(.96,e*1.1));
+        g.restore();
         g.save();g.beginPath();g.arc(sx,sy,Math.max(1,6+t*26),0,TAU);
         g.strokeStyle=`rgba(239,207,139,${effect.life*.28})`;g.lineWidth=1.4;g.stroke();g.restore();
       }else{
         const [px,py]=P(effect.sourceX,effect.sourceY);
         const x=px+(sx-px)*t,y=py+(sy-py)*t,r=Math.max(0,TABLE.radius*this.bw/1000*(1-.93*t));
-        g.save();g.shadowColor='#080d0a';g.shadowBlur=9*t;
+        g.save();this.clipToClothAndHole(effect);g.shadowColor='#080d0a';g.shadowBlur=9*t;
         g.beginPath();g.arc(x,y,r,0,TAU);g.fillStyle=effect.color||'#eee5d8';g.fill();
         g.restore();
         g.beginPath();g.arc(sx,sy,Math.max(1,t*25),0,TAU);
@@ -195,7 +198,10 @@ export class TableRenderer{
    g.strokeStyle=sheen;g.lineWidth=Math.max(1.2,r*.85);g.stroke();g.restore();
   }
   g.save();g.globalAlpha=ball.opacity??1;g.translate(sx,sy);
+  // contact shadow: a wide soft penumbra, then a tight dark core where the ball meets the cloth
+  g.beginPath();g.ellipse(r*.16,r*.3,r*1.28,r*.95,0,0,TAU);g.fillStyle='rgba(0,0,0,.14)';g.fill();
   g.beginPath();g.ellipse(r*.10,r*.21,r*1.03,r*.85,0,0,TAU);g.fillStyle='rgba(0,0,0,.28)';g.fill();
+  g.beginPath();g.ellipse(r*.04,r*.12,r*.78,r*.58,0,0,TAU);g.fillStyle='rgba(0,0,0,.3)';g.fill();
   g.beginPath();g.arc(0,0,r,0,TAU);g.clip();
   if(ball.id>=9)g.drawImage(this.stripeTexture(ball),-r,-r,2*r,2*r);
   else{g.fillStyle=ball.color;g.fillRect(-r,-r,2*r,2*r);}
@@ -203,6 +209,11 @@ export class TableRenderer{
   light.addColorStop(0,'rgba(255,255,255,.66)');light.addColorStop(.29,'rgba(255,255,255,.12)');
   light.addColorStop(.64,'rgba(0,0,0,0)');light.addColorStop(1,'rgba(0,0,0,.7)');
   g.fillStyle=light;g.fillRect(-r,-r,r*2,r*2);
+  // bounce light from the cloth along the lower edge, then a crisp lamp glint
+  const bounce=g.createRadialGradient(r*.15,r*.95,r*.1,r*.15,r*.95,r*.9);
+  bounce.addColorStop(0,'rgba(160,215,205,.22)');bounce.addColorStop(1,'rgba(160,215,205,0)');
+  g.fillStyle=bounce;g.fillRect(-r,-r,r*2,r*2);
+  g.beginPath();g.ellipse(-r*.36,-r*.46,r*.2,r*.12,-.65,0,TAU);g.fillStyle='rgba(255,255,255,.7)';g.fill();
   const q=orientationOf(ball);
   for(const local of [[0,0,1],[0,0,-1]]){
    const n=rotateVector(q,local);
@@ -357,8 +368,18 @@ export class TableRenderer{
     g.strokeStyle='#fff0c7';g.stroke();g.restore();
   }
  }
- drawCue(cue,angle,drawback=0,opacity=1){
-  const g=this.g,style=this.cueStyle||cueById('house'),{tip,grip,butt}=cueGeometry(cue,angle,drawback);
+ /** The cue is held above the table, so it always paints over the balls: while a frame is being drawn, cue draws
+  * are queued and flushed after the balls. */
+ /** A sinking ball is only visible over the cloth or inside the hole it drops into, never floating over the wood. */
+ clipToClothAndHole(effect){
+  const g=this.g,P=(x,y)=>this.project(x,y),corners=[P(0,0),P(TABLE.width,0),P(TABLE.width,TABLE.height),P(0,TABLE.height)];
+  g.beginPath();g.moveTo(corners[0][0],corners[0][1]);for(const c of corners.slice(1))g.lineTo(c[0],c[1]);g.closePath();
+  const [hx,hy,hk]=P(effect.x,clamp(effect.y,0,TABLE.height)),u=clamp(this.bw/1000,.29,1.7),side=Math.abs(effect.x-500)<60,rr=(side?23:27)*u*hk*1.18;
+  g.moveTo(hx+rr,hy);g.arc(hx,hy,rr,0,TAU);g.clip();
+ }
+ drawCue(...args){if(this.cueQueue)this.cueQueue.push(args);else this.paintCueNow(...args);}
+ paintCueNow(cue,angle,drawback=0,opacity=1){
+  const g=this.g,style=this.cueStyleNow||this.cueStyle||cueById('house'),{tip,grip,butt}=cueGeometry(cue,angle,drawback);
   const [tx,ty]=this.project(tip.x,tip.y),[gx,gy]=this.project(grip.x,grip.y),[bx,by]=this.project(butt.x,butt.y);
   const width=clamp(this.bw/560, .56, 1.28);
   g.save();g.globalAlpha=clamp(opacity,0,1);

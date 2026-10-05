@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {Simulation, makeBall, rack, TABLE} from '../src/physics.js';
+import {Simulation, makeBall, rack, TABLE, JAWS} from '../src/physics.js';
 import {Game, chooseShot} from '../src/game.js';
 import {createRandom} from '../src/random.js';
 
@@ -22,13 +22,19 @@ test('a side pocket catches an incoming ball while adjacent rubber rebounds it',
   assert.ok(rail.cue().y>=TABLE.radius);
 });
 
-test('corner approach pockets the ball and an adjacent jaw can reject a bad angle',()=>{
+test('a ball that rolls into a mouth drops; one aimed at the cushion bounces; nothing invisible is in the way',()=>{
   const corner=moving(45,45,-440,-440);corner.advance(.4);
   assert.equal(corner.cue().pocketed,true);
-  const jaw=moving(458,50,0,-500);
-  const events=jaw.advance(.5);
-  assert.equal(jaw.cue().pocketed,false);
-  assert.ok(events.some(e=>e.jaw));
+  // into the side mouth, even near its edge: it looks like it is going in, so it goes in
+  const edge=moving(462,50,0,-500);edge.advance(.5);
+  assert.equal(edge.cue().pocketed,true);
+  // straight at the cushion beside the mouth: a normal cushion rebound
+  const wall=moving(430,50,0,-500);const events=wall.advance(.5);
+  assert.equal(wall.cue().pocketed,false);
+  assert.ok(events.some(e=>e.type==='rail'));
+  assert.ok(wall.cue().vy>0,'rebounded off the cushion');
+  // and the pocket-nose list is empty
+  assert.equal(JAWS.length,0);
 });
 
 test('contact conserves pairwise momentum to numerical tolerance before cloth drag',()=>{
