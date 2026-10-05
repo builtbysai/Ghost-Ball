@@ -12,9 +12,7 @@
 #app .locker-heading small,#app .locker-info small{color:#dbbf89;font:800 clamp(8px,1.5dvh,10px) system-ui;letter-spacing:.13em}
 #app .locker-heading h2{font:normal clamp(23px,4.5dvh,37px)/1.07 Georgia,serif;
  margin:2px 0 0;letter-spacing:-.025em}
-#app #closeLocker{flex:none;border:1px solid #e1c78d6b;background:#273e32;color:#f8eed9;
- padding:clamp(7px,1.5dvh,11px) clamp(11px,1.8vw,19px);font:850 10px system-ui;
- letter-spacing:.13em;border-radius:999px}
+
 #app .locker-layout{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,.94fr);
  gap:clamp(9px,1.6vw,22px);min-width:0;min-height:0}
 #app .locker-collection{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));

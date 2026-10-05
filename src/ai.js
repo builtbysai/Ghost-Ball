@@ -1,5 +1,6 @@
 import {PERSONAS} from './ai-personas.js';
-import {Simulation,POCKETS,JAWS,JAW_RADIUS,TABLE} from './physics.js';
+import {Simulation,POCKETS,TABLE} from './physics.js';
+import {FACINGS,nearestOnSegment} from './table-geometry.js';
 import {trickCandidates,spinVariants,TRICK_LABELS} from './trick-shots.js';
 import {createRandom} from './random.js';
 import {groupContains} from './casual-rules.js';
@@ -19,15 +20,22 @@ function clearPath(from,to,balls,excluded){
    return Math.hypot(ball.x-from.x-t*dx,ball.y-from.y-t*dy)<TABLE.radius*2.18;
  });
 }
-/** True when a ball travelling from `from` to `to` clears every rubber jaw
- * nose with a small margin. Pocket centres lie outside the cloth, so a naive
- * line to the centre often clips a jaw and rebounds into the table. */
+/** True when a ball travelling from `from` to `to` clears every pocket facing and nose with a small margin. Pocket
+ * centres lie outside the cloth, so a naive line to the centre can clip a facing and rebound into the table. */
 function jawClear(from,to,margin=.5){
- const dx=to.x-from.x,dy=to.y-from.y,den=dx*dx+dy*dy||1,reach=TABLE.radius+JAW_RADIUS+margin;
- return JAWS.every(([jx,jy])=>{
-  const t=clamp(((jx-from.x)*dx+(jy-from.y)*dy)/den,0,1);
-  return Math.hypot(jx-from.x-t*dx,jy-from.y-t*dy)>reach;
- });
+ const reach=TABLE.radius+margin,path=[from.x,from.y,to.x,to.y];
+ return FACINGS.every(wall=>segmentDistance(path,wall)>reach);
+}
+/** Shortest distance between two segments [x1,y1,x2,y2] (zero when they cross). */
+function segmentDistance(p,q){
+ const cross=(ax,ay,bx,by)=>ax*by-ay*bx;
+ const d1=[p[2]-p[0],p[3]-p[1]],d2=[q[2]-q[0],q[3]-q[1]],den=cross(d1[0],d1[1],d2[0],d2[1]);
+ if(den){
+  const t=cross(q[0]-p[0],q[1]-p[1],d2[0],d2[1])/den,u=cross(q[0]-p[0],q[1]-p[1],d1[0],d1[1])/den;
+  if(t>=0&&t<=1&&u>=0&&u<=1)return 0;
+ }
+ const point=(x,y,seg)=>{const [nx,ny]=nearestOnSegment(x,y,seg);return Math.hypot(x-nx,y-ny);};
+ return Math.min(point(p[0],p[1],q),point(p[2],p[3],q),point(q[0],q[1],p),point(q[2],q[3],p));
 }
 /** Aim points across a pocket mouth, ordered from the centre outward. The
  * first one whose line from the object ball clears the jaws is the real
@@ -80,7 +88,7 @@ export function candidateShots(sim,group='open'){
  * the live browser can spread it over animation frames with no altered
  * physics or RNG behavior.
  */
-function* simulateAssessment(sim,candidate,group='open',{maxSteps=960,callEight=false,ownPocket,oppPocket}={}){
+function* simulateAssessment(sim,candidate,group='open',{maxSteps=1500,callEight=false,ownPocket,oppPocket}={}){
  const predicted=new Simulation(sim.snapshot().balls);
  if(!predicted.strike(candidate.angle,candidate.power,candidate.spin||0)){
    return {score:-Infinity,targetPocket:false,legalFirst:false,scratch:false,complete:false};
@@ -287,17 +295,28 @@ export function* createShotPlanner(sim,group='open',difficulty='rookie',random=c
     if(!best||verdict.score>best.verdict.score)best={plan,verdict};
     if(verdict.made&&verdict.score>1120)break;
    }
+   // Nobody takes a line that is predicted to lose the rack or foul when a safety exists.
+   if((best.verdict.earlyEight||best.verdict.foul)&&targets.length){
+    const safe=yield* safetyPlan(sim,group,random,targets,{legacy:true,maxOptions:2,callEight});
+    if(safe)return safe;
+   }
    // Patient players (Vera) decline a pot that is not a sure thing and play safe.
    if(persona.safety>0&&!best.verdict.made&&targets.length&&(persona.safety>=1||random()<persona.safety)){
     const safe=yield* safetyPlan(sim,group,random,targets,{legacy:true,maxOptions:2,callEight});
     if(safe)return safe;
    }
    const selected=best.plan;
-   return {angle:selected.angle+(random()-.5)*.004*looseness,power:clamp(selected.power*persona.power,.2,.95),
+   const finalPlan={...selected,angle:selected.angle+(random()-.5)*.004*looseness,power:clamp(selected.power*persona.power,.2,.95)};
+   // The hand wobble is tiny but collisions are chaotic: prove the stroke that will really be played, and fall back to
+   // the noise-free line if the blurred one would foul (an accidental early eight, a scratch).
+   const proof=yield* assess(finalPlan);
+   const chosen=proof.foul||proof.earlyEight?{...selected,power:clamp(selected.power*persona.power,.2,.95)}:finalPlan;
+   const verdict=chosen===finalPlan?proof:best.verdict;
+   return {angle:chosen.angle,power:chosen.power,
      target:selected.target,pocket:selected.pocket,
-     predictedLegal:best.verdict.legalFirst,
-     predictedPot:best.verdict.made,predictedComplete:best.verdict.complete,
-     predictedEarlyEight:best.verdict.earlyEight,plan:'preview'};
+     predictedLegal:verdict.legalFirst,
+     predictedPot:verdict.made,predictedComplete:verdict.complete,
+     predictedEarlyEight:verdict.earlyEight,plan:'preview'};
   }
   // Rookie: geometry chooses the pot, a short noise-free look-ahead only vets
   // it. The first makeable line wins; otherwise the best non-fouling one.

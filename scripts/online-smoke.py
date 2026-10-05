@@ -7,7 +7,7 @@ port=8141
 server=subprocess.Popen([sys.executable,'-m','http.server',str(port),'--bind','127.0.0.1'],cwd=root,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 time.sleep(1)
 HOOK="""
-window.__t={game:()=>current,shoot(a,p){angle=a;power=p;fire();},
+window.__t={game:()=>current,ui:()=>turnUI(),shoot(a,p){angle=a;power=p;fire();},
  view(){return current?{turn:current.turn,shots:current.shots,seat:current.localSeat,moving:current.sim.moving,balls:current.sim.balls.map(b=>[b.id,Math.round(b.x*100),Math.round(b.y*100),b.pocketed]).join('|'),label:document.getElementById('turnLabel').textContent,over:current.over}:null;}};
 """
 def hook(route):
@@ -25,6 +25,8 @@ try:
         host.click('#menuBtn');host.click('#menuOnline');host.click('#onlineHost')
         host.wait_for_function("document.getElementById('onlineCodeShown').textContent.length===6 && !document.getElementById('onlineCodeShown').textContent.includes('-')")
         code=host.inner_text('#onlineCodeShown')
+        assert host.locator('#onlineQr svg').count()==1,'the invite has no QR code'
+        assert host.locator('#onlineQr svg').is_visible(),'the QR code is hidden'
         guest.goto(f'http://127.0.0.1:{port}/?transport=tabs&join={code}');guest.wait_for_timeout(800)
         assert guest.locator('#onlineSheet').is_visible(),'join link did not open the online sheet'
         assert guest.input_value('#onlineCode')==code
@@ -33,6 +35,8 @@ try:
         host.wait_for_timeout(2500);guest.wait_for_timeout(500)
         hv,gv=host.evaluate('window.__t.view()'),guest.evaluate('window.__t.view()')
         assert hv['seat']==0 and gv['seat']==1,(hv,gv)
+        assert host.evaluate('window.__t.game().remoteCue')=='house' and guest.evaluate('window.__t.game().remoteCue')=='house','players did not learn each other\'s cue'
+        assert host.evaluate('window.__t.game().clockAuthority') is True and guest.evaluate('window.__t.game().clockAuthority') is False,'only the host owns the shot clock'
         assert hv['balls']==gv['balls'],'tables differ at the start'
         assert 'BREAK' in hv['label'] and 'OPPONENT' in gv['label'],(hv['label'],gv['label'])
         host.evaluate('window.__t.shoot(0,.9)')
@@ -60,7 +64,28 @@ try:
                 hv,gv=host.evaluate('window.__t.view()'),guest.evaluate('window.__t.view()')
                 if hv['shots']==before+1 and gv['shots']==before+1 and not hv['moving'] and not gv['moving']:break
             assert hv['balls']==gv['balls'] and hv['turn']==gv['turn'],('drift after shot',before+1,hv,gv)
+        # a finished game offers a rematch that needs both players
+        for page in (host,guest):
+            page.evaluate("(()=>{const g=window.__t.game();g.over=true;g.winner=0;window.__t.ui();})()")
+        host.wait_for_timeout(300)
+        assert 'REMATCH' in host.inner_text('#playAgain'),host.inner_text('#playAgain')
+        host.click('#playAgain');host.wait_for_timeout(400)
+        assert 'WAITING' in host.inner_text('#playAgain'),'the host button did not wait for the guest'
+        guest.click('#playAgain')
+        for _ in range(40):
+            host.wait_for_timeout(250)
+            hv,gv=host.evaluate('window.__t.view()'),guest.evaluate('window.__t.view()')
+            if hv['shots']==0 and gv['shots']==0 and not hv['over'] and not gv['over']:break
+        assert hv['shots']==0 and gv['shots']==0 and not hv['over'] and not gv['over'],('rematch did not reset both tables',hv,gv)
+        host.wait_for_timeout(2500)
+        hv,gv=host.evaluate('window.__t.view()'),guest.evaluate('window.__t.view()')
+        assert hv['balls']==gv['balls'] and hv['turn']==gv['turn'],'rematch racks differ'
         guest.screenshot(path='/tmp/online-guest.png');host.screenshot(path='/tmp/online-host.png')
+        # when a player drops the other sees a reconnect countdown and a way out
+        guest.close();host.wait_for_selector('#onlineBanner',state='visible',timeout=8000)
+        text=host.inner_text('#onlineBannerText')
+        assert 'disconnected' in text and code in text,text
+        assert host.locator('#onlineLeave').is_visible()
         print('online: two tabs joined, break replicated, tables identical, seat', hv['turn'],'is up OK')
         assert not errors,errors
         browser.close()

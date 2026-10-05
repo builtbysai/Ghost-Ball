@@ -42,7 +42,7 @@ try:
   page.locator('#closeLocker').click()
   page.locator('#menuSettings').click()
   page.locator('#openRecord').click()
-  assert page.locator('#recordStorage').inner_text()=='THIS DEVICE ONLY'
+  assert page.locator('#recordStorage').inner_text()=='This device only'
   with page.expect_download() as download_info:
    page.locator('#exportRecord').click()
   exported=json.loads(Path(download_info.value.path()).read_text())
@@ -64,7 +64,7 @@ try:
   assert page.locator('#lockerFavorite').get_attribute('aria-pressed')=='false', 'reset failed to clear favorites'
   page.locator('#closeLocker').click()
   page.locator('#menuChallenges').click()
-  assert page.locator('#challengeCards [data-drill]').count()==8
+  assert page.locator('#challengeCards [data-drill]').count()==10
   assert 'PLAY CHALLENGE' in page.locator('[data-drill="center-drop"] .challenge-card-status').inner_text()
   page.locator('[data-drill="center-drop"]').click()
   page.wait_for_timeout(1840)
@@ -129,7 +129,7 @@ try:
   page.locator('#menuBtn').click()
   page.locator('#menuSettings').click()
   page.locator('#openRecord').click()
-  assert page.locator('#recordDrills').inner_text()=='3 / 8 SKILLS','local record omitted earned drill'
+  assert page.locator('#recordDrills').inner_text()=='3 / 10','local record omitted earned drill'
   assert page.locator('#recordMatches').inner_text()=='0','skill artificially inflated match ledger'
   page.locator('#closeRecord').click()
   page.locator('#closeSettings').click()

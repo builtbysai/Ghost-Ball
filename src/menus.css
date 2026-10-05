@@ -1,0 +1,104 @@
+/* Menu polish: one rhythm for every sheet. Loaded after sheets.css, so these rules win. */
+.sheet-head h2{letter-spacing:0}
+.sheet-sub{margin:6px 0 0;color:var(--sh-muted);font:400 12.5px/1.4 system-ui}
+.sheet-head{align-items:center}
+
+/* Clubhouse: grouped, never wrapping */
+.menu-sheet .sheet-body{padding-top:0}
+.menu-heading{margin:clamp(10px,2dvh,16px) 2px 6px;color:var(--sh-brass);font:800 10px/1 system-ui;letter-spacing:.22em;text-transform:uppercase}
+.menu-heading:first-child{margin-top:4px}
+.menu-sheet .menu-list{margin-top:0}
+.menu-item{min-height:clamp(40px,7dvh,50px)}
+.menu-item span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-item small{flex:0 1 auto;max-width:52%;color:var(--sh-muted);font:500 11.5px system-ui;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
+
+/* Setting rows: label left, control right; long controls get their own full-width line */
+.set-row{min-height:clamp(46px,7.6dvh,56px)}
+.set-row.stack{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-items:start;padding:10px 0 12px}
+.set-row.stack .seg{display:grid;grid-auto-flow:row;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));width:100%}
+.set-row.stack .seg button{min-width:0;height:34px}
+.seg button{height:32px;min-width:clamp(56px,7vw,72px)}
+.rival-blurb{margin:0;padding:9px 12px;border-radius:10px;background:#ffffff0a;border:1px solid var(--sh-line);color:var(--sh-muted);font:400 12.5px/1.45 system-ui}
+.sheet-foot .btn-quiet{flex:none}
+.prefs-panel .set-group:first-child h3{margin-top:2px}
+.prefs-panel .sheet-body{padding-bottom:6px}
+
+/* Skill drills: a calm scrolling grid of equal cards */
+.challenge-sheet .sheet-body{padding-top:6px}
+.challenge-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:10px}
+.challenge-card{display:grid;grid-template-rows:auto 1fr auto;gap:8px;min-height:150px;padding:12px 14px;text-align:left;border-radius:13px;
+ border:1px solid var(--sh-line);background:linear-gradient(160deg,#ffffff10,#ffffff05);color:var(--sh-ink);cursor:pointer;transition:border-color .15s,background .15s,transform .12s}
+.challenge-card:hover,.challenge-card:focus-visible{border-color:#e6c98b99;background:linear-gradient(160deg,#ffffff16,#ffffff08)}
+.challenge-card:active{transform:translateY(1px)}
+.challenge-card-tag{display:block;color:var(--sh-brass);font:800 9.5px/1.2 system-ui;letter-spacing:.16em;text-transform:uppercase}
+.challenge-card-name{display:block;margin-top:5px;font:normal 20px/1.1 Georgia,serif}
+.challenge-card-rule{display:block;color:var(--sh-muted);font:400 12px/1.4 system-ui}
+.challenge-card-status{color:var(--sh-brass);font:800 10px system-ui;letter-spacing:.1em;text-transform:uppercase}
+.challenge-card[data-done="true"]{border-color:#e6c98b55;background:linear-gradient(160deg,#e6c98b1c,#ffffff05)}
+.challenge-card[data-next="true"]{border-color:#f3deb0;box-shadow:0 0 0 1px #f3deb055}
+
+/* My Club */
+.record-sheet .sheet-body{padding-top:4px}
+.record-body{grid-template-columns:minmax(0,1.5fr) minmax(220px,.8fr)}
+.record-main{min-width:0;display:grid;gap:12px;align-content:start}
+.record-stats{grid-template-columns:repeat(auto-fit,minmax(92px,1fr))}
+.record-stats small{letter-spacing:.1em}
+.record-stats strong{font-size:26px}
+.record-card{display:grid;gap:8px;padding:12px 14px;border-radius:13px;border:1px solid var(--sh-line);background:#ffffff09;min-width:0}
+.record-card h3{display:flex;align-items:center;gap:8px;margin:0;color:var(--sh-brass);font:800 10px/1 system-ui;letter-spacing:.2em;text-transform:uppercase}
+.record-card h3 span{color:var(--sh-faint);letter-spacing:.06em}
+.record-rooms{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.record-room{display:grid;gap:5px;padding:9px 10px;border-radius:10px;background:#00000026;border:1px solid var(--sh-line)}
+.record-room b{font:650 12.5px system-ui;color:var(--sh-ink)}
+.record-room small{color:var(--sh-muted);font:500 10.5px system-ui;letter-spacing:.04em}
+.record-room i{display:block;height:4px;border-radius:99px;background:#ffffff14;overflow:hidden}
+.record-room i::after{content:'';display:block;height:100%;width:var(--fill,0%);background:linear-gradient(90deg,#d6b36e,#f2dcab);border-radius:inherit}
+.record-room[data-mastered="true"] b::after{content:' ✓';color:var(--sh-brass)}
+.record-privacy{position:sticky;top:0;align-self:start}
+.record-privacy h3{margin:0;color:var(--sh-ink);font:normal 18px Georgia,serif}
+.record-privacy>button{display:block;width:100%;text-align:center;border:1px solid var(--sh-line);background:#ffffff0c;color:var(--sh-ink)}
+.record-privacy>button.record-primary{border-color:#f1dba8;color:#1b2a22;background:linear-gradient(#f2dcab,#d6b36e)}
+.record-privacy>button.record-danger{color:#f4c7b9;border-color:#e9a994aa;background:transparent}
+.record-privacy>button:hover{filter:brightness(1.08)}
+@media (max-width:760px){.record-body{grid-template-columns:minmax(0,1fr)}.record-privacy{position:static}}
+
+/* Lobby: the room's next step is a button */
+.room-mastery{cursor:pointer;text-align:left;font:inherit;color:inherit}
+.room-mastery:hover small,.room-mastery:focus-visible small{text-decoration:underline;text-underline-offset:3px}
+
+.setting[hidden],.set-row[hidden]{display:none!important}
+
+/* short landscape phones: two columns so every Clubhouse entry fits without scrolling */
+@media (max-height:440px) and (min-width:560px){
+ .menu-sheet .sheet-card{--w:600px!important}
+ .menu-sheet .sheet-body{column-count:2;column-gap:14px;padding-bottom:8px}
+ .menu-group{break-inside:avoid}
+ .menu-heading{margin:2px 2px 4px}.menu-group+.menu-group .menu-heading{margin-top:2px}
+ .menu-sheet .menu-group:nth-child(3){margin-top:8px}
+ .menu-item{min-height:36px}
+ .menu-item small{display:inline-block}
+ .menu-sheet .sheet-head h2{font-size:22px}
+}
+@media (max-height:440px){
+ .setup-sheet .set-row.stack{padding:5px 0 7px;gap:5px}
+ .setup-sheet .set-row.stack .seg button{height:30px}
+ .setup-sheet .set-row{min-height:40px}
+ .setup-sheet .rival-blurb{padding:5px 10px;font-size:11.5px}
+ .setup-sheet .sheet-foot{display:none}
+ .setup-sheet .sheet-head{padding-top:10px;padding-bottom:4px}
+ .setup-sheet .sheet-head h2{font-size:22px}
+ .sheet-head{padding-top:10px}
+}
+
+/* narrow upright phones: keep the label and a short control on one line (long ones stay stacked) */
+@media (max-width:480px) and (min-height:441px){
+ .set-row:not(.stack){flex-direction:row;align-items:center;gap:10px;padding:6px 0}
+ .set-row:not(.stack) .seg{width:auto}
+ .set-row:not(.stack) .seg button{min-width:50px;padding:0 9px;height:32px}
+ .set-text small{display:block}
+ .menu-item small{display:inline-block;max-width:46%}
+ .challenge-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .challenge-card{min-height:132px;padding:10px 11px}
+ .challenge-card-name{font-size:17px}
+ .challenge-card-rule{font-size:11px}
+}

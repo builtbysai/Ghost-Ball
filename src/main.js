@@ -14,7 +14,7 @@ import {TRICK_LABELS} from './trick-shots.js';
 import {cuePlacementDraft,initialCuePlacement} from './placement-guide.js';
 import {CUES,cueUnlocked,cueById,equippedCue,equipCue,toggleFavorite,paintCuePreview} from './cue-catalog.js';
 import {readLocalProgress,writeLocalProgress,recordLiveMatch,bestLegalRun,chooseRoom,
- freshProgress,exportLocalProgress,resetLocalProgress,recordLiveDrill,dayKey,dailySeed,recordDaily,dailySummary,
+ freshProgress,exportLocalProgress,importLocalProgress,resetLocalProgress,recordLiveDrill,dayKey,dailySeed,recordDaily,dailySummary,
  CIRCUIT,circuitState,recordCircuitResult} from './player-progress.js';
 import {SKILL_DRILLS,skillDrillById} from './skill-drills.js';
 import {encodeShot,decodeShot,addHighlight} from './highlights.js';
@@ -23,6 +23,7 @@ import {recordSummary} from './record-summary.js';
 import {decisiveShot,POCKET_LABELS} from './match-finish.js';
 import {roomMastery} from './room-mastery.js';
 import {OnlineSession,makeRoomCode,normalizeRoomCode,validRoomCode,joinLink,broadcastTransport,trysteroTransport} from './online.js';
+import {qrSvg} from './qr.js';
 const $=id=>document.getElementById(id);
 const all=(query)=>[...document.querySelectorAll(query)];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -127,12 +128,14 @@ function setRecap(text,tone=''){
 }
 function matchTurn(event){
  if(active!=='game')return;
+ if(event.type==='foul'&&event.reason==='shot-clock'&&online?.role==='host')online.session.sendAct({k:'timeout'});
  if(event.type==='trick'){tableToast(`${TRICK_LABELS[event.kind]||'TRICK SHOT'} · ${seatName(event.seat).toUpperCase()}`,'turn',2200);return;}
  if(event.type==='rerack'){
   // The referee re-racked: the same balls glide back into a fresh triangle.
   finishRackFlock();startRackFlock(event.before);calledPocket=null;lastScoreSignature='';clearTableToast();clearTurnBanner();
   setRecap(recapFor(event));turnUI();return;
  }
+ if(event.type==='drill-streak'){tableToast(`${event.made} OF ${event.need} · TARGET RE-SPOTTED`,'turn',2400);audio.play({type:'turn'});placement=null;turnUI();return;}
  if(event.type==='drill-continue'){
   tableToast('ONE SHOT LEFT · RECHECK THE ANGLE');return;
  }
@@ -208,35 +211,52 @@ function matchTurn(event){
 }
 // ---- Online private matches -------------------------------------------------------------------------------------
 const onlineStatus=(text,tone='')=>{const el=$('onlineStatus');el.textContent=text;el.dataset.tone=tone;};
-function closeOnlineSession(){if(online){const o=online;online=null;try{o.session.close();}catch{}}}
-function openOnline(){hide('clubMenu');hide('setupSheet');show('backdrop');show('onlineSheet');show('onlineStart');hide('onlineWait');onlineStatus('');$('onlineHost').focus();}
+function closeOnlineSession(){if(online){const o=online;online=null;clearInterval(o.timer);try{o.session.close();}catch{}}hide('onlineBanner');}
+function openOnline(){hide('clubMenu');hide('setupSheet');show('backdrop');show('onlineSheet');show('onlineStart');hide('onlineWait');onlineStatus('');syncClock();$('onlineHost').focus();}
 function closeOnline(){hide('onlineSheet');if(!online||active==='lobby'&&!current)closeOnlineSession();hide('backdrop');}
-const hostSettings=()=>({ruleset:gameType,official:rules==='official'&&gameType==='eight',callEight:rules==='call8'&&gameType==='eight'});
+const hostSettings=()=>({ruleset:gameType,official:rules==='official'&&gameType==='eight',callEight:rules==='call8'&&gameType==='eight',shotClock:clockSeconds});
+const guestSettings=settings=>({ruleset:String(settings.ruleset||'eight'),official:Boolean(settings.official),callEight:Boolean(settings.callEight),shotClock:[0,45].includes(settings.shotClock)?settings.shotClock:0});
 async function openTransport(code){
  // ?transport=tabs plays between two tabs of one browser with no network (testing and demos).
  if(new URLSearchParams(location.search).get('transport')==='tabs')return broadcastTransport(code);
  try{return await trysteroTransport(code);}
- catch(err){console.warn('Internet transport unavailable, using same-browser fallback',err);onlineStatus('Could not reach the matchmaking relays. Same-browser tabs still work.','bad');return broadcastTransport(code);}
+ catch(err){console.warn('Internet transport unavailable, using same-browser fallback',err);onlineStatus('Could not reach the matchmaking relays. Only two tabs on this device can connect right now.','bad');return broadcastTransport(code);}
+}
+/** Shared by host and guest: wires the session callbacks that do not depend on the role. */
+function sessionHooks(){
+ return {
+  cue:equippedCue(progress).id,
+  onResync:()=>{lastScoreSignature='';turnUI();},
+  onRematchChange:()=>updateRematchUI(),
+  onRematch:state=>{if(current)resetMatch(true,{force:true,state});}
+ };
 }
 function attachOnline(session,role,code){
- online={session,role,code};
- return session;
+ const o=online={session,role,code,timer:setInterval(()=>updateOnlineBanner(),500)};
+ return o;
+}
+function showInvite(code,link){
+ setText('onlineCodeShown',code);
+ try{$('onlineQr').innerHTML=qrSvg(link,{scale:4,margin:3});}catch{$('onlineQr').replaceChildren();}
+ $('onlineQr').hidden=!$('onlineQr').firstChild;
 }
 async function hostOnline(){
  if(online)closeOnlineSession();
- const code=makeRoomCode(),settings=hostSettings();
- hide('onlineStart');show('onlineWait');setText('onlineCodeShown',code);onlineStatus('Waiting for your friend to join…');
+ const code=makeRoomCode(),settings=hostSettings(),link=joinLink(code,location.origin+location.pathname);
+ hide('onlineStart');show('onlineWait');showInvite(code,link);onlineStatus('Waiting for your friend to join…');
  const transport=await openTransport(code);
- const session=new OnlineSession({transport,role:'host',getGame:()=>current,getSettings:()=>settings,
+ const session=new OnlineSession({transport,role:'host',getGame:()=>current,getSettings:()=>settings,...sessionHooks(),
   onStatus:status=>{
    if(online?.session!==session)return;
    if(status==='connected'){
     onlineStatus('Friend connected.');
     if(!current&&active==='lobby'){hide('onlineSheet');hide('backdrop');onlineBoot={seat:0,settings};begin('match');session.sendState('welcome');}
-   }else if(status==='peer-left')onlineGone();
-  },
-  onResync:()=>{lastScoreSignature='';turnUI();}});
- attachOnline(session,'host',code);online.link=joinLink(code,location.origin+location.pathname);
+    if(current)current.remoteCue=session.peerCue;
+    updateOnlineBanner();
+   }else onlinePeerState(status);
+  }});
+ attachOnline(session,'host',code).link=link;
+ setTimeout(()=>{if(online?.session===session&&session.status==='waiting')onlineStatus('Still waiting. Check your friend has the same code, and that both devices are online.');},90000);
 }
 async function joinOnline(raw){
  const code=normalizeRoomCode(raw);
@@ -244,20 +264,45 @@ async function joinOnline(raw){
  if(online)closeOnlineSession();
  onlineStatus('Looking for the table…');
  const transport=await openTransport(code);
- const session=new OnlineSession({transport,role:'guest',getGame:()=>current,
+ const session=new OnlineSession({transport,role:'guest',getGame:()=>current,...sessionHooks(),
   onStart:(settings,state)=>{
-   if(!current&&active==='lobby'){hide('onlineSheet');hide('backdrop');onlineBoot={seat:1,settings:{ruleset:String(settings.ruleset||'eight'),official:Boolean(settings.official),callEight:Boolean(settings.callEight)}};begin('match');}
+   if(!current&&active==='lobby'){hide('onlineSheet');hide('backdrop');onlineBoot={seat:1,settings:guestSettings(settings)};begin('match');}
    if(current&&!current.importState(state)){onlineStatus('The host sent a table this version cannot read.','bad');closeOnlineSession();return;}
-   lastScoreSignature='';turnUI();
+   if(current)current.remoteCue=session.peerCue;
+   lastScoreSignature='';turnUI();updateOnlineBanner();
   },
-  onStatus:status=>{if(online?.session===session&&status==='peer-left')onlineGone();},
-  onResync:()=>{lastScoreSignature='';turnUI();}});
+  onStatus:status=>{if(online?.session===session)onlinePeerState(status);}});
  attachOnline(session,'guest',code);
- setTimeout(()=>{if(online?.session===session&&session.status==='waiting'&&!current)onlineStatus('No table found for that code yet. Check it, and that your friend is hosting.','bad');},12000);
+ setTimeout(()=>{if(online?.session===session&&session.status==='waiting'&&!current)onlineStatus('No table found for that code. Check the code, and that your friend is hosting.','bad');},12000);
 }
-function onlineGone(){
- if(current&&active!=='lobby'){tableToast('OPPONENT DISCONNECTED','hint',4000);setRecap('Your opponent left. They can rejoin with the same code, or leave the table.');}
- else onlineStatus('Your friend left before the game began.','bad');
+function onlinePeerState(status){
+ if(status==='peer-left'){
+  if(current&&active!=='lobby'){tableToast('OPPONENT DISCONNECTED','hint',4000);audio.play({type:'foul'});}
+  else onlineStatus('Your friend left before the game began.','bad');
+ }
+ updateOnlineBanner();
+}
+/** A thin bar over the table while the other player is away: a countdown to their return, or the way out. */
+function updateOnlineBanner(){
+ const banner=$('onlineBanner');
+ if(!online||!current||active==='lobby'){banner.hidden=true;return;}
+ const status=online.session.status;
+ if(status==='peer-left'){
+  banner.hidden=false;banner.dataset.tone='wait';
+  const left=online.session.graceLeft(),m=Math.floor(left/60),sec=String(left%60).padStart(2,'0');
+  setText('onlineBannerText',`Opponent disconnected · they can rejoin with code ${online.code} · ${m}:${sec}`);
+ }else if(status==='abandoned'){
+  banner.hidden=false;banner.dataset.tone='gone';setText('onlineBannerText','Your opponent did not come back. You can leave the table.');
+ }else banner.hidden=true;
+}
+/** The result card's main button becomes REMATCH, then waits for the other player. */
+function updateRematchUI(){
+ if(!online||!current?.over)return;
+ const r=online.session.rematch;
+ setText('playAgain',r.me?'WAITING FOR OPPONENT…':'REMATCH ↻');
+ $('playAgain').disabled=r.me;
+ const detail=$('matchResultDetail');
+ if(r.them&&!r.me)detail.dataset.hint='1',detail.textContent='YOUR OPPONENT WANTS A REMATCH';
 }
 
 function renderRoomMastery(){
@@ -315,7 +360,7 @@ function syncSpinKeep(){
  all('[data-spin-keep]').forEach(b=>{const on=(b.dataset.spinKeep==='keep')===spinKeep;b.setAttribute('aria-pressed',String(on));b.classList.toggle('selected',on);});
 }
 function syncClock(){
- all('#clockSetting [data-clock]').forEach(b=>{const on=Number(b.dataset.clock)===clockSeconds;b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
+ all('[data-clock]').forEach(b=>{const on=Number(b.dataset.clock)===clockSeconds;b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
 }
 function syncAimMode(){
  all('[data-aim-mode]').forEach(b=>{const pressed=b.dataset.aimMode===aimMode;b.setAttribute('aria-pressed',String(pressed));b.classList.toggle('selected',pressed);});
@@ -379,7 +424,7 @@ function closeLocker(){
  if($('lockerSheet').hidden)return;
  hide('lockerSheet');show('clubMenu');$('menuLocker').focus();
 }
-setText('drillCount',`${SKILL_DRILLS.length} playable`);
+setText('drillCount',`${SKILL_DRILLS.length} drills`);
 function showCrests(){
  const summary=crestSummary(progress);
  setText('recordCrestCount',`${summary.earned} / ${summary.total}`);
@@ -417,13 +462,25 @@ function playHighlight(code){
  pendingHighlight={...shot,turn:0,shot:1};
  begin('practice');
 }
+function renderRecordRooms(){
+ const rows=halls.map((hall,index)=>{
+  const model=roomMastery(progress,index),row=document.createElement('div');
+  row.className='record-room';row.setAttribute('role','listitem');row.dataset.mastered=String(Boolean(model?.complete));
+  const name=document.createElement('b');name.textContent=hall.name;
+  const note=document.createElement('small');note.textContent=model?(model.complete?'Mastered':model.count+' of '+model.total+' · '+model.next.toLowerCase()):'';
+  const bar=document.createElement('i');bar.style.setProperty('--fill',model?Math.round(model.count/model.total*100)+'%':'0%');
+  row.append(name,note,bar);return row;
+ });
+ $('recordRooms').replaceChildren(...rows);
+}
 function showRecord(){
  const summary=recordSummary(progress);
  setText('recordMatches',String(summary.matches));
  setText('recordRivals',summary.wins+' / '+summary.losses);
  setText('recordClean',String(summary.clean));
  setText('recordRun',String(summary.run));
- setText('recordDrills',Object.keys(progress.drills||{}).length+' / '+SKILL_DRILLS.length+' SKILLS');
+ setText('recordDrills',Object.keys(progress.drills||{}).length+' / '+SKILL_DRILLS.length);
+ renderRecordRooms();
  const rows=summary.recent.map(item=>{
   const row=document.createElement('div');row.className='record-row';row.setAttribute('role','listitem');
   const title=document.createElement('strong');title.textContent=item.title+' · '+item.opponent;
@@ -436,10 +493,10 @@ function showRecord(){
  }
  $('recordHistory').replaceChildren(...rows);
  showHighlights();showCrests();
- let label='THIS DEVICE ONLY',reason='';
+ let label='This device only',reason='';
  if(!progressAccess.writable){
-  label=progressAccess.reason==='unsupported-version'?'NEWER SAVED FORMAT':
-    progressAccess.reason==='invalid-data'?'SAVED DATA NEEDS REVIEW':'SESSION ONLY';
+  label=progressAccess.reason==='unsupported-version'?'Newer saved format':
+    progressAccess.reason==='invalid-data'?'Saved data needs review':'Session only';
   reason=progressAccess.reason==='unsupported-version'?
     'An existing record uses a newer format. It was not changed.':
     progressAccess.reason==='invalid-data'?
@@ -475,6 +532,23 @@ function downloadRecord(){
  try{anchor.click();setText('recordMessage','Export prepared. Your data stays local.');}
  finally{anchor.remove();setTimeout(()=>URL.revokeObjectURL(object),2000);}
 }
+let pendingImport=null;
+/** Restore a backup in two steps: choose a file, see what is in it, then confirm the replacement. */
+function startImport(){
+ if(!progressAccess.writable){setText('recordMessage','Saving is unavailable here, so a backup cannot be restored.');return;}
+ if(pendingImport){
+  saveProgress(pendingImport);pendingImport=null;setText('importRecord','Restore a backup');showRecord();setText('recordMessage','Backup restored.');return;
+ }
+ $('importFile').value='';$('importFile').click();
+}
+async function importChosen(){
+ const file=$('importFile').files?.[0];if(!file)return;
+ const incoming=importLocalProgress(await file.text());
+ if(!incoming){pendingImport=null;setText('recordMessage','That file is not a Ghost Ball backup this version can read. Nothing was changed.');return;}
+ pendingImport=incoming;
+ setText('importRecord','Replace my record');
+ setText('recordMessage',`Backup found: ${incoming.records?.length||0} matches, ${Object.keys(incoming.drills||{}).length} skills. Press again to replace your current record.`);
+}
 function confirmLocalReset(){
  if(!progressAccess.writable)return;
  if(!resetLocalProgress()){setText('recordMessage','Could not clear storage. No progress was reset.');return;}
@@ -490,14 +564,11 @@ function ensureChallengeCards(){
   button.dataset.drill=drill.id;
   const top=document.createElement('span');
   const tag=document.createElement('span');tag.className='challenge-card-tag';
-  tag.textContent='ROOM 0'+(drill.room+1)+' · '+drill.subtitle.toUpperCase();
-  tag.dataset.compact='ROOM 0'+(drill.room+1);
+  tag.textContent=drill.subtitle;
   const title=document.createElement('span');title.className='challenge-card-name';title.textContent=drill.name;
   top.append(tag,title);
   const instruction=document.createElement('span');instruction.className='challenge-card-rule';
   instruction.textContent=drill.instruction;
-  const pockets=['TOP LEFT','TOP MIDDLE','TOP RIGHT','BOTTOM LEFT','BOTTOM MIDDLE','BOTTOM RIGHT'];
-  instruction.dataset.compact=drill.goal?.kind==='ball-zone'?drill.targetId+' → REST IN THE RING':drill.targetId+' → '+(drill.requiredCushion?'RAIL → ':'')+pockets[drill.targetPocket]+(drill.goal?' + RING':'');
   const status=document.createElement('span');status.className='challenge-card-status';
   button.append(top,instruction,status);$('challengeCards').append(button);
  }
@@ -506,11 +577,15 @@ function renderChallenges(){
  ensureChallengeCards();
  for(const button of $('challengeCards').children){
   const drill=skillDrillById(button.dataset.drill),best=progress.drills?.[drill.id];
+  button.dataset.done=String(Boolean(best));
   button.querySelector('.challenge-card-status').textContent=best?
    'COMPLETED · BEST '+best+(best===1?' SHOT':' SHOTS')+' ↗':'PLAY CHALLENGE →';
   button.setAttribute('aria-label',drill.name+', '+drill.instruction+', '+
    (best?'completed, best '+best+' shots':'not yet completed'));
  }
+ // The first drill not yet done is the suggested next step.
+ const nextCard=[...$('challengeCards').children].find(b=>b.dataset.done==='false');
+ for(const b of $('challengeCards').children)b.dataset.next=String(b===nextCard);
 }
 function openChallenges(){
  if(active!=='lobby')return;
@@ -537,11 +612,11 @@ function closeGuide(){
  else{show('clubMenu');$('menuGuide').focus();}
 }
 function closeMenu(){if($('clubMenu').hidden)return;hide('clubMenu');$('menuBtn').focus();}
-function openMenu(){const d=dailySummary(progress);setText('dailySub',d.today!==null?`Cleared in ${d.today} shots today${d.streak>1?` · ${d.streak} days running`:''}`:d.streak>0?`${d.streak} days running · clear today's`:'One rack, the same for everyone today');show('clubMenu');$('closeMenu').focus();}
+function openMenu(){const d=dailySummary(progress);setText('dailySub',d.today!==null?`Cleared in ${d.today} shots${d.streak>1?` · ${d.streak} day streak`:''}`:d.streak>0?`${d.streak} day streak`:'Same rack for all');show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){const ball=gameType==='nine'?'9-Ball':gameType==='ten'?'10-Ball':gameType==='straight'?'Straight pool':gameType==='onepocket'?'One-pocket':'8-Ball';
   const circuitStage=circuitState(progress),circuitPersona=personaFor(CIRCUIT[circuitStage.stage]);
   setText('matchSummary',mode==='circuit'?`Round ${circuitStage.stage+1} of ${CIRCUIT.length} · ${circuitPersona.name}`:mode==='practice'?'Open practice table':(rival==='local'?`${ball} · Two players`:`${ball} vs ${personaFor(rival).name}`)+(gameType==='eight'&&rules!=='casual'?` · ${rules==='official'?'Official':'Call the 8'}`:''));
-  setText('playSubtitle',mode==='circuit'?`${circuitPersona.style.toUpperCase()}${circuitStage.champion?` · CHAMPION ×${circuitStage.champion}`:''}`:mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`${gameType==='eight'&&rules!=='casual'?(rules==='official'?'OFFICIAL':'CALL THE 8'):'CASUAL'} ${ball.toUpperCase()} · NO ENTRY FEE`);
+  setText('playSubtitle',mode==='circuit'?`${circuitPersona.style.toUpperCase()}${circuitStage.champion?` · CHAMPION ×${circuitStage.champion}`:''}`:mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`${gameType==='eight'&&rules!=='casual'?(rules==='official'?'OFFICIAL':'CALL THE 8'):'CASUAL'} ${ball.toUpperCase()}`);
   all('.mode[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));}
 /** One short phrase for how the rack ended, from the referee's own reason. */
 function finishText(reason){
@@ -671,7 +746,7 @@ function turnUI(){if(!current)return;
  if(completed){
   const player=current.players==='ai'?current.personaAt(current.winner).name.toUpperCase():current.players==='online'?boxName(current.winner):current.winner===0?(current.players==='local'?'PLAYER ONE':'YOU'):current.players==='local'?'PLAYER TWO':current.persona.name.toUpperCase();
   setText('matchResultTitle',drill?current.drillOutcome==='completed'?'DRILL COMPLETE':'TRY AGAIN':practice?(dailyDay?'DAILY RACK CLEARED':'TABLE CLEARED'):`${player} ${player==='YOU'?'WIN':'WINS'}`);
-  setText('playAgain',current.players==='online'?'LEAVE TABLE':drill?'RETRY DRILL ↻':current.players==='ai'?'NEXT EXHIBITION ↻':circuitRun?(current.winner!==0?'REPLAY ROUND ↻':circuitState(progress).stage===0?'RUN THE CIRCUIT AGAIN ↻':'NEXT ROUND ↻'):"RACK 'EM AGAIN ↻");
+  setText('playAgain',current.players==='online'?(online?.session.rematch.me?'WAITING FOR OPPONENT…':'REMATCH ↻'):drill?'RETRY DRILL ↻':current.players==='ai'?'NEXT EXHIBITION ↻':circuitRun?(current.winner!==0?'REPLAY ROUND ↻':circuitState(progress).stage===0?'RUN THE CIRCUIT AGAIN ↻':'NEXT ROUND ↻'):"RACK 'EM AGAIN ↻");
   const finalReason=current.history.at(-1)?.reason;
   const resultKind=practice?'practice':finalReason==='eight-cleared'||finalReason==='nine-potted'||finalReason==='ten-potted'||finalReason==='race-won'?'clean':'foul';
   $('matchResult').dataset.finish=resultKind;
@@ -753,7 +828,7 @@ function begin(kind,drillId=null){
  angle=kind==='drill'?skillDrillById(drillId).referenceAngle:0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  calledPocket=null;
  const net=onlineBoot;onlineBoot=null;
- current=new Game({kind,drillId,fixedRack:daily,seed:daily?dailySeed(dailyDay):undefined,players:net?'online':exhibit?'ai':!circuit&&rival==='local'?'local':'cpu',localSeat:net?net.seat:0,persona:circuit?circuitOpponent():rival==='local'?'rookie':rival,seats:exhibit?exhibitionPair(exhibitionIndex++):null,ruleset:net?net.settings.ruleset:kind==='match'&&!circuit?gameType:'eight',official:net?Boolean(net.settings.official):!exhibit&&!circuit&&rules==='official'&&gameType==='eight',callEight:net?Boolean(net.settings.callEight):!exhibit&&!circuit&&rules==='call8'&&gameType==='eight',shotClock:net||exhibit?0:clockSeconds,notify,onPocket:animatePocket,onTurn:matchTurn});
+ current=new Game({kind,drillId,fixedRack:daily,seed:daily?dailySeed(dailyDay):undefined,players:net?'online':exhibit?'ai':!circuit&&rival==='local'?'local':'cpu',localSeat:net?net.seat:0,persona:circuit?circuitOpponent():rival==='local'?'rookie':rival,seats:exhibit?exhibitionPair(exhibitionIndex++):null,ruleset:net?net.settings.ruleset:kind==='match'&&!circuit?gameType:'eight',official:net?Boolean(net.settings.official):!exhibit&&!circuit&&rules==='official'&&gameType==='eight',callEight:net?Boolean(net.settings.callEight):!exhibit&&!circuit&&rules==='call8'&&gameType==='eight',shotClock:net?net.settings.shotClock:exhibit?0:clockSeconds,clockAuthority:!net||net.seat===0,notify,onPocket:animatePocket,onTurn:matchTurn});
  matchEventId=kind==='match'&&!exhibit&&!net?newMatchId():null;
  $('gameScreen').dataset.exhibition=String(exhibit);
  drillEventId=kind==='drill'?newMatchId():null;
@@ -821,12 +896,12 @@ function finishRackFlock(){
  for(const ball of current?.sim.balls||[]){const pose=final.find(p=>p.id===ball.id);if(pose){ball.orientation=[...pose.orientation];ball.rotation=pose.rotation;}}
  rackFlock=null;
 }
-function resetMatch(alternate=false){
+function resetMatch(alternate=false,{force=false,state=null}={}){
  if(!current)return;
- if(current.players==='online'){tableToast('LEAVE THE TABLE TO START A NEW ONLINE MATCH','hint',2600);return;}clearTimeout(exhibitionTimer);
+ if(current.players==='online'&&!force){tableToast('USE REMATCH, OR LEAVE THE TABLE','hint',2600);return;}clearTimeout(exhibitionTimer);
  // Circuit: a win moves on to the next opponent, a loss replays the same round.
  if(circuitRun){const stage=circuitState(progress).stage;circuitRun={stage};current.persona=personaFor(CIRCUIT[stage]);current.difficulty=current.persona.tier;}
- if(current.players==='ai')current.seatPersonas=exhibitionPair(exhibitionIndex++).map(personaFor);const before=cloneBalls(current.sim.balls);finishRackFlock();current.reset(alternate);startRackFlock(before);calledPocket=null;matchEventId=current.kind==='match'&&current.players!=='ai'?newMatchId():null;
+ if(current.players==='ai')current.seatPersonas=exhibitionPair(exhibitionIndex++).map(personaFor);const before=cloneBalls(current.sim.balls);finishRackFlock();if(state){if(!current.importState(state)){online?.session.requestResync();return;}}else{current.reset(alternate);if(current.players==='online'&&online?.role==='host')online.session.sendRematch();}startRackFlock(before);calledPocket=null;matchEventId=current.kind==='match'&&current.players!=='ai'?newMatchId():null;
  drillEventId=current.kind==='drill'?newMatchId():null;lastScoreSignature='';matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();
  setRecap(current.kind==='match'?(current.players==='ai'?`Exhibition: ${current.personaAt(0).name} vs ${current.personaAt(1).name}. ${current.personaAt(current.turn).name} breaks.`:current.players==='local'?`Player ${current.turn+1} breaks.`:current.turn===1?`${seatName(1)} breaks.`:(gameType!=='eight'||rules==='official'?'Your break: hit hard. Pot a ball or drive four to a cushion.':'Your break. Aim, pull the power bar and release.')):'');
  newlyEarnedCueCount=0;$('flightLayer').replaceChildren();placement=null;placeGesture=null;angle=current.kind==='drill'?skillDrillById(current.drillId).referenceAngle:0;
@@ -1136,7 +1211,8 @@ $('menuGuide').onclick=()=>openGuide('menu');$('pauseGuide').onclick=()=>openGui
 all('[data-guide-tab]').forEach(tab=>tab.onclick=()=>selectGuideTab(tab.dataset.guideTab));
 $('menuBtn').onclick=openMenu;$('closeMenu').onclick=closeMenu;
 $('menuPractice').onclick=()=>begin('practice');$('menuDaily').onclick=()=>begin('daily');$('menuSettings').onclick=openSettings;
-$('menuOnline').onclick=openOnline;$('modeOnline').onclick=openOnline;$('menuRecord').onclick=()=>openRecord('menu');$('closeOnline').onclick=closeOnline;$('onlineHost').onclick=()=>hostOnline();$('onlineJoin').onclick=()=>joinOnline($('onlineCode').value);
+$('menuOnline').onclick=openOnline;
+$('roomMastery').onclick=()=>{const model=roomMastery(progress,room),step=model?.steps.find(x=>!x.done);if(!step||active!=='lobby')return;if(step.drillId)begin('drill',step.drillId);else{mode='match';begin('match');}};$('onlineLeave').onclick=quitToLobby;$('modeOnline').onclick=openOnline;$('menuRecord').onclick=()=>openRecord('menu');$('closeOnline').onclick=closeOnline;$('onlineHost').onclick=()=>hostOnline();$('onlineJoin').onclick=()=>joinOnline($('onlineCode').value);
 $('onlineCode').onkeydown=e=>{if(e.key==='Enter')joinOnline($('onlineCode').value);};
 $('onlineCancel').onclick=()=>{closeOnlineSession();show('onlineStart');hide('onlineWait');onlineStatus('');};
 $('onlineCopy').onclick=async()=>{const link=online?.link;if(!link)return;try{await navigator.clipboard.writeText(link);onlineStatus('Invite link copied.');}catch{onlineStatus(link);}};
@@ -1158,11 +1234,11 @@ const answerChoice=(a)=>{const kind=current?.pendingChoice?.kind;if(!kind)return
 $('choiceA').onclick=()=>answerChoice(true);$('choiceB').onclick=()=>answerChoice(false);
 $('replayButton').onclick=()=>{if(replay)endReplay();else startReplay();};
 $('playShotCode').onclick=()=>playHighlight($('shotCode').value);
-$('playAgain').onclick=()=>{if(active==='game'&&current?.over&&current.players==='online'){quitToLobby();return;}if(active==='game'&&current?.over){resetMatch(true);$('gameCanvas').focus();}};
+$('playAgain').onclick=()=>{if(active==='game'&&current?.over&&current.players==='online'){online?.session.askRematch();return;}if(active==='game'&&current?.over){resetMatch(true);$('gameCanvas').focus();}};
 $('resultMenu').onclick=quitToLobby;
 $('closeSettings').onclick=closeSettings;
 $('openRecord').onclick=openRecord;$('closeRecord').onclick=closeRecord;
-$('exportRecord').onclick=downloadRecord;
+$('exportRecord').onclick=downloadRecord;$('importRecord').onclick=startImport;$('importFile').onchange=importChosen;
 $('resetRecord').onclick=()=>{
  $('recordMessage').textContent='';$('resetRecord').hidden=true;
  $('recordConfirm').hidden=false;$('cancelRecordReset').focus();
@@ -1176,7 +1252,7 @@ all('[data-spin-keep]').forEach(b=>b.onclick=()=>{spinKeep=b.dataset.spinKeep===
 all('[data-guide-mode]').forEach(b=>b.onclick=()=>{guideMode=b.dataset.guideMode;savePreference('ghostball-guide',guideMode);syncGuideMode();});
 all('[data-view]').forEach(b=>b.onclick=()=>{tableView=b.dataset.view==='elevated'?'elevated':'overhead';savePreference('ghostball-view',tableView);applyTableView();resize();syncTableView();});
 all('[data-wheel]').forEach(b=>b.onclick=()=>{wheelFine=b.dataset.wheel==='fine';savePreference('ghostball-wheel',wheelFine?'fine':'normal');syncGuideMode();});
-all('#clockSetting [data-clock]').forEach(b=>b.onclick=()=>{clockSeconds=Number(b.dataset.clock);savePreference('ghostball-clock',String(clockSeconds));syncClock();});
+all('[data-clock]').forEach(b=>b.onclick=()=>{clockSeconds=Number(b.dataset.clock);savePreference('ghostball-clock',String(clockSeconds));syncClock();});
 all('[data-aim-mode]').forEach(b=>b.onclick=()=>{aimMode=b.dataset.aimMode;savePreference('ghostball-aim-mode',aimMode);syncAimMode();});
 $('soundToggle').onchange=event=>setSound(event.target.checked);
 $('musicToggle').onchange=event=>{audio.setMusic(event.target.checked);if(event.target.checked)audio.unlock();savePreference('ghostball-music',event.target.checked?'on':'off');};
@@ -1516,3 +1592,4 @@ if ('serviceWorker' in navigator){
 $('applyUpdate').onclick=()=>window.location.reload();
 {const code=new URLSearchParams(location.search).get('join');
  if(code&&validRoomCode(code)){openOnline();$('onlineCode').value=normalizeRoomCode(code);onlineStatus('Press Join to enter the table.');}}
+window.addEventListener('pagehide',()=>{if(online)try{online.session.transport.send({t:'bye',v:1});}catch{}});

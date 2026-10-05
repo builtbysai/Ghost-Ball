@@ -2,6 +2,7 @@
  * All detail is visual: no changes to cushion or pocket collision coordinates.
  */
 import {POCKETS,TABLE} from './physics.js';
+import {CUSHION_RUNS,RAIL_RISE} from './table-geometry.js';
 const C=(n,a,b)=>Math.max(a,Math.min(b,n));
 const mix=(hex,target,amount)=>{const n=parseInt(hex.slice(1),16),c=[n>>16&255,n>>8&255,n&255].map(v=>Math.round(v+(target-v)*amount));return `rgb(${c[0]},${c[1]},${c[2]})`;};
 const lighten=(hex,amount)=>mix(hex,255,amount),darken=(hex,amount)=>mix(hex,0,amount);
@@ -132,45 +133,50 @@ export function paintCloth(g,{P,h,finish,bw,blend}){
  // The dark cloth seam never crosses the openings; pocket mouths are drawn last.
  g.restore();
 }
-const cushions=[
- [[45,0],[454,0]],[[546,0],[955,0]],
- [[45,500],[454,500]],[[546,500],[955,500]],
- [[0,45],[0,455]],[[1000,45],[1000,455]],
-];
 export function paintRailDetails(g,{P,finish,bw,margin}){
  const unit=C(bw/740,.52,1.35);
  g.save();g.lineCap='round';g.lineJoin='round';
 
- // Real cushions: a rubber wedge that rises out from under the rail and ends in a nose exactly on the cloth edge
- // (the line balls touch). A soft contact shadow falls on the felt, and each end is cut back toward its pocket.
- for(const [a,b] of cushions){
-   const vertical=a[0]===b[0],edge=vertical?(a[0]===0?-1:1):(a[1]===0?-1:1);
-   const len=Math.hypot(b[0]-a[0],b[1]-a[1]),ux=(b[0]-a[0])/len,uy=(b[1]-a[1])/len;
-   // inward normal (into the table)
-   const nx=vertical?-edge:0,ny=vertical?0:-edge;
-   const at=(along,depth)=>P(a[0]+ux*along+nx*depth,a[1]+uy*along+ny*depth);
-   const cut=9,rise=9;
-   // contact shadow on the cloth, drawn first so the rubber sits on it: stacked, shrinking strips fake a soft penumbra
-   // (no canvas blur, which not every browser has) and fade out toward the pockets.
-   for(let layer=0;layer<6;layer++){
-    const depth=3+layer*2.6,inset=cut*.4+layer*3.2;
-    path(g,[at(inset,0),at(len-inset,0),at(len-inset-depth*.8,depth),at(inset+depth*.8,depth)]);
-    g.fillStyle=`rgba(0,10,8,${.115-layer*.014})`;g.fill();
-   }
-   // rubber body
-   const r0=at(len/2,-rise),r1=at(len/2,0);
+
+ // Cushions are drawn from the very edges the physics uses (table-geometry.js): a rubber wedge whose FACE is the line
+ // balls touch, ending in a rounded NOSE and cut back at the facing angle toward the pocket's throat.
+ for(const run of CUSHION_RUNS){
+   const {a,b,fa,fb,n}=run,len=Math.hypot(b[0]-a[0],b[1]-a[1]),ux=(b[0]-a[0])/len,uy=(b[1]-a[1])/len;
+   const at=(along,depth)=>P(a[0]+ux*along+n[0]*depth,a[1]+uy*along+n[1]*depth);
+   const nA=P(a[0],a[1]),nB=P(b[0],b[1]),fA=P(fa[0],fa[1]),fB=P(fb[0],fb[1]);
+   // soft contact shadow on the cloth: a row of overlapping soft discs along the nose, so it fades out smoothly at the
+   // ends (no canvas blur, which not every browser has)
+   {const step=7,count=Math.max(2,Math.ceil(len/step)),p0=P(0,250),p1=P(14,250),rad=Math.max(3,Math.hypot(p1[0]-p0[0],p1[1]-p0[1]));
+    for(let i=0;i<=count;i++){
+     const along=len*i/count,[cx,cy]=at(along,5),edge=Math.min(along,len-along);
+     const fade=Math.min(1,.35+edge/40);
+     const disc=g.createRadialGradient(cx,cy,0,cx,cy,rad*1.15);
+     disc.addColorStop(0,`rgba(0,10,8,${.1*fade})`);disc.addColorStop(1,'rgba(0,10,8,0)');
+     g.fillStyle=disc;g.beginPath();g.arc(cx,cy,rad*1.15,0,Math.PI*2);g.fill();
+    }}
+   // rubber body: dark where it tucks under the rail, a lit shoulder, then the darker face down to the nose
+   const r0=at(len/2,-RAIL_RISE),r1=at(len/2,0);
    const body=g.createLinearGradient(r0[0],r0[1],r1[0],r1[1]);
    body.addColorStop(0,darken(finish.cushion,.62));body.addColorStop(.34,lighten(finish.cushion,.1));
    body.addColorStop(.72,finish.cushion);body.addColorStop(1,darken(finish.cushion,.38));
-   path(g,[at(0,-rise),at(len,-rise),at(len-cut,0),at(cut,0)]);
-   g.fillStyle=body;g.fill();g.lineJoin='round';g.strokeStyle='#04100b';g.lineWidth=.9*unit;g.stroke();
-   // a thin catchlight on the shoulder and a darker seam at the nose
-   g.lineCap='round';g.strokeStyle='rgba(255,255,255,.22)';g.lineWidth=.9*unit;
-   line(g,at(cut*1.3,-rise*.42),at(len-cut*1.3,-rise*.42));
-   g.strokeStyle='rgba(2,10,8,.7)';g.lineWidth=1.1*unit;line(g,at(cut*.9,-.3),at(len-cut*.9,-.3));
-   // inlaid trim where the rail meets the rubber
-   g.strokeStyle=finish.trim;g.lineWidth=1.1*unit;g.globalAlpha=.6;
-   line(g,at(cut*.5,-rise-1.5),at(len-cut*.5,-rise-1.5));g.globalAlpha=1;
+   path(g,[fA,fB,nB,nA]);g.fillStyle=body;g.fill();
+   g.lineJoin='round';g.lineCap='round';
+   // the two facings: a lit bevel on the angled end face, then a dark seam against the wood
+   for(const [nose,foot] of [[nA,fA],[nB,fB]]){
+    g.strokeStyle='rgba(235,255,240,.2)';g.lineWidth=1.5*unit;line(g,nose,foot);
+    g.strokeStyle='rgba(2,10,8,.85)';g.lineWidth=.9*unit;line(g,nose,foot);
+   }
+   // shoulder catchlight, the face seam, and the trim where the rubber meets the rail
+   g.strokeStyle='rgba(255,255,255,.22)';g.lineWidth=.9*unit;line(g,at(len*.03,-RAIL_RISE*.42),at(len*.97,-RAIL_RISE*.42));
+   g.strokeStyle='rgba(2,10,8,.7)';g.lineWidth=1.1*unit;line(g,at(0,-.3),at(len,-.3));
+   g.strokeStyle=finish.trim;g.lineWidth=1.1*unit;g.globalAlpha=.6;line(g,fA,fB);g.globalAlpha=1;
+   // the noses: small polished caps, so the exact point a ball can touch is visible
+   for(const [nose,toward] of [[nA,1],[nB,-1]]){
+    const rn=Math.max(1.1,1.7*unit);
+    g.beginPath();g.arc(nose[0],nose[1],rn,0,Math.PI*2);g.fillStyle=lighten(finish.cushion,.2);g.fill();
+    g.strokeStyle='rgba(2,10,8,.8)';g.lineWidth=.7*unit;g.stroke();
+    g.beginPath();g.arc(nose[0]-rn*.3,nose[1]-rn*.3,rn*.38,0,Math.PI*2);g.fillStyle="rgba(255,255,255,.4)";g.fill();
+   }
  }
  // Inlaid sights live in the wood, not on the felt or in pocket mouths.
  const sights=[];
@@ -203,41 +209,42 @@ export function paintRailDetails(g,{P,finish,bw,margin}){
  g.restore();
 }
 export function paintPockets(g,{P,finish,bw,blend}){
- const u=C(bw/1000,.29,1.7);
+ const sc=bw/1000;
  // Ambient shade pooling in front of each pocket, only on the cloth, so the holes read as deep.
  g.save();path(g,[P(0,0),P(TABLE.width,0),P(TABLE.width,TABLE.height),P(0,TABLE.height)]);g.clip();
  for(let i=0;i<POCKETS.length;i++){
-  const [x,y]=POCKETS[i],[sx,sy,k]=P(x,C(y,0,500)),side=i===1||i===4,rr=(side?58:74)*u*k;
+  const [x,y]=POCKETS[i],[sx,sy,k]=P(x,y),side=i===1||i===4,rr=(side?60:76)*sc*k;
   const pool=g.createRadialGradient(sx,sy,rr*.2,sx,sy,rr);
-  pool.addColorStop(0,'rgba(0,6,6,.55)');pool.addColorStop(.55,'rgba(0,6,6,.2)');pool.addColorStop(1,'rgba(0,6,6,0)');
+  pool.addColorStop(0,'rgba(0,6,6,.5)');pool.addColorStop(.55,'rgba(0,6,6,.18)');pool.addColorStop(1,'rgba(0,6,6,0)');
   g.fillStyle=pool;g.fillRect(sx-rr,sy-rr,rr*2,rr*2);
  }
  g.restore();
+ // Each cup is centred on the physics pocket, and its rim passes through the outer ends of the two facings, so the
+ // cushions run straight into the throat with no gap and no overlap.
  for(let i=0;i<POCKETS.length;i++){
-   const [x,y]=POCKETS[i],[sx,sy,k]=P(x,C(y,0,500));
-   const side=i===1||i===4,r=(side?23:27)*u*k,stretch=.77+.23*blend;
+   const [x,y]=POCKETS[i],[sx,sy,k]=P(x,y),side=i===1||i===4;
+   const R=(side?25.6:31.8)*sc*k,stretch=.77+.23*blend;
    g.save();g.translate(sx,sy);g.scale(1,stretch);
-   g.shadowColor='#000e';g.shadowBlur=C(r*.63,3,12);g.shadowOffsetY=2;
-   g.beginPath();g.arc(0,0,r*1.24,0,Math.PI*2);
-   g.fillStyle=finish.pocket;g.fill();g.shadowBlur=0;g.shadowOffsetY=0;
-   // Thin polished iron/leather outer rim, with a top-left catchlight.
-   const ring=g.createLinearGradient(-r,-r,r,r);ring.addColorStop(0,finish.inlay);ring.addColorStop(.4,finish.trim);
-   ring.addColorStop(.75,'#241d1a');ring.addColorStop(1,finish.trim);
-   g.strokeStyle=ring;g.lineWidth=C(r*.19,1.1,3.2);g.stroke();
-   const dark=g.createRadialGradient(-r*.22,-r*.27,1,r*.2,r*.28,r*1.04);
-   dark.addColorStop(0,'#040606');dark.addColorStop(.55,'#060a0a');dark.addColorStop(1,'#101612');
-   g.beginPath();g.arc(0,0,r*.92,0,Math.PI*2);g.fillStyle=dark;g.fill();
-   // depth: a leather lip lit from the top left, a glimpse of the net far below, and a row of stitching
-   const lip=g.createLinearGradient(-r,-r,r,r);lip.addColorStop(0,'rgba(210,170,120,.5)');lip.addColorStop(.45,'rgba(60,38,26,.5)');lip.addColorStop(1,'rgba(0,0,0,.8)');
-   g.beginPath();g.arc(0,0,r*.9,0,Math.PI*2);g.strokeStyle=lip;g.lineWidth=C(r*.11,1,3.4);g.stroke();
-   const net=g.createRadialGradient(r*.1,r*.42,0,r*.1,r*.42,r*.6);net.addColorStop(0,'rgba(92,64,44,.34)');net.addColorStop(1,'rgba(92,64,44,0)');
-   g.beginPath();g.arc(0,0,r*.84,0,Math.PI*2);g.fillStyle=net;g.fill();
-   g.save();g.setLineDash([C(r*.07,1,2.4),C(r*.09,1.4,3)]);g.beginPath();g.arc(0,0,r*1.06,0,Math.PI*2);
-   g.strokeStyle='rgba(235,205,150,.3)';g.lineWidth=C(r*.035,.5,1.2);g.stroke();g.restore();
-   g.beginPath();g.arc(-r*.08,-r*.12,r*1.02,Math.PI*1.1,Math.PI*1.75);
-   g.strokeStyle=finish.inlay;g.globalAlpha=.45;g.lineWidth=C(r*.13,.75,2);
-   g.stroke();g.restore();
+   // seat: the shelf of wood and leather around the opening, with a drop shadow onto the rail
+   g.shadowColor='rgba(0,0,0,.8)';g.shadowBlur=C(R*.45,3,12);g.shadowOffsetY=2;
+   g.beginPath();g.arc(0,0,R*1.1,0,Math.PI*2);g.fillStyle=finish.pocket;g.fill();g.shadowBlur=0;g.shadowOffsetY=0;
+   // polished rim: a bright top-left edge rolling to dark
+   const ring=g.createLinearGradient(-R,-R,R,R);ring.addColorStop(0,finish.inlay);ring.addColorStop(.38,finish.trim);
+   ring.addColorStop(.72,'#241d1a');ring.addColorStop(1,finish.trim);
+   g.beginPath();g.arc(0,0,R*1.03,0,Math.PI*2);g.strokeStyle=ring;g.lineWidth=C(R*.12,1.2,3.6);g.stroke();
+   // leather lip and the well itself
+   const lip=g.createLinearGradient(-R,-R,R,R);lip.addColorStop(0,'rgba(120,88,62,.9)');lip.addColorStop(.5,'rgba(48,32,24,.95)');lip.addColorStop(1,'rgba(8,6,6,1)');
+   g.beginPath();g.arc(0,0,R*.9,0,Math.PI*2);g.fillStyle=lip;g.fill();
+   const well=g.createRadialGradient(-R*.2,-R*.26,1,R*.1,R*.22,R*.84);
+   well.addColorStop(0,'#030505');well.addColorStop(.6,'#060a0a');well.addColorStop(1,'#141a16');
+   g.beginPath();g.arc(0,0,R*.76,0,Math.PI*2);g.fillStyle=well;g.fill();
+   // a glimpse of the net far below, row of stitching on the leather, and a specular crescent on the rim
+   const net=g.createRadialGradient(R*.08,R*.4,0,R*.08,R*.4,R*.55);net.addColorStop(0,'rgba(96,66,46,.34)');net.addColorStop(1,'rgba(96,66,46,0)');
+   g.beginPath();g.arc(0,0,R*.74,0,Math.PI*2);g.fillStyle=net;g.fill();
+   g.save();g.setLineDash([C(R*.07,1,2.4),C(R*.09,1.4,3)]);g.beginPath();g.arc(0,0,R*.84,0,Math.PI*2);
+   g.strokeStyle='rgba(235,205,150,.34)';g.lineWidth=C(R*.035,.5,1.2);g.stroke();g.restore();
+   g.beginPath();g.arc(-R*.04,-R*.06,R*1.0,Math.PI*1.08,Math.PI*1.72);
+   g.strokeStyle=finish.inlay;g.globalAlpha=.5;g.lineWidth=C(R*.09,.75,2);g.stroke();g.globalAlpha=1;
+   g.restore();
  }
- // Pocket knuckles are part of the cushion on a real table, never loose dots on the
- // cloth, so nothing is painted over the pocket mouths. Physics keeps the funnel.
 }

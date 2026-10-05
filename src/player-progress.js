@@ -151,7 +151,7 @@ export function recordLiveDrill(previous,event){
   typeof event.at!=='string'||!/^(19|20)\d\d-\d\d-\d\dT/.test(event.at)||
   !Number.isInteger(event.shots)||event.shots<1||event.shots>drill.attempts)
   return previous;
- const grade=gradeSkillDrill(event.drillId,{shots:event.shots,shot:event.evidence});
+ const grade=gradeSkillDrill(event.drillId,{shots:event.shots,shot:event.evidence,end:event.evidence?.end,made:event.evidence?.made||0});
  if(grade.status!=='completed'||(previous.drillEvents||[]).includes(event.id))return previous;
  const best=previous.drills?.[drill.id];
  const drills={...(previous.drills||{}),[drill.id]:best?Math.min(best,event.shots):event.shots};
@@ -164,6 +164,12 @@ export function chooseRoom(previous,room,maxRooms){
  if(!validProgress(previous)||!Number.isInteger(room)||room<0||
   !Number.isInteger(maxRooms)||room>=maxRooms)return previous;
  return previous.selectedRoom===room?previous:{...previous,selectedRoom:room};
+}
+/** Parse a backup file. Returns a fully validated progress object, or null; nothing is written here. */
+export function importLocalProgress(text){
+ if(typeof text!=='string'||text.length>2_000_000)return null;
+ let parsed;try{parsed=JSON.parse(text);}catch{return null;}
+ return validProgress(parsed)?parsed:null;
 }
 export function exportLocalProgress(progress){
  return validProgress(progress)?JSON.stringify(progress,null,2):null;

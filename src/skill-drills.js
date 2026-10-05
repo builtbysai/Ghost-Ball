@@ -60,23 +60,37 @@ const EXTRA=[
   brief:'FEEL THE SPEED',room:2,targetId:9,targetPocket:-1,attempts:2,
   cue:Object.freeze({x:420,y:250}),target:Object.freeze({x:600,y:250}),
   goal:Object.freeze({kind:'ball-zone',x:850,y:250,r:85}),
-  referenceAngle:0,solution:Object.freeze({angle:0,power:.215,spin:Object.freeze({x:0,y:0})})})
+  referenceAngle:0,solution:Object.freeze({angle:0,power:.215,spin:Object.freeze({x:0,y:0})})}),
+ Object.freeze({id:'safe-hide',name:'Safe Hide',subtitle:'Safety play',
+  instruction:'Clip the 7 thinly so the cue ball finishes inside the ring along the bottom rail. Do not pot the 7: that is a safety.',
+  brief:'LEAVE THEM NOTHING',room:3,targetId:7,targetPocket:-1,attempts:2,
+  cue:Object.freeze({x:250,y:170}),target:Object.freeze({x:520,y:250}),
+  goal:Object.freeze({kind:'safety',x:640,y:445,r:55}),
+  referenceAngle:.35,solution:Object.freeze({angle:.35,power:.32,spin:Object.freeze({x:0,y:0})})}),
+ Object.freeze({id:'three-straight',name:'Three Straight',subtitle:'Repeat the shot',
+  instruction:'Pocket the 4 in the top left three times in a row. After each pot the 4 is re-spotted somewhere new, so re-aim every time.',
+  brief:'REPEAT, DO NOT REPLAY',room:4,targetId:4,targetPocket:0,attempts:6,streak:3,
+  cue:Object.freeze({x:300,y:260}),target:Object.freeze({x:150,y:120}),
+  variants:Object.freeze([Object.freeze({x:150,y:120}),Object.freeze({x:215,y:150}),Object.freeze({x:130,y:180})]),
+  referenceAngle:-2.375,solution:Object.freeze({angle:-2.375,power:.5,spin:Object.freeze({x:0,y:0})}),
+  solutions:Object.freeze([-2.375,-2.153,-2.7835])})
 ];
 export const EXTRA_DRILLS=Object.freeze(EXTRA);
 /** Every drill: the five founder skills (tied to the halls' mastery steps) and the extra skills. */
 export const SKILL_DRILLS=Object.freeze([...FOUNDER_DRILLS,...EXTRA]);
 export const skillDrillById=id=>SKILL_DRILLS.find(drill=>drill.id===id)||null;
-export function skillDrillBalls(id){
+export function skillDrillBalls(id,step=0){
  const drill=skillDrillById(id);
  if(!drill)throw new RangeError('Unknown skill drill');
- return [makeBall(0,drill.cue.x,drill.cue.y),
-   makeBall(drill.targetId,drill.target.x,drill.target.y)];
+ // A streak drill re-spots the target at the next of its authored positions after every pot.
+ const spot=drill.variants?.[step%drill.variants.length]||drill.target;
+ return [makeBall(0,drill.cue.x,drill.cue.y),makeBall(drill.targetId,spot.x,spot.y)];
 }
 /** Score only the settled event log, never a click/animation or ball snapshot.
  * A wrong-pocket pot and a scratch terminate this attempt, so a failed drill
  * cannot be replayed as though a correctly pocketed target still existed.
  */
-export function gradeSkillDrill(id,{shots,shot,end}={}){
+export function gradeSkillDrill(id,{shots,shot,end,made=0}={}){
  const drill=skillDrillById(id);
  if(!drill||!Number.isInteger(shots)||shots<1||
   !shot||!Array.isArray(shot.potRecords)||!Array.isArray(shot.pots))
@@ -85,6 +99,12 @@ export function gradeSkillDrill(id,{shots,shot,end}={}){
  const target=shot.potRecords.find(record=>record?.id===drill.targetId);
  if(scratched)return {status:'failed',reason:'scratch'};
  const inZone=point=>point&&!point.pocketed&&drill.goal&&Math.hypot(point.x-drill.goal.x,point.y-drill.goal.y)<=drill.goal.r;
+ // Safety: the target is hit first and stays down, and the cue ball finishes inside the ring.
+ if(drill.goal?.kind==='safety'){
+  if(target)return {status:'failed',reason:'potted'};
+  if(shot.first===drill.targetId&&inZone(end?.cue))return {status:'completed',reason:'safe'};
+  return shots>=drill.attempts?{status:'failed',reason:'out-of-shots'}:{status:'continue',reason:'try-again'};
+ }
  // Speed control: the target must come to rest in the ring without being potted, after the cue ball hit it first.
  if(drill.goal?.kind==='ball-zone'){
   if(target)return {status:'failed',reason:'potted'};
@@ -99,6 +119,8 @@ export function gradeSkillDrill(id,{shots,shot,end}={}){
    return {status:'failed',reason:'no-bank'};
   // Cue-ball control: the pot only counts when the cue ball also finishes inside the ring.
   if(drill.goal?.kind==='cue-zone'&&!inZone(end?.cue))return {status:'failed',reason:'position'};
+  // Streak drills need several pots in a row: a pot short of the streak re-spots the target and keeps going.
+  if(drill.streak&&made+1<drill.streak)return shots>=drill.attempts?{status:'failed',reason:'out-of-shots'}:{status:'made',reason:'streak'};
   return {status:'completed',reason:'target-pocket'};
  }
  return shots>=drill.attempts

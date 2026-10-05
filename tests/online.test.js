@@ -6,7 +6,7 @@ import {authoritativeDigest} from '../src/private-match-protocol.js';
 
 const tick=()=>new Promise(r=>setTimeout(r,0));
 const settings={ruleset:'eight',official:false,seed:21};
-const make=seat=>new Game({kind:'match',players:'online',localSeat:seat,seed:settings.seed,ruleset:settings.ruleset,shotClock:0});
+const make=seat=>new Game({kind:'match',players:'online',localSeat:seat,clockAuthority:seat===0,seed:settings.seed,ruleset:settings.ruleset,shotClock:0});
 async function pair(){
  const [ta,tb,connect]=loopbackPair();
  const ctx={host:make(0),guest:null,statuses:[]};
@@ -90,4 +90,58 @@ test('the live aim of the shooter shows on the waiting device',async()=>{
  assert.equal(c.guest.remotePose.angle,.7);
  assert.ok(c.guest.presentedCue);
  c.hs.sendAim({angle:.9,power:.4},1010);await tick();assert.equal(c.guest.remotePose.angle,.7,'aim updates are rate limited');
+});
+
+async function pair2(extra={}){
+ const [ta,tb,connect]=loopbackPair();
+ const ctx={host:make(0),guest:null,statuses:[],rematches:[]};
+ ctx.hs=new OnlineSession({transport:ta,role:'host',cue:'ember',getGame:()=>ctx.host,getSettings:()=>settings,onStatus:s=>ctx.statuses.push('h:'+s),
+  onRematch:()=>{ctx.host.reset(true);ctx.rematches.push('host-reset');ctx.hs.sendRematch();},...extra.host});
+ ctx.gs=new OnlineSession({transport:tb,role:'guest',cue:'showman',getGame:()=>ctx.guest,onStart:(s,state)=>{ctx.guest=make(1);ctx.guest.importState(state);},
+  onStatus:s=>ctx.statuses.push('g:'+s),onRematch:state=>{ctx.guest.importState(state);ctx.rematches.push('guest-state');},...extra.guest});
+ connect();for(let i=0;i<6;i++)await tick();
+ return ctx;
+}
+
+test('each player sees the other\'s cue name from the handshake',async()=>{
+ const c=await pair2();
+ assert.equal(c.gs.peerCue,'ember');assert.equal(c.hs.peerCue,'showman');
+});
+
+test('a rematch needs both players, then the host racks again and the guest receives the same table',async()=>{
+ const c=await pair2();
+ c.host.over=true;c.guest.over=true;
+ c.hs.askRematch();await tick();await tick();
+ assert.deepEqual(c.rematches,[],'one player asking is not enough');
+ c.gs.askRematch();for(let i=0;i<8;i++)await tick();
+ assert.deepEqual(c.rematches.sort(),['guest-state','host-reset']);
+ assert.equal(c.guest.over,false);assert.equal(authoritativeDigest(c.host),authoritativeDigest(c.guest));
+ assert.equal(c.host.turn,c.guest.turn);
+ assert.deepEqual(c.hs.rematch,{me:false,them:false},'the request flags reset for the next game');
+});
+
+test('only the host\'s shot clock fines a player; the guest follows the host\'s timeout',async()=>{
+ const c=await pair2();
+ for(const g of [c.host,c.guest]){g.shotClockSeconds=5;g.shotRemaining=5;}
+ assert.equal(c.guest.clockAuthority,false,'the guest never fines a player on its own clock');
+ // the guest's local clock running out does nothing
+ c.guest.shotClockKey='x';c.guest.shotRemaining=.01;c.guest.update(1);
+ assert.equal(c.guest.foul,false);
+ // the host's clock expires, the host sends a timeout, and both tables agree
+ assert.ok(c.host.expireShotClock());c.hs.sendAct({k:'timeout'});
+ for(let i=0;i<6;i++){c.gs.pump();await tick();}
+ assert.equal(c.guest.turn,c.host.turn);assert.equal(c.guest.foul,true);
+ // a guest cannot send a timeout at the host
+ c.gs.sendAct({k:'timeout'});for(let i=0;i<4;i++){c.hs.pump();await tick();}
+ assert.equal(c.hs.queue.length,0);
+});
+
+test('a dropped peer gets a reconnect window, then the game is marked abandoned',async()=>{
+ const c=await pair2({host:{graceMs:50}});
+ c.gs.close();await tick();await tick();
+ assert.ok(c.statuses.includes('h:peer-left'));
+ assert.ok(c.hs.graceLeft()>=0);
+ await new Promise(r=>setTimeout(r,80));
+ c.hs.pump();
+ assert.equal(c.hs.status,'abandoned');
 });

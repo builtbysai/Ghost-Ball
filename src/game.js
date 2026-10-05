@@ -13,7 +13,7 @@ export const HEAD_STRING=265;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 const nowMs=()=>typeof performance!=='undefined'?performance.now():Date.now();
 export class Game {
- constructor({kind='attract',players='cpu',difficulty='rookie',persona=null,seats=null,fixedRack=false,official=false,target=30,localSeat=0,seed=Date.now(),drillId=null,ruleset='eight',callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
+ constructor({kind='attract',players='cpu',difficulty='rookie',persona=null,seats=null,fixedRack=false,official=false,target=30,localSeat=0,clockAuthority=true,seed=Date.now(),drillId=null,ruleset='eight',callEight=false,shotClock=SHOT_CLOCK_SECONDS,notify=()=>{},onPocket=()=>{},onTurn=()=>{}}={}){
   this.ruleset=(ruleset==='nine'||ruleset==='ten'||ruleset==='straight'||ruleset==='onepocket')&&(kind==='match'||kind==='attract')?ruleset:'eight';
   // Straight pool is a race to `target` points (one per called-pocket ball).
   this.target=this.ruleset==='onepocket'?8:Math.max(5,Math.min(150,Number(target)||30));
@@ -24,7 +24,7 @@ export class Game {
   this.callEight=Boolean(callEight)&&kind==='match'&&this.ruleset==='eight';
   // 0 turns the shot clock off (relaxed games); any positive value is whole seconds per shot.
   this.shotClockSeconds=Number.isFinite(shotClock)&&shotClock>0?Math.round(shotClock):0;
-  this.kind=kind;this.players=players;this.localSeat=localSeat===1?1:0;this.remotePose=null;this.fixedRack=fixedRack;this.officialRequested=official;
+  this.kind=kind;this.players=players;this.localSeat=localSeat===1?1:0;this.clockAuthority=Boolean(clockAuthority);this.remoteCue=null;this.remotePose=null;this.fixedRack=fixedRack;this.officialRequested=official;
   // `persona` picks the named CPU; `difficulty` stays the planner tier that records and unlocks see.
   // An exhibition (players:'ai') seats two personas and plays a fully refereed match with no human.
   this.persona=personaFor(persona||difficulty);this.seatPersonas=seats?seats.map(personaFor):null;
@@ -37,7 +37,7 @@ export class Game {
    // Rack-again alternates the breaker (the fair casual convention); a restart is a fresh match.
    this.rackCount=alternate?(this.rackCount||0)+1:0;this.turn=this.kind==='match'?this.rackCount%2:0;this.groups=[null,null];this.break=this.kind!=='drill';
    this.foul=false;this.ballInHand=false;this.kitchen=false;this.over=false;this.winner=null;
-   this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;this.drillOutcome=null;
+   this.timer=0;this.turnShot=null;this.fx=[];this.shots=0;this.drillOutcome=null;this.drillMade=0;
   this.history=[];this.previewShot=null;this.planIterator=null;this.planningPose=null;this.planSettledAt=0;this.activeStroke=null;
   this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';this.bestShot=null;this.points=[0,0];this.credit=new Map();this.pendingChoice=null;this.pushOutAvailable=false;this.lastShot=null;this.foulStreak=[0,0];this.dryTurns=[0,0];
   this.notify('A fresh rack. Take your time.');}
@@ -171,7 +171,7 @@ export class Game {
  }
  /** The CPU previews the real shot it will take, including cue motion. */
  /** The pose shown for whoever is shooting, tagged with the cue the CPU (or online opponent) uses. */
- get presentedCue(){const pose=this.rawCue;if(!pose||!this.isAI())return pose;return {...pose,cueId:this.players==='online'?'smoke':this.personaAt(this.turn).cue};}
+ get presentedCue(){const pose=this.rawCue;if(!pose||!this.isAI())return pose;return {...pose,cueId:this.players==='online'?(this.remoteCue||'smoke'):this.personaAt(this.turn).cue};}
  get rawCue(){
    // Online: show the other player's live aim, then their stroke.
    if(this.isRemote()&&!this.activeStroke)return this.remotePose&&!this.sim.moving?{angle:this.remotePose.angle,power:this.remotePose.power,drawback:this.remotePose.drawback,showGuide:false}:null;
@@ -282,7 +282,8 @@ export class Game {
      if(key!==this.shotClockKey){this.shotClockKey=key;this.shotRemaining=this.shotClockSeconds;}
      else if(this.shotRemaining>0){
        this.shotRemaining=Math.max(0,this.shotRemaining-dt);
-       if(this.shotRemaining===0)this.expireShotClock();
+       // Online: only the host's clock fines a player; the guest waits for the host's timeout message.
+       if(this.shotRemaining===0&&this.clockAuthority)this.expireShotClock();
      }
    }
  }
@@ -321,18 +322,26 @@ export class Game {
      // Final resting positions let skill drills judge cue-ball position and speed, not only pockets.
      const end={cue:(()=>{const c=this.sim.cue();return c?{x:c.x,y:c.y,pocketed:c.pocketed}:null;})(),
        balls:Object.fromEntries(this.sim.balls.map(b=>[b.id,{x:b.x,y:b.y,pocketed:b.pocketed}]))};
-     const grade=gradeSkillDrill(this.drillId,{shots:this.shots,shot,end});
+     const made=this.drillMade||0,grade=gradeSkillDrill(this.drillId,{shots:this.shots,shot,end,made});
      this.history.push({kind:'drill-ruling',drillId:this.drillId,shot:this.shots,
        reason:grade.reason,status:grade.status,potRecords:[...(shot.potRecords||[])],
        cushionBalls:[...(shot.cushionBalls||[])]});
      this.timer=0;
+     if(grade.status==='made'){
+       // One pot of a streak: re-spot the table at the next authored position and carry on.
+       this.drillMade=made+1;this.sim=new Simulation(skillDrillBalls(this.drillId,this.drillMade));this.turnShot=null;this.fx=[];
+       const need=skillDrillById(this.drillId).streak;
+       this.notify(`${this.drillMade} of ${need}. The target is re-spotted: re-aim.`);
+       this.onTurn({type:'drill-streak',kind:'drill',drillId:this.drillId,made:this.drillMade,need});
+       return;
+     }
      if(grade.status==='completed'||grade.status==='failed'){
        this.drillOutcome=grade.status;this.over=true;
        const complete=grade.status==='completed';
        this.notify(complete?'Skill completed.':'Attempt finished. Reset to try again.');
        this.onTurn({type:'drill-end',kind:'drill',drillId:this.drillId,
          completed:complete,reason:grade.reason,shots:this.shots,
-         evidence:{pots:[...shot.pots],potRecords:[...shot.potRecords],
+         evidence:{pots:[...shot.pots],potRecords:[...shot.potRecords],first:shot.first??null,made,end,
            cushionBalls:[...(shot.cushionBalls||[])]}});
      }else{
        this.notify('One more shot. Pick your angle.');
