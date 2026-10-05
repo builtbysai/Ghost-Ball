@@ -1,4 +1,5 @@
 import {advanceRoll} from './ball-orientation.js';
+import {WALLS,nearestOnSegment} from './table-geometry.js';
 /** Deterministic 240 Hz, browser-free pool simulation. Units: 1000 x 500 cloth. */
 export const TABLE = Object.freeze({width: 1000, height: 500, radius: 12, step: 1 / 240});
 export const POCKETS = Object.freeze([[-7,-7],[500,-13],[1007,-7],[-7,507],[500,513],[1007,507]]);
@@ -11,11 +12,8 @@ export const PHYSICS = Object.freeze({
 const BALL_COLORS = ['#efece3','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d','#191918','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d'];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const distance=(x,y)=>Math.hypot(x,y);
-const topMouth=x=>x<45||x>955||Math.abs(x-500)<46;
-const sideMouth=y=>y<45||y>455;
-// There are no invisible blockers at the pockets: the cushion simply ends at its visible tip (see topMouth/sideMouth)
-// and anything that rolls into a mouth is captured by the pocket. JAWS stays exported (empty) for callers that
-// ask whether a line clips a pocket nose; with none, every line is clear.
+// The cushions and pocket facings live in table-geometry.js, shared with the painter: a ball only ever meets an edge
+// that is drawn. JAWS stays exported (empty) for older callers; the facings replace it.
 export const JAW_RADIUS=0;
 export const JAWS = Object.freeze([]);
 export function makeBall(id,x,y){return {id,x,y,vx:0,vy:0,spin:0,follow:0,aimX:1,aimY:0,slipX:0,slipY:0,pocketed:false,color:BALL_COLORS[id],rotation:0,orientation:[1,0,0,0]};}
@@ -117,6 +115,17 @@ function slowBall(ball,dt){
   }
   const decay=Math.max(0,1-PHYSICS.spinDecay*dt);ball.spin*=decay;
 }
+/** Push a ball out of a cushion face or facing and rebound it. The normal comes from the nearest point on the edge,
+ * so a flat face behaves as before and a nose or facing deflects the way a real one does. */
+function wallHit(ball,wall,r,events){
+  const [qx,qy]=nearestOnSegment(ball.x,ball.y,wall),dx=ball.x-qx,dy=ball.y-qy,d2=dx*dx+dy*dy;
+  if(d2>=r*r)return;
+  let d=Math.sqrt(d2),nx,ny;
+  if(d<1e-6){const wx=wall[2]-wall[0],wy=wall[3]-wall[1],wl=Math.hypot(wx,wy)||1;nx=-wy/wl;ny=wx/wl;d=0;}
+  else{nx=dx/d;ny=dy/d;}
+  ball.x+=nx*(r-d+.01);ball.y+=ny*(r-d+.01);
+  bounceRail(ball,nx,ny,events);
+}
 function bounceRail(ball,nx,ny,events){
   const normal=ball.vx*nx+ball.vy*ny;
   if(normal>=0)return;
@@ -176,10 +185,7 @@ export class Simulation{
       let pocket=pocketFor(b);
       if(pocket!==-1){Object.assign(b,{pocketed:true,vx:0,vy:0,slipX:0,slipY:0});events.push({type:'pocket',id:b.id,pocket});continue;}
       // A rail is absent inside its pocket mouth. Rounded rubber jaws guard each gap.
-      if(b.y<r&&!topMouth(b.x)){b.y=r;bounceRail(b,0,1,events);}
-      if(b.y>500-r&&!topMouth(b.x)){b.y=500-r;bounceRail(b,0,-1,events);}
-      if(b.x<r&&!sideMouth(b.y)){b.x=r;bounceRail(b,1,0,events);}
-      if(b.x>1000-r&&!sideMouth(b.y)){b.x=1000-r;bounceRail(b,-1,0,events);}
+      for(const wall of WALLS)wallHit(b,wall,r,events);
       // A ball passing through a mouth cannot travel to infinity if it misses a well.
       // Resolve the outer throat as a soft rubber edge instead.
       if(b.y < -35){b.y=-35;bounceRail(b,0,1,events);}

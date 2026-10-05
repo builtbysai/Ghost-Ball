@@ -50,3 +50,17 @@ So Ghost Ball no longer simulates them at all (`JAWS` is now empty). The cushion
 a ball whose centre rolls into a mouth is captured by the pocket, and a ball past the cloth edge near a pocket drops instead of
 bouncing back. A sinking ball is also clipped to the cloth and the hole, so it never floats over the wood. Pockets are now a
 little easier, which is a deliberate trade for "if it looks like it goes in, it goes in".
+
+## Update: pocket facings, drawn exactly as simulated
+Instead of dropping the whole idea of a pocket entrance, the table now has real **facings** (see the nose / facing / throat /
+mouth diagram): each cushion ends in a rounded **nose** on the face line, and the rubber is cut back at the **facing angle**
+(142 degrees at the corners, 103 degrees at the sides) so the two facings funnel into the **throat**. Corner mouths are about
+2.1 ball widths nose to nose and the throat is narrower than the mouth; side mouths are about 2.6.
+
+The point of the earlier complaint was *invisible* blockers, so the geometry now lives in one file, `src/table-geometry.js`,
+used by **both** the physics and the painter. The physics treats the six cushion faces and twelve facing edges as walls (a
+ball rebounds off the nearest point, so a nose deflects it like a real one). The painter draws the rubber wedge, the angled
+facing, a small polished cap on each nose, and a cup whose rim passes through the facing ends. A test checks that a ball
+pushed into any nose or facing comes to rest exactly one radius from it, and another that the facing angles are as stated.
+The CPU's pocket line-of-sight check uses the same facings, and it now plays a safety rather than a line it predicts will
+lose the rack.
