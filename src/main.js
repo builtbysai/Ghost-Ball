@@ -135,6 +135,7 @@ function matchTurn(event){
   finishRackFlock();startRackFlock(event.before);calledPocket=null;lastScoreSignature='';clearTableToast();clearTurnBanner();
   setRecap(recapFor(event));turnUI();return;
  }
+ if(event.type==='drill-streak'){tableToast(`${event.made} OF ${event.need} · TARGET RE-SPOTTED`,'turn',2400);audio.play({type:'turn'});placement=null;turnUI();return;}
  if(event.type==='drill-continue'){
   tableToast('ONE SHOT LEFT · RECHECK THE ANGLE');return;
  }

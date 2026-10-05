@@ -148,6 +148,7 @@ function strike(id,{angle,power,spin}){
 }
 test('the extra skills are physically solvable by their authored solution, and only by skill',()=>{
  for(const drill of EXTRA_DRILLS){
+  if(drill.streak)continue;   // streak drills are covered by their own test
   const ok=strike(drill.id,drill.solution);
   assert.equal(ok.g.drillOutcome,'completed',drill.id+' is not solvable by its own solution');
   assert.equal(ok.g.history.at(-1).status,'completed');
@@ -169,4 +170,44 @@ test('the grader needs final positions for position and speed skills',()=>{
  const end={cue:{x:0,y:0,pocketed:false},balls:{9:{x:850,y:250,pocketed:false}}};
  assert.equal(gradeSkillDrill('soft-touch',{shots:1,shot,end}).status,'completed');
  assert.equal(gradeSkillDrill('soft-touch',{shots:1,shot:{...shot,first:null},end}).status,'continue','the cue ball must have hit the 9');
+});
+
+const settleGame=g=>{let n=0;while(g.turnShot&&n++<12000)g.step();return n<12000;};
+const finish=(drillId,angle,power,spin={x:0,y:0})=>{
+ const events=[],g=new Game({kind:'drill',drillId,seed:31,onTurn:e=>events.push(e)});
+ assert.ok(g.beginShot(angle,power,spin));assert.ok(settleGame(g));return {g,events};
+};
+test('every authored solution completes its drill AND is accepted by the live ledger (zone drills included)',()=>{
+ for(const drill of EXTRA_DRILLS){
+  if(drill.streak)continue;
+  const {events}=finish(drill.id,drill.solution.angle,drill.solution.power,drill.solution.spin);
+  const end=events.find(e=>e.type==='drill-end');
+  assert.ok(end?.completed,`${drill.id} did not complete (${end?.reason})`);
+  const recorded=recordLiveDrill(freshProgress(),{kind:'drill',source:'live',id:'t-'+drill.id,at:'2026-10-05T10:00:00.000Z',drillId:drill.id,completed:true,shots:end.shots,evidence:end.evidence});
+  assert.ok(recorded.drills?.[drill.id],`${drill.id} was not recorded in the ledger`);
+ }
+});
+test('safe hide: a pot, a missed ring and a clean safety are told apart',()=>{
+ const drill=skillDrillById('safe-hide');
+ const good=finish('safe-hide',drill.solution.angle,drill.solution.power);
+ assert.equal(good.events.find(e=>e.type==='drill-end')?.reason,'safe');
+ // too hard: the cue ball does not finish in the ring, so the drill asks for another try
+ const hard=finish('safe-hide',drill.solution.angle,.8);
+ assert.ok(hard.events.some(e=>e.type==='drill-continue'||e.type==='drill-end'&&!e.completed));
+});
+test('three straight needs three pots in a row, re-spotting the target each time',()=>{
+ const drill=skillDrillById('three-straight'),events=[],g=new Game({kind:'drill',drillId:'three-straight',seed:31,onTurn:e=>events.push(e)});
+ const spots=[];
+ drill.solutions.forEach((angle,i)=>{
+  spots.push({...g.sim.balls.find(b=>b.id===4)});
+  assert.ok(g.beginShot(angle,drill.solution.power,{x:0,y:0}),`shot ${i+1}`);assert.ok(settleGame(g));
+ });
+ assert.deepEqual(events.filter(e=>e.type==='drill-streak').map(e=>e.made),[1,2]);
+ const end=events.find(e=>e.type==='drill-end');assert.ok(end?.completed,end?.reason);assert.equal(end.shots,3);
+ assert.notDeepEqual([spots[0].x,spots[0].y],[spots[1].x,spots[1].y],'the target moves between shots');
+ const recorded=recordLiveDrill(freshProgress(),{kind:'drill',source:'live',id:'t-3',at:'2026-10-05T10:00:00.000Z',drillId:'three-straight',completed:true,shots:end.shots,evidence:end.evidence});
+ assert.ok(recorded.drills['three-straight']);
+ // the first pot alone never completes it
+ const solo=new Game({kind:'drill',drillId:'three-straight',seed:31,onTurn:()=>{}});
+ solo.beginShot(drill.solutions[0],drill.solution.power,{x:0,y:0});settleGame(solo);assert.equal(solo.over,false);
 });

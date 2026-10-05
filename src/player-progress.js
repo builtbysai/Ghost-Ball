@@ -151,7 +151,7 @@ export function recordLiveDrill(previous,event){
   typeof event.at!=='string'||!/^(19|20)\d\d-\d\d-\d\dT/.test(event.at)||
   !Number.isInteger(event.shots)||event.shots<1||event.shots>drill.attempts)
   return previous;
- const grade=gradeSkillDrill(event.drillId,{shots:event.shots,shot:event.evidence});
+ const grade=gradeSkillDrill(event.drillId,{shots:event.shots,shot:event.evidence,end:event.evidence?.end,made:event.evidence?.made||0});
  if(grade.status!=='completed'||(previous.drillEvents||[]).includes(event.id))return previous;
  const best=previous.drills?.[drill.id];
  const drills={...(previous.drills||{}),[drill.id]:best?Math.min(best,event.shots):event.shots};

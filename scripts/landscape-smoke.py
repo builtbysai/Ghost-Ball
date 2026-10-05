@@ -101,7 +101,7 @@ with sync_playwright() as p:
         assert page.locator('#clubMenu').is_visible()
         page.locator('#menuChallenges').click()
         page.wait_for_timeout(450)
-        assert page.locator('#challengeSheet').is_visible() and page.locator('#challengeCards button').count()==8
+        assert page.locator('#challengeSheet').is_visible() and page.locator('#challengeCards button').count()==10
         cpanel=page.locator('.challenge-panel').bounding_box()
         assert inside_viewport(cpanel,width,height),f'{width}x{height}: challenge picker clipped'
         assert page.locator('.challenge-panel').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'challenge panel overflow'
