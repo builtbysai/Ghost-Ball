@@ -44,6 +44,7 @@ export function broadcastTransport(code){
   else if(m.from===peer)handlers.forEach(h=>h(m.body));
  };
  post({sys:'hi'});
+ if(typeof addEventListener==='function')addEventListener('pagehide',()=>{if(!closed)post({sys:'bye'});});
  return {
   send(body){if(peer)post({body});},
   onMessage(fn){handlers.push(fn);},
@@ -78,32 +79,42 @@ const finite=n=>Number.isFinite(n);
  *   onStart(settings,state) -> guest only: build a Game from the host's settings, then importState(state)
  *   onStatus(status)     -> 'waiting' | 'connected' | 'peer-left' | 'closed'
  *   onResync()           -> a replica was replaced by the host's state
+ *   onRematch(state)     -> both players asked for another rack: the host resets and sends `state` (guests receive it)
+ *   onRematchChange()    -> the rematch request flags changed
+ * A peer that drops gets `graceMs` to come back (status 'peer-left'), after which the status becomes 'abandoned'.
  */
 export class OnlineSession{
- constructor({transport,role,getGame,getSettings=()=>({}),onStart=()=>{},onStatus=()=>{},onResync=()=>{}}){
+ constructor({transport,role,getGame,getSettings=()=>({}),onStart=()=>{},onStatus=()=>{},onResync=()=>{},onRematch=()=>{},onRematchChange=()=>{},cue='house',graceMs=60000}){
   this.transport=transport;this.role=role;this.seat=role==='host'?0:1;
-  Object.assign(this,{getGame,getSettings,onStart,onStatus,onResync});
+  Object.assign(this,{getGame,getSettings,onStart,onStatus,onResync,onRematch,onRematchChange,cue,graceMs});
+  this.peerCue=null;this.leftAt=0;this.rematch={me:false,them:false};
   this.queue=[];this.pendingCheck=null;this.status='waiting';this.checkedShots=-1;this.lastAim=0;this.resyncs=0;this.closed=false;
   transport.onMessage(m=>this.receive(m));
   transport.onPeer(()=>this.peerJoined(),()=>this.peerLeft());
  }
  setStatus(status){if(this.status===status)return;this.status=status;this.onStatus(status);}
  peerJoined(){
-  if(this.role==='guest')this.transport.send({t:'hello',v:ONLINE_VERSION});
-  else this.setStatus('connected');
+  this.leftAt=0;
+  // The guest announces itself; the host counts a friend as connected once it has heard that hello.
+  if(this.role==='guest')this.transport.send({t:'hello',v:ONLINE_VERSION,cue:this.cue});
  }
- peerLeft(){if(!this.closed)this.setStatus('peer-left');}
+ peerLeft(){if(this.closed)return;this.leftAt=Date.now();this.setStatus('peer-left');}
+ /** Seconds left of the reconnect window (0 once it has run out or nobody has left). */
+ graceLeft(now=Date.now()){return this.status==='peer-left'?Math.max(0,Math.ceil((this.leftAt+this.graceMs-now)/1000)):0;}
  /** Host: describe the table to a guest (also used to repair a diverged replica). */
  sendState(type){
   const game=this.getGame();if(!game)return;
-  this.transport.send({t:type,v:ONLINE_VERSION,settings:this.getSettings(),state:game.exportState()});
+  this.transport.send({t:type,v:ONLINE_VERSION,cue:this.cue,settings:this.getSettings(),state:game.exportState()});
  }
  receive(m){
   if(!m||typeof m!=='object'||m.v!==undefined&&m.v!==ONLINE_VERSION)return;
   const game=this.getGame();
   switch(m.t){
-   case 'hello':if(this.role==='host'){this.setStatus('connected');this.queue.length=0;this.sendState('welcome');}break;
-   case 'welcome':if(this.role==='guest'){this.queue.length=0;this.onStart(m.settings||{},m.state);this.setStatus('connected');}break;
+   case 'hello':if(this.role==='host'){this.peerCue=typeof m.cue==='string'?m.cue.slice(0,24):null;this.leftAt=0;this.setStatus('connected');this.queue.length=0;this.sendState('welcome');}break;
+   case 'welcome':if(this.role==='guest'){this.peerCue=typeof m.cue==='string'?m.cue.slice(0,24):null;this.leftAt=0;this.queue.length=0;this.onStart(m.settings||{},m.state);this.setStatus('connected');}break;
+   case 'rematch-ask':this.rematch.them=true;this.onRematchChange();if(this.role==='host'&&this.rematch.me)this.beginRematch();break;
+   // The guest hands the new table to the UI first so the old rack can animate into it; the UI imports it.
+   case 'rematch':if(this.role==='guest'&&game&&m.state&&typeof m.state==='object'){this.queue.length=0;this.rematch={me:false,them:false};this.onRematch(m.state);this.onRematchChange();}break;
    case 'state':if(this.role==='guest'&&game&&game.importState(m.state)){this.queue.length=0;this.resyncs++;this.onResync();}break;
    case 'resync':if(this.role==='host')this.sendState('state');break;
    case 'act':if(this.validAct(m))this.queue.push(m);break;
@@ -114,12 +125,22 @@ export class OnlineSession{
   }
  }
  validAct(m){
-  const ok=['shot','place','break-place','choose'].includes(m.k);
+  const ok=['shot','place','break-place','choose','timeout'].includes(m.k);
+  if(m.k==='timeout')return this.role==='guest'&&m.seat===0;   // only the host's clock is authoritative
   if(!ok)return false;
   if(m.k==='shot')return finite(m.angle)&&finite(m.power)&&m.spin&&finite(m.spin.x)&&finite(m.spin.y);
   if(m.k==='place'||m.k==='break-place')return finite(m.x)&&finite(m.y);
   return typeof m.o==='string'&&m.o.length<16;
  }
+ /** Ask for another rack. Both players must ask; the host then resets the table and sends it to the guest. */
+ askRematch(){
+  if(this.closed||this.rematch.me)return;
+  this.rematch.me=true;this.transport.send({t:'rematch-ask',v:ONLINE_VERSION});this.onRematchChange();
+  if(this.role==='host'&&this.rematch.them)this.beginRematch();
+ }
+ beginRematch(){this.rematch={me:false,them:false};this.onRematch(null);this.onRematchChange();}
+ /** Host: after resetting its own table for a rematch, send the new rack to the guest. */
+ sendRematch(){this.sendState('rematch');}
  /** Tell the peer about a local input that has just been applied to this device's Game. */
  sendAct(act){if(!this.closed)this.transport.send({t:'act',v:ONLINE_VERSION,seat:this.seat,...act});}
  sendAim(pose,now=Date.now()){
@@ -132,6 +153,7 @@ export class OnlineSession{
   let applied=0;
   while(this.queue.length&&!game.sim.moving&&!game.turnShot){
    const m=this.queue.shift(),turnOwner=m.k==='choose'?game.pendingChoice?.seat:game.turn;
+   if(m.k==='timeout'){if(game.expireShotClock()){applied++;game.remotePose=null;}else this.requestResync();continue;}
    // The peer may only act for its own seat. Anything else means the replicas disagree.
    let ok=m.seat===1-this.seat&&turnOwner===m.seat&&!game.over;
    if(ok){
@@ -148,6 +170,7 @@ export class OnlineSession{
    this.transport.send({t:'check',v:ONLINE_VERSION,shots:game.shots,digest:authoritativeDigest(game)});
   }
   if(this.pendingCheck)this.verify(game,this.pendingCheck);
+  if(this.status==='peer-left'&&this.graceLeft()===0)this.setStatus('abandoned');
   return applied;
  }
  /** A host digest waits until this replica has played the same number of shots and is at rest. */

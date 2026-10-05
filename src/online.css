@@ -9,3 +9,11 @@
 .online-code{font-size:2.4rem;font-weight:700;letter-spacing:.35em;text-align:center;padding:14px 0 14px .35em;border-radius:14px;background:rgba(0,0,0,.35);border:1px dashed rgba(255,255,255,.25)}
 .online-status{min-height:1.3em;margin:0;font-size:.9rem;opacity:.85}
 .online-status[data-tone="bad"]{color:#ff8a80}
+
+.online-qr{display:grid;place-items:center;padding:10px;border-radius:14px;background:#fff;width:max-content;margin:0 auto}
+.online-qr svg{display:block;width:min(46vw,190px);height:auto}
+.online-banner{position:absolute;z-index:9;left:50%;top:clamp(48px,11dvh,84px);transform:translateX(-50%);display:flex;gap:12px;align-items:center;
+ max-width:min(92%,640px);padding:8px 10px 8px 16px;border-radius:99px;background:#101a28ee;border:1px solid #cdb78388;color:#f2e6c4;font:600 12px/1.35 system-ui;box-shadow:0 8px 24px #0009}
+.online-banner[data-tone="gone"]{border-color:#ff8a80aa}
+.online-banner button{flex:none;min-height:30px;padding:0 14px;border-radius:99px;border:1px solid #ffffff2a;background:#ffffff14;color:inherit;font:800 11px system-ui;letter-spacing:.06em;cursor:pointer}
+.online-banner[hidden]{display:none}
