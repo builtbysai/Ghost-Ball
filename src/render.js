@@ -57,7 +57,7 @@ export class TableRenderer{
  clear(){this.g.clearRect(0,0,this.w,this.h);}
  draw(sim,{aim=null,interactive=false,placement=null,placementZone=null,fx=[],callPocket=null,callLabel=8,targetBall=null,pocketOwners=null,pocketOwnerNames=null,drillZone=null}={}){
   const g=this.g,P=(x,y)=>this.project(x,y);
-  this.clear();g.save();
+  this.clear();g.save();this.cueQueue=[];this.cueStyleNow=aim?.cueId?cueById(aim.cueId):this.cueStyle;
   if(this.cacheStatic&&typeof document!=='undefined'){
    const key=[this.canvas.width,this.canvas.height,this.hall,this.blend,this.portrait].join(':');
    if(!this.surface||this.surfaceKey!==key){
@@ -87,6 +87,7 @@ export class TableRenderer{
     this.drawBall(ball);
   }
   if(interactive&&aim?.showGuide!==false&&!sim.moving&&!sim.cue()?.pocketed)this.drawCueStrike(sim.cue(),aim.spin);
+  {const queued=this.cueQueue;this.cueQueue=null;for(const args of queued)this.paintCueNow(...args);}
   if(placement){
     const [sx,sy,k]=P(placement.x,placement.y);
     const r=Math.max(5,TABLE.radius*this.bw/1000*k);
@@ -139,14 +140,16 @@ export class TableRenderer{
         const e=t*t*(3-2*t),slide=Math.min(1,t*1.25);
         const wx=effect.sourceX+(effect.x-effect.sourceX)*(slide*slide*(3-2*slide));
         const wy=effect.sourceY+(effect.y-effect.sourceY)*(slide*slide*(3-2*slide));
+        g.save();this.clipToClothAndHole(effect);
         this.drawBall({id:effect.id,color:effect.color,x:wx,y:wy,rotation:0,
           orientation:effect.orientation||[1,0,0,0],opacity:Math.max(0,1-.55*e*e)},1-.46*e,Math.min(.96,e*1.1));
+        g.restore();
         g.save();g.beginPath();g.arc(sx,sy,Math.max(1,6+t*26),0,TAU);
         g.strokeStyle=`rgba(239,207,139,${effect.life*.28})`;g.lineWidth=1.4;g.stroke();g.restore();
       }else{
         const [px,py]=P(effect.sourceX,effect.sourceY);
         const x=px+(sx-px)*t,y=py+(sy-py)*t,r=Math.max(0,TABLE.radius*this.bw/1000*(1-.93*t));
-        g.save();g.shadowColor='#080d0a';g.shadowBlur=9*t;
+        g.save();this.clipToClothAndHole(effect);g.shadowColor='#080d0a';g.shadowBlur=9*t;
         g.beginPath();g.arc(x,y,r,0,TAU);g.fillStyle=effect.color||'#eee5d8';g.fill();
         g.restore();
         g.beginPath();g.arc(sx,sy,Math.max(1,t*25),0,TAU);
@@ -365,8 +368,18 @@ export class TableRenderer{
     g.strokeStyle='#fff0c7';g.stroke();g.restore();
   }
  }
- drawCue(cue,angle,drawback=0,opacity=1){
-  const g=this.g,style=this.cueStyle||cueById('house'),{tip,grip,butt}=cueGeometry(cue,angle,drawback);
+ /** The cue is held above the table, so it always paints over the balls: while a frame is being drawn, cue draws
+  * are queued and flushed after the balls. */
+ /** A sinking ball is only visible over the cloth or inside the hole it drops into, never floating over the wood. */
+ clipToClothAndHole(effect){
+  const g=this.g,P=(x,y)=>this.project(x,y),corners=[P(0,0),P(TABLE.width,0),P(TABLE.width,TABLE.height),P(0,TABLE.height)];
+  g.beginPath();g.moveTo(corners[0][0],corners[0][1]);for(const c of corners.slice(1))g.lineTo(c[0],c[1]);g.closePath();
+  const [hx,hy,hk]=P(effect.x,clamp(effect.y,0,TABLE.height)),u=clamp(this.bw/1000,.29,1.7),side=Math.abs(effect.x-500)<60,rr=(side?23:27)*u*hk*1.18;
+  g.moveTo(hx+rr,hy);g.arc(hx,hy,rr,0,TAU);g.clip();
+ }
+ drawCue(...args){if(this.cueQueue)this.cueQueue.push(args);else this.paintCueNow(...args);}
+ paintCueNow(cue,angle,drawback=0,opacity=1){
+  const g=this.g,style=this.cueStyleNow||this.cueStyle||cueById('house'),{tip,grip,butt}=cueGeometry(cue,angle,drawback);
   const [tx,ty]=this.project(tip.x,tip.y),[gx,gy]=this.project(grip.x,grip.y),[bx,by]=this.project(butt.x,butt.y);
   const width=clamp(this.bw/560, .56, 1.28);
   g.save();g.globalAlpha=clamp(opacity,0,1);

@@ -6,20 +6,18 @@ export const POCKETS = Object.freeze([[-7,-7],[500,-13],[1007,-7],[-7,507],[500,
 export const PHYSICS = Object.freeze({
   slideDeceleration: 760, rollingDeceleration: 135, rollingSpeedDrag: .10,
   ballRestitution: .94, railRestitution: .84, railFriction: .14,
-  spinDecay: 1.25, jawRestitution: .5, jawFunnel: .2, jawFunnelReach: 62, maxSpeed: 2050,
+  spinDecay: 1.25, maxSpeed: 2050,
 });
 const BALL_COLORS = ['#efece3','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d','#191918','#eabb32','#2764a5','#c14738','#604688','#d98935','#287a54','#73382d'];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const distance=(x,y)=>Math.hypot(x,y);
 const topMouth=x=>x<45||x>955||Math.abs(x-500)<46;
 const sideMouth=y=>y<45||y>455;
-// Rubber noses sit exactly on the visible cushion tips (the face line, not out on the cloth), so a ball only
-// ever meets something it can see. A ball centre touches a nose at TABLE.radius + JAW_RADIUS.
-export const JAW_RADIUS=4;
-export const JAWS = Object.freeze([
-  [45,0],[0,45],[955,0],[1000,45], [45,500],[0,455],[955,500],[1000,455],
-  [454,0],[546,0],[454,500],[546,500],
-]);
+// There are no invisible blockers at the pockets: the cushion simply ends at its visible tip (see topMouth/sideMouth)
+// and anything that rolls into a mouth is captured by the pocket. JAWS stays exported (empty) for callers that
+// ask whether a line clips a pocket nose; with none, every line is clear.
+export const JAW_RADIUS=0;
+export const JAWS = Object.freeze([]);
 export function makeBall(id,x,y){return {id,x,y,vx:0,vy:0,spin:0,follow:0,aimX:1,aimY:0,slipX:0,slipY:0,pocketed:false,color:BALL_COLORS[id],rotation:0,orientation:[1,0,0,0]};}
 /** Standard triangular layout: opposite groups in the rear corners; eight in the center. */
 export function rack(seed=0){
@@ -96,7 +94,7 @@ function pocketFor(ball){
     const d=distance(ball.x-px,ball.y-py);
     if(d<(side?26:32)+lip)return i;
     // A ball whose centre has rolled past the cloth edge inside a mouth is hanging over the hole and drops.
-    if(d<50&&(ball.x<0||ball.x>1000||ball.y<0||ball.y>500))return i;
+    if(d<62&&(ball.x<0||ball.x>1000||ball.y<0||ball.y>500))return i;
   }
   return -1;
 }
@@ -118,39 +116,6 @@ function slowBall(ball,dt){
     const factor=(speed-slow)/speed;ball.vx*=factor;ball.vy*=factor;
   }
   const decay=Math.max(0,1-PHYSICS.spinDecay*dt);ball.spin*=decay;
-}
-function nearestWell(x,y){
-  let best=null,bestD=PHYSICS.jawFunnelReach**2;
-  for(const w of POCKETS){const d=(w[0]-x)**2+(w[1]-y)**2;if(d<bestD){bestD=d;best=w;}}
-  return best;
-}
-function jawHit(ball,jx,jy,events){
-  const dx=ball.x-jx,dy=ball.y-jy,r=TABLE.radius+JAW_RADIUS,d2=dx*dx+dy*dy;
-  if(d2>=r*r)return;
-  const d=Math.sqrt(d2)||.001,nx=dx/d,ny=dy/d;
-  ball.x+=nx*(r-d+.05);ball.y+=ny*(r-d+.05);
-  const normal=ball.vx*nx+ball.vy*ny;
-  if(normal>=0)return;
-  // Real pocket facings are angled into the throat: tilt the rebound normal
-  // toward the nearest well so a glancing nose contact funnels the ball in
-  // instead of spitting it back across the table.
-  let hx=nx,hy=ny;
-  const well=nearestWell(ball.x,ball.y);
-  if(well){
-   const wx=well[0]-ball.x,wy=well[1]-ball.y,wd=Math.hypot(wx,wy)||1;
-   hx=nx*(1-PHYSICS.jawFunnel)+wx/wd*PHYSICS.jawFunnel;hy=ny*(1-PHYSICS.jawFunnel)+wy/wd*PHYSICS.jawFunnel;
-   const hn=Math.hypot(hx,hy)||1;hx/=hn;hy/=hn;
-  }
-  const hit=ball.vx*hx+ball.vy*hy;
-  if(hit<0){
-   ball.vx-=(1+PHYSICS.jawRestitution)*hit*hx;
-   ball.vy-=(1+PHYSICS.jawRestitution)*hit*hy;
-  }else{
-   ball.vx-=(1+PHYSICS.jawRestitution)*normal*nx;
-   ball.vy-=(1+PHYSICS.jawRestitution)*normal*ny;
-  }
-  ball.spin*=.65;ball.slipX=ball.vx*.16;ball.slipY=ball.vy*.16;
-  if(-normal>60)events.push({type:'rail',id:ball.id,speed:-normal,jaw:true});
 }
 function bounceRail(ball,nx,ny,events){
   const normal=ball.vx*nx+ball.vy*ny;
@@ -215,7 +180,6 @@ export class Simulation{
       if(b.y>500-r&&!topMouth(b.x)){b.y=500-r;bounceRail(b,0,-1,events);}
       if(b.x<r&&!sideMouth(b.y)){b.x=r;bounceRail(b,1,0,events);}
       if(b.x>1000-r&&!sideMouth(b.y)){b.x=1000-r;bounceRail(b,-1,0,events);}
-      for(const [jx,jy] of JAWS)jawHit(b,jx,jy,events);
       // A ball passing through a mouth cannot travel to infinity if it misses a well.
       // Resolve the outer throat as a soft rubber edge instead.
       if(b.y < -35){b.y=-35;bounceRail(b,0,1,events);}

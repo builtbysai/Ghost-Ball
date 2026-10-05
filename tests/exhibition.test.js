@@ -33,3 +33,10 @@ test('the breaker alternates each rack in a match, and practice always starts on
  assert.equal(g.turn,0);g.reset(true);assert.equal(g.turn,1);g.reset(true);assert.equal(g.turn,0);g.reset(true);g.reset();assert.equal(g.turn,0,'a restart is a fresh match');
  const p=new Game({kind:'practice',seed:5});p.reset(true);p.reset(true);assert.equal(p.turn,0);
 });
+
+import {OPPONENT_CUES,CUES,cueById} from '../src/cue-catalog.js';
+test('every named opponent shoots with a unique cue that is not in the locker',()=>{
+ const used=PERSONA_ORDER.map(id=>PERSONAS[id].cue);
+ assert.equal(new Set(used).size,used.length,'cues must be unique per opponent');
+ for(const id of used){assert.ok(OPPONENT_CUES.some(c=>c.id===id),id);assert.ok(!CUES.some(c=>c.id===id),'opponent cues are never equippable');assert.equal(cueById(id).id,id);}
+});

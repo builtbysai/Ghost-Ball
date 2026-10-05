@@ -170,7 +170,9 @@ export class Game {
    return true;
  }
  /** The CPU previews the real shot it will take, including cue motion. */
- get presentedCue(){
+ /** The pose shown for whoever is shooting, tagged with the cue the CPU (or online opponent) uses. */
+ get presentedCue(){const pose=this.rawCue;if(!pose||!this.isAI())return pose;return {...pose,cueId:this.players==='online'?'smoke':this.personaAt(this.turn).cue};}
+ get rawCue(){
    // Online: show the other player's live aim, then their stroke.
    if(this.isRemote()&&!this.activeStroke)return this.remotePose&&!this.sim.moving?{angle:this.remotePose.angle,power:this.remotePose.power,drawback:this.remotePose.drawback,showGuide:false}:null;
    if(this.activeStroke&&this.activeStroke.elapsed<.18){

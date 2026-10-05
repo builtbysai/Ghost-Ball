@@ -24,7 +24,15 @@ export const CUES=Object.freeze([
   butt:'#24242b',wrap:'#101116',shaft:'#d9c49d',metal:'#e3c481',
   tip:'#82bdc1',accent:'#bb9b55'}
 ].map(cue=>Object.freeze(cue)));
-export const cueById=id=>CUES.find(cue=>cue.id===id)||CUES[0];
+/** Each named opponent shoots with their own cue. These are never in the locker: they cannot be earned or equipped. */
+export const OPPONENT_CUES=Object.freeze([
+ {id:'rental',name:'Rental Ash',butt:'#d8c9a8',wrap:'#4d6f8f',shaft:'#efe0bd',metal:'#c8d0d6',tip:'#9ab7bc',accent:'#6f95b8'},
+ {id:'ember',name:'Ember',butt:'#1b1416',wrap:'#7a1f1a',shaft:'#d9b98c',metal:'#e0523a',tip:'#c9d3d6',accent:'#ff6a45'},
+ {id:'viridian',name:'Viridian',butt:'#e9e2d0',wrap:'#1f5a4a',shaft:'#f1e6c9',metal:'#c9d3d1',tip:'#8fc2c0',accent:'#3fa68a'},
+ {id:'proline',name:'Pro Line',butt:'#4a4f56',wrap:'#23272c',shaft:'#cdbf9c',metal:'#c9a24a',tip:'#7fb0c0',accent:'#b88a2e'},
+ {id:'showman',name:'Showman',butt:'#3a1f52',wrap:'#14101f',shaft:'#f0dfb0',metal:'#f0c85a',tip:'#9fd0e0',accent:'#e0a8ff'}
+].map(cue=>Object.freeze(cue)));
+export const cueById=id=>CUES.find(cue=>cue.id===id)||OPPONENT_CUES.find(cue=>cue.id===id)||CUES[0];
 export const cueUnlocked=(progress,cue)=>Boolean(cue)&&
  (!cue.requirement||progress?.achievements?.includes(cue.requirement));
 export function equippedCue(progress){

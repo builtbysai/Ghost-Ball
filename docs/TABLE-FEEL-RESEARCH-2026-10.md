@@ -42,3 +42,11 @@ smallest step moves the object ball about 1.2 units, enough to separate a make f
 variants. The planner proves each with the real physics before attempting it, so the CPU never plays a shot it only hopes
 works. Ace (new, always shows off), Dex, Club Pro and a little Vera use it; Rookie never does. In a 50-position survey Ace
 landed about 90% of its trick shots. Not done: masse and jump shots (the simulation has no cue elevation).
+
+## Update: the nose collisions are gone entirely
+Those rounded cushion ends are called **cushion points** (also *knuckles*, *jaws* or *pocket facings*). Real tables have them and
+they cause the classic rattle, but in a game they read as an invisible blocker whenever the ball looks like it is going in.
+So Ghost Ball no longer simulates them at all (`JAWS` is now empty). The cushion is a flat face that stops at its visible tip;
+a ball whose centre rolls into a mouth is captured by the pocket, and a ball past the cloth edge near a pocket drops instead of
+bouncing back. A sinking ball is also clipped to the cloth and the hole, so it never floats over the wood. Pockets are now a
+little easier, which is a deliberate trade for "if it looks like it goes in, it goes in".

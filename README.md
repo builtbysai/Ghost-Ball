@@ -78,7 +78,7 @@ Addresses the verified play-test findings (see [docs/OVERHAUL-2026-10-04.md](doc
 
 ## Visual, physics and rules update (2026-10-04, part 2)
 
-- **Pockets:** rubber jaw noses on the cushion tips (what you see is what the ball hits), funnelled glancing contacts (no more mystery bounce-outs), a ball that visibly sinks into the well, and a ball-return rail where pocketed balls roll in and queue.
+- **Pockets:** no invisible blockers at the pockets (the cushion ends at its visible tip and a ball that rolls into a mouth drops), a ball that visibly sinks into the well, and a ball-return rail where pocketed balls roll in and queue.
 - **Rack flocking:** restarting or racking again sends the balls flocking back into the triangle without overlaps; pocketed balls re-enter from the return gate.
 - **Sheets:** Pause, Preferences, How to play, the Clubhouse menu, Match setup, Local record, Cue locker and Skill drills share one design (`src/sheets.css`).
 - **Halls:** each of the five rooms has its own wall, floor, lamp and light (`src/rooms.css`).

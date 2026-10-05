@@ -73,6 +73,10 @@ export function paintFrame(g,{P,h,finish,bw,blend,portrait,margin}){
    g.lineWidth=.8;line(g,P(d,60),P(d,440));line(g,P(1000-d,60),P(1000-d,440));
  }
  g.restore();
+ // varnish sheen: one soft diagonal highlight sweeping across the polished rails
+ {g.save();path(g,edge);g.clip();const sheen=g.createLinearGradient(front[0],front[1],back[0],back[1]);
+  sheen.addColorStop(0,'rgba(255,240,210,0)');sheen.addColorStop(.28,'rgba(255,240,210,.0)');sheen.addColorStop(.36,'rgba(255,240,210,.13)');sheen.addColorStop(.44,'rgba(255,240,210,0)');sheen.addColorStop(.7,'rgba(255,240,210,0)');sheen.addColorStop(.76,'rgba(255,240,210,.07)');sheen.addColorStop(.82,'rgba(255,240,210,0)');
+  g.fillStyle=sheen;g.fillRect(0,0,g.canvas.width,g.canvas.height);g.restore();}
  path(g,edge);g.strokeStyle='#17130f';g.lineWidth=C(bw/330,1.3,3.5);g.stroke();
 
  // polished outer chamfer: a bright top-left edge and a dark lower-right one, as light rakes across the wood
@@ -223,6 +227,13 @@ export function paintPockets(g,{P,finish,bw,blend}){
    const dark=g.createRadialGradient(-r*.22,-r*.27,1,r*.2,r*.28,r*1.04);
    dark.addColorStop(0,'#040606');dark.addColorStop(.55,'#060a0a');dark.addColorStop(1,'#101612');
    g.beginPath();g.arc(0,0,r*.92,0,Math.PI*2);g.fillStyle=dark;g.fill();
+   // depth: a leather lip lit from the top left, a glimpse of the net far below, and a row of stitching
+   const lip=g.createLinearGradient(-r,-r,r,r);lip.addColorStop(0,'rgba(210,170,120,.5)');lip.addColorStop(.45,'rgba(60,38,26,.5)');lip.addColorStop(1,'rgba(0,0,0,.8)');
+   g.beginPath();g.arc(0,0,r*.9,0,Math.PI*2);g.strokeStyle=lip;g.lineWidth=C(r*.11,1,3.4);g.stroke();
+   const net=g.createRadialGradient(r*.1,r*.42,0,r*.1,r*.42,r*.6);net.addColorStop(0,'rgba(92,64,44,.34)');net.addColorStop(1,'rgba(92,64,44,0)');
+   g.beginPath();g.arc(0,0,r*.84,0,Math.PI*2);g.fillStyle=net;g.fill();
+   g.save();g.setLineDash([C(r*.07,1,2.4),C(r*.09,1.4,3)]);g.beginPath();g.arc(0,0,r*1.06,0,Math.PI*2);
+   g.strokeStyle='rgba(235,205,150,.3)';g.lineWidth=C(r*.035,.5,1.2);g.stroke();g.restore();
    g.beginPath();g.arc(-r*.08,-r*.12,r*1.02,Math.PI*1.1,Math.PI*1.75);
    g.strokeStyle=finish.inlay;g.globalAlpha=.45;g.lineWidth=C(r*.13,.75,2);
    g.stroke();g.restore();
