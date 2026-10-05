@@ -17,3 +17,38 @@
 .online-banner[data-tone="gone"]{border-color:#ff8a80aa}
 .online-banner button{flex:none;min-height:30px;padding:0 14px;border-radius:99px;border:1px solid #ffffff2a;background:#ffffff14;color:inherit;font:800 11px system-ui;letter-spacing:.06em;cursor:pointer}
 .online-banner[hidden]{display:none}
+
+/* host waiting state: code and QR side by side when there is room */
+#onlineWait{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"code qr" "actions qr";align-items:center;gap:12px 18px}
+#onlineWait .online-code{grid-area:code;font-size:clamp(1.6rem,6vw,2.4rem)}
+#onlineWait .online-qr{grid-area:qr;margin:0}
+#onlineWait .online-qr[hidden]{display:none}
+#onlineWait .online-actions{grid-area:actions;align-self:start}
+.online-status{margin-top:4px}
+@media (max-width:520px) and (min-height:441px){
+ #onlineWait{grid-template-columns:1fr;grid-template-areas:"code" "qr" "actions"}
+ #onlineWait .online-qr{margin:0 auto}
+}
+@media (max-height:440px){
+ #onlineSheet .sheet-head{padding-top:8px}
+ .online-qr svg{width:min(34vh,150px)}
+ .online-note{display:none}
+}
+
+.online-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.online-card{display:grid;gap:10px;align-content:start;padding:14px;border-radius:13px;border:1px solid var(--sh-line);background:#ffffff09}
+.online-card h3{margin:0;color:var(--sh-brass);font:800 10px/1 system-ui;letter-spacing:.2em;text-transform:uppercase}
+.online-card label{font:600 12.5px system-ui;color:var(--sh-muted);text-transform:none;letter-spacing:0;opacity:1;margin:0}
+.online-card .set-row{min-height:0;border:0;padding:0}
+.online-card .primary-action{width:100%}
+.online-join-row input{min-width:0}
+@media (max-width:560px){.online-cards{grid-template-columns:1fr}}
+.online-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+.online-card{min-width:0;overflow:hidden}
+.online-join-row{min-width:0}.online-join-row input{width:100%;flex:1 1 0}
+.online-card .primary-action{min-height:44px;border-radius:12px;border:0;background:#e7b94d;color:#17120a;font:700 14px system-ui;cursor:pointer}
+.online-card .primary-action:hover{filter:brightness(1.06)}
+.online-card .online-clock .set-text b{white-space:nowrap}
+.online-join-row button{flex:none}
+
+@media (max-width:600px){.online-cards{grid-template-columns:minmax(0,1fr)}}

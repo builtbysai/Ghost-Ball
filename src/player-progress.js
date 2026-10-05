@@ -165,6 +165,12 @@ export function chooseRoom(previous,room,maxRooms){
   !Number.isInteger(maxRooms)||room>=maxRooms)return previous;
  return previous.selectedRoom===room?previous:{...previous,selectedRoom:room};
 }
+/** Parse a backup file. Returns a fully validated progress object, or null; nothing is written here. */
+export function importLocalProgress(text){
+ if(typeof text!=='string'||text.length>2_000_000)return null;
+ let parsed;try{parsed=JSON.parse(text);}catch{return null;}
+ return validProgress(parsed)?parsed:null;
+}
 export function exportLocalProgress(progress){
  return validProgress(progress)?JSON.stringify(progress,null,2):null;
 }

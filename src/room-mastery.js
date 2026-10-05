@@ -19,7 +19,7 @@ export function roomMastery(progress,room){
  const match=Boolean((stored&2)||history.length);
  const win=Boolean((stored&4)||history.some(e=>e.winner===0&&e.reason==='eight-cleared'));
  const steps=[
-  {id:'drill',done:drill,label:'COMPLETE '+config.drillName},
+  {id:'drill',done:drill,label:'COMPLETE '+config.drillName,drillId:config.drillId},
   {id:'match',done:match,label:'FINISH A RIVAL MATCH HERE'},
   {id:'win',done:win,label:'WIN CLEAN VS A RIVAL HERE'}
  ];

@@ -14,7 +14,7 @@ import {TRICK_LABELS} from './trick-shots.js';
 import {cuePlacementDraft,initialCuePlacement} from './placement-guide.js';
 import {CUES,cueUnlocked,cueById,equippedCue,equipCue,toggleFavorite,paintCuePreview} from './cue-catalog.js';
 import {readLocalProgress,writeLocalProgress,recordLiveMatch,bestLegalRun,chooseRoom,
- freshProgress,exportLocalProgress,resetLocalProgress,recordLiveDrill,dayKey,dailySeed,recordDaily,dailySummary,
+ freshProgress,exportLocalProgress,importLocalProgress,resetLocalProgress,recordLiveDrill,dayKey,dailySeed,recordDaily,dailySummary,
  CIRCUIT,circuitState,recordCircuitResult} from './player-progress.js';
 import {SKILL_DRILLS,skillDrillById} from './skill-drills.js';
 import {encodeShot,decodeShot,addHighlight} from './highlights.js';
@@ -424,7 +424,7 @@ function closeLocker(){
  if($('lockerSheet').hidden)return;
  hide('lockerSheet');show('clubMenu');$('menuLocker').focus();
 }
-setText('drillCount',`${SKILL_DRILLS.length} playable`);
+setText('drillCount',`${SKILL_DRILLS.length} drills`);
 function showCrests(){
  const summary=crestSummary(progress);
  setText('recordCrestCount',`${summary.earned} / ${summary.total}`);
@@ -462,13 +462,25 @@ function playHighlight(code){
  pendingHighlight={...shot,turn:0,shot:1};
  begin('practice');
 }
+function renderRecordRooms(){
+ const rows=halls.map((hall,index)=>{
+  const model=roomMastery(progress,index),row=document.createElement('div');
+  row.className='record-room';row.setAttribute('role','listitem');row.dataset.mastered=String(Boolean(model?.complete));
+  const name=document.createElement('b');name.textContent=hall.name;
+  const note=document.createElement('small');note.textContent=model?(model.complete?'Mastered':model.count+' of '+model.total+' · '+model.next.toLowerCase()):'';
+  const bar=document.createElement('i');bar.style.setProperty('--fill',model?Math.round(model.count/model.total*100)+'%':'0%');
+  row.append(name,note,bar);return row;
+ });
+ $('recordRooms').replaceChildren(...rows);
+}
 function showRecord(){
  const summary=recordSummary(progress);
  setText('recordMatches',String(summary.matches));
  setText('recordRivals',summary.wins+' / '+summary.losses);
  setText('recordClean',String(summary.clean));
  setText('recordRun',String(summary.run));
- setText('recordDrills',Object.keys(progress.drills||{}).length+' / '+SKILL_DRILLS.length+' SKILLS');
+ setText('recordDrills',Object.keys(progress.drills||{}).length+' / '+SKILL_DRILLS.length);
+ renderRecordRooms();
  const rows=summary.recent.map(item=>{
   const row=document.createElement('div');row.className='record-row';row.setAttribute('role','listitem');
   const title=document.createElement('strong');title.textContent=item.title+' · '+item.opponent;
@@ -481,10 +493,10 @@ function showRecord(){
  }
  $('recordHistory').replaceChildren(...rows);
  showHighlights();showCrests();
- let label='THIS DEVICE ONLY',reason='';
+ let label='This device only',reason='';
  if(!progressAccess.writable){
-  label=progressAccess.reason==='unsupported-version'?'NEWER SAVED FORMAT':
-    progressAccess.reason==='invalid-data'?'SAVED DATA NEEDS REVIEW':'SESSION ONLY';
+  label=progressAccess.reason==='unsupported-version'?'Newer saved format':
+    progressAccess.reason==='invalid-data'?'Saved data needs review':'Session only';
   reason=progressAccess.reason==='unsupported-version'?
     'An existing record uses a newer format. It was not changed.':
     progressAccess.reason==='invalid-data'?
@@ -520,6 +532,23 @@ function downloadRecord(){
  try{anchor.click();setText('recordMessage','Export prepared. Your data stays local.');}
  finally{anchor.remove();setTimeout(()=>URL.revokeObjectURL(object),2000);}
 }
+let pendingImport=null;
+/** Restore a backup in two steps: choose a file, see what is in it, then confirm the replacement. */
+function startImport(){
+ if(!progressAccess.writable){setText('recordMessage','Saving is unavailable here, so a backup cannot be restored.');return;}
+ if(pendingImport){
+  saveProgress(pendingImport);pendingImport=null;setText('importRecord','Restore a backup');showRecord();setText('recordMessage','Backup restored.');return;
+ }
+ $('importFile').value='';$('importFile').click();
+}
+async function importChosen(){
+ const file=$('importFile').files?.[0];if(!file)return;
+ const incoming=importLocalProgress(await file.text());
+ if(!incoming){pendingImport=null;setText('recordMessage','That file is not a Ghost Ball backup this version can read. Nothing was changed.');return;}
+ pendingImport=incoming;
+ setText('importRecord','Replace my record');
+ setText('recordMessage',`Backup found: ${incoming.records?.length||0} matches, ${Object.keys(incoming.drills||{}).length} skills. Press again to replace your current record.`);
+}
 function confirmLocalReset(){
  if(!progressAccess.writable)return;
  if(!resetLocalProgress()){setText('recordMessage','Could not clear storage. No progress was reset.');return;}
@@ -535,14 +564,11 @@ function ensureChallengeCards(){
   button.dataset.drill=drill.id;
   const top=document.createElement('span');
   const tag=document.createElement('span');tag.className='challenge-card-tag';
-  tag.textContent='ROOM 0'+(drill.room+1)+' · '+drill.subtitle.toUpperCase();
-  tag.dataset.compact='ROOM 0'+(drill.room+1);
+  tag.textContent=drill.subtitle;
   const title=document.createElement('span');title.className='challenge-card-name';title.textContent=drill.name;
   top.append(tag,title);
   const instruction=document.createElement('span');instruction.className='challenge-card-rule';
   instruction.textContent=drill.instruction;
-  const pockets=['TOP LEFT','TOP MIDDLE','TOP RIGHT','BOTTOM LEFT','BOTTOM MIDDLE','BOTTOM RIGHT'];
-  instruction.dataset.compact=drill.goal?.kind==='ball-zone'?drill.targetId+' → REST IN THE RING':drill.targetId+' → '+(drill.requiredCushion?'RAIL → ':'')+pockets[drill.targetPocket]+(drill.goal?' + RING':'');
   const status=document.createElement('span');status.className='challenge-card-status';
   button.append(top,instruction,status);$('challengeCards').append(button);
  }
@@ -551,11 +577,15 @@ function renderChallenges(){
  ensureChallengeCards();
  for(const button of $('challengeCards').children){
   const drill=skillDrillById(button.dataset.drill),best=progress.drills?.[drill.id];
+  button.dataset.done=String(Boolean(best));
   button.querySelector('.challenge-card-status').textContent=best?
    'COMPLETED · BEST '+best+(best===1?' SHOT':' SHOTS')+' ↗':'PLAY CHALLENGE →';
   button.setAttribute('aria-label',drill.name+', '+drill.instruction+', '+
    (best?'completed, best '+best+' shots':'not yet completed'));
  }
+ // The first drill not yet done is the suggested next step.
+ const nextCard=[...$('challengeCards').children].find(b=>b.dataset.done==='false');
+ for(const b of $('challengeCards').children)b.dataset.next=String(b===nextCard);
 }
 function openChallenges(){
  if(active!=='lobby')return;
@@ -582,11 +612,11 @@ function closeGuide(){
  else{show('clubMenu');$('menuGuide').focus();}
 }
 function closeMenu(){if($('clubMenu').hidden)return;hide('clubMenu');$('menuBtn').focus();}
-function openMenu(){const d=dailySummary(progress);setText('dailySub',d.today!==null?`Cleared in ${d.today} shots today${d.streak>1?` · ${d.streak} days running`:''}`:d.streak>0?`${d.streak} days running · clear today's`:'One rack, the same for everyone today');show('clubMenu');$('closeMenu').focus();}
+function openMenu(){const d=dailySummary(progress);setText('dailySub',d.today!==null?`Cleared in ${d.today} shots${d.streak>1?` · ${d.streak} day streak`:''}`:d.streak>0?`${d.streak} day streak`:'Same rack for all');show('clubMenu');$('closeMenu').focus();}
 function refreshMenu(){const ball=gameType==='nine'?'9-Ball':gameType==='ten'?'10-Ball':gameType==='straight'?'Straight pool':gameType==='onepocket'?'One-pocket':'8-Ball';
   const circuitStage=circuitState(progress),circuitPersona=personaFor(CIRCUIT[circuitStage.stage]);
   setText('matchSummary',mode==='circuit'?`Round ${circuitStage.stage+1} of ${CIRCUIT.length} · ${circuitPersona.name}`:mode==='practice'?'Open practice table':(rival==='local'?`${ball} · Two players`:`${ball} vs ${personaFor(rival).name}`)+(gameType==='eight'&&rules!=='casual'?` · ${rules==='official'?'Official':'Call the 8'}`:''));
-  setText('playSubtitle',mode==='circuit'?`${circuitPersona.style.toUpperCase()}${circuitStage.champion?` · CHAMPION ×${circuitStage.champion}`:''}`:mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`${gameType==='eight'&&rules!=='casual'?(rules==='official'?'OFFICIAL':'CALL THE 8'):'CASUAL'} ${ball.toUpperCase()} · NO ENTRY FEE`);
+  setText('playSubtitle',mode==='circuit'?`${circuitPersona.style.toUpperCase()}${circuitStage.champion?` · CHAMPION ×${circuitStage.champion}`:''}`:mode==='practice'?'FREE PLAY · EXPLORE THE ANGLES':`${gameType==='eight'&&rules!=='casual'?(rules==='official'?'OFFICIAL':'CALL THE 8'):'CASUAL'} ${ball.toUpperCase()}`);
   all('.mode[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));}
 /** One short phrase for how the rack ended, from the referee's own reason. */
 function finishText(reason){
@@ -1181,7 +1211,8 @@ $('menuGuide').onclick=()=>openGuide('menu');$('pauseGuide').onclick=()=>openGui
 all('[data-guide-tab]').forEach(tab=>tab.onclick=()=>selectGuideTab(tab.dataset.guideTab));
 $('menuBtn').onclick=openMenu;$('closeMenu').onclick=closeMenu;
 $('menuPractice').onclick=()=>begin('practice');$('menuDaily').onclick=()=>begin('daily');$('menuSettings').onclick=openSettings;
-$('menuOnline').onclick=openOnline;$('onlineLeave').onclick=quitToLobby;$('modeOnline').onclick=openOnline;$('menuRecord').onclick=()=>openRecord('menu');$('closeOnline').onclick=closeOnline;$('onlineHost').onclick=()=>hostOnline();$('onlineJoin').onclick=()=>joinOnline($('onlineCode').value);
+$('menuOnline').onclick=openOnline;
+$('roomMastery').onclick=()=>{const model=roomMastery(progress,room),step=model?.steps.find(x=>!x.done);if(!step||active!=='lobby')return;if(step.drillId)begin('drill',step.drillId);else{mode='match';begin('match');}};$('onlineLeave').onclick=quitToLobby;$('modeOnline').onclick=openOnline;$('menuRecord').onclick=()=>openRecord('menu');$('closeOnline').onclick=closeOnline;$('onlineHost').onclick=()=>hostOnline();$('onlineJoin').onclick=()=>joinOnline($('onlineCode').value);
 $('onlineCode').onkeydown=e=>{if(e.key==='Enter')joinOnline($('onlineCode').value);};
 $('onlineCancel').onclick=()=>{closeOnlineSession();show('onlineStart');hide('onlineWait');onlineStatus('');};
 $('onlineCopy').onclick=async()=>{const link=online?.link;if(!link)return;try{await navigator.clipboard.writeText(link);onlineStatus('Invite link copied.');}catch{onlineStatus(link);}};
@@ -1207,7 +1238,7 @@ $('playAgain').onclick=()=>{if(active==='game'&&current?.over&&current.players==
 $('resultMenu').onclick=quitToLobby;
 $('closeSettings').onclick=closeSettings;
 $('openRecord').onclick=openRecord;$('closeRecord').onclick=closeRecord;
-$('exportRecord').onclick=downloadRecord;
+$('exportRecord').onclick=downloadRecord;$('importRecord').onclick=startImport;$('importFile').onchange=importChosen;
 $('resetRecord').onclick=()=>{
  $('recordMessage').textContent='';$('resetRecord').hidden=true;
  $('recordConfirm').hidden=false;$('cancelRecordReset').focus();

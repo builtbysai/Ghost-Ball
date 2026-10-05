@@ -102,13 +102,13 @@ with sync_playwright() as p:
         page.locator('#menuChallenges').click()
         page.wait_for_timeout(450)
         assert page.locator('#challengeSheet').is_visible() and page.locator('#challengeCards button').count()==10
-        cpanel=page.locator('.challenge-panel').bounding_box()
+        cpanel=page.locator('#challengeSheet .sheet-card').bounding_box()
         assert inside_viewport(cpanel,width,height),f'{width}x{height}: challenge picker clipped'
-        assert page.locator('.challenge-panel').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'challenge panel overflow'
-        assert page.locator('#challengeCards').evaluate('(el)=>el.scrollHeight<=el.clientHeight+1'), 'skill cards clipped'
         page.screenshot(path=str((root/'screenshots'/f'skill-drills-{width}x{height}.png').resolve()))
+        # the cards scroll inside the sheet; each one must be reachable and fully readable
         for card in page.locator('#challengeCards button').all():
-            assert inside_viewport(card.bounding_box(),width,height),'authored skill card outside viewport'
+            card.scroll_into_view_if_needed()
+            assert inside_viewport(card.bounding_box(),width,height),'authored skill card outside viewport after scrolling'
             fits=card.evaluate('(el)=>({scroll:el.scrollHeight,client:el.clientHeight})')
             assert fits['scroll']<=fits['client']+1,f"{width}x{height}: {card.get_attribute('data-drill')} text clipped: {fits}"
         page.keyboard.press('Escape')
@@ -218,7 +218,7 @@ with sync_playwright() as p:
             page.locator('#cancelRecordReset').click()
             assert page.locator('#recordConfirm').is_hidden(), 'cancel failed'
         else:
-            assert page.locator('#recordStorage').inner_text()=='SESSION ONLY'
+            assert page.locator('#recordStorage').inner_text()=='Session only'
             assert page.locator('#recordConfirm').is_hidden(), 'unavailable storage offered destructive reset'
         page.screenshot(path=str((root/'screenshots'/f'local-record-{width}x{height}.png').resolve()))
         page.keyboard.press('Escape')
