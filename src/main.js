@@ -1528,6 +1528,13 @@ window.addEventListener('keyup',e=>{
 });
 // The first touch, click or key anywhere unlocks audio so the room's music starts straight away.
 for(const type of ['pointerdown','keydown'])window.addEventListener(type,()=>audio.unlock(),{once:true,capture:true});
+// Every interface press answers back: a soft tick and, where allowed, a hair of haptic.
+window.addEventListener('pointerdown',event=>{
+ const el=event.target.closest?.('button:not(:disabled),.switch input,.modes button,.room-switch button');
+ if(!el||el.closest('#gameCanvas,.power-track'))return;
+ audio.uiTick(el.matches('.sheet-done,.primary,.shoot')?'confirm':'soft');
+ if(motion)navigator.vibrate?.(3);
+},{capture:true,passive:true});
 window.addEventListener('blur',cancelKeyPull);
 window.addEventListener('pagehide',()=>audio.suspend());
  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelKeyPull();audio.suspend();}else audio.resume();});

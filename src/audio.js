@@ -56,6 +56,11 @@ export class Audio {
   g.gain.setValueAtTime(Math.max(.0001,volume),now);g.gain.exponentialRampToValueAtTime(.0001,now+length);
   src.connect(f).connect(g).connect(ctx.destination);src.start(now,Math.random()*.3,length+.01);
  }
+ /** Soft interface tick: a felt-dampened tap for presses (`soft`) or a brighter one for confirmations. */
+ uiTick(kind='soft'){
+  if(kind==='confirm'){this.tone({frequency:880,end:1320,volume:.022,length:.07,wave:'sine'});return;}
+  this.click({type:'bandpass',frequency:kind==='soft'?1500:2300,q:.9,volume:.03,length:.018});
+ }
  resume(){if(this.enabled&&this.ctx?.state==='suspended')this.ctx.resume().catch(()=>{});}
  suspend(){if(this.ctx?.state==='running')this.ctx.suspend().catch(()=>{});}
  tone({frequency=200,end=75,volume=.1,length=.08,wave='triangle',delay=0}){
