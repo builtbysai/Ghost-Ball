@@ -76,3 +76,8 @@ button{touch-action:manipulation}
 }
 .primary strong{font-size:clamp(15px,1.35vw,18px);letter-spacing:-.01em}
 .primary .arrow{font-size:28px;margin-left:8px}
+
+/* A turn handing over rings the new player's badge once */
+#gameScreen .player-token.turn-pulse{animation:turn-pulse .7s var(--fin-ease) both}
+@keyframes turn-pulse{0%{box-shadow:0 0 0 0 #f1d9a1cc,0 3px 10px #0008}100%{box-shadow:0 0 0 14px #f1d9a100,0 3px 10px #0008}}
+@media(prefers-reduced-motion:reduce){#gameScreen .player-token.turn-pulse{animation:none}}
