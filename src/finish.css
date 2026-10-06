@@ -81,3 +81,14 @@ button{touch-action:manipulation}
 #gameScreen .player-token.turn-pulse{animation:turn-pulse .7s var(--fin-ease) both}
 @keyframes turn-pulse{0%{box-shadow:0 0 0 0 #f1d9a1cc,0 3px 10px #0008}100%{box-shadow:0 0 0 14px #f1d9a100,0 3px 10px #0008}}
 @media(prefers-reduced-motion:reduce){#gameScreen .player-token.turn-pulse{animation:none}}
+
+/* The result card reveals in order: kicker, verdict, evidence, then the choices */
+#gameScreen .match-result:not([hidden])>*{animation:fin-rise .4s var(--fin-ease) both}
+#gameScreen .match-result:not([hidden])>*:nth-child(2){animation-delay:.07s}
+#gameScreen .match-result:not([hidden])>*:nth-child(3){animation-delay:.14s}
+#gameScreen .match-result:not([hidden])>*:nth-child(4){animation-delay:.21s}
+#gameScreen .match-result:not([hidden])>*:nth-child(n+5){animation-delay:.3s}
+#gameScreen .match-result-actions button{transition:transform .12s var(--fin-ease),filter .15s,background .15s}
+#gameScreen .match-result-actions button:active{transform:scale(.96)}
+@media(hover:hover){#gameScreen .match-result-actions button:hover{filter:brightness(1.1)}}
+@media(prefers-reduced-motion:reduce){#gameScreen .match-result:not([hidden])>*{animation:none}}
