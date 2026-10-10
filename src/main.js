@@ -37,7 +37,7 @@ let current=null,active='lobby',motion=true,placement=null,pointerMode=null,plac
 let online=null,onlineBoot=null,pendingHighlight=null,highlightRun=false,pushOutArmed=false,safetyArmed=false,callManual=false,lastTurnSeen=-1,settingsOrigin='lobby',updateWaiting=false,powerSide='left',aimMode='smart',rules='casual',calledPocket=null,guideMode='full',wheelFine=false,clockSeconds=45,spinKeep=false,gameType='eight';
 let matchElapsed=0,lastClockSecond=-1;
 let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
-let previousShotAngles=[0,0],toastTimeout=null;
+let previousShotAngles=[0,0],toastTimeout=null,turnPulseFor=null;
 let tableView='overhead',circuitRun=null,dailyDay=null,coach=0,exhibitionIndex=Math.floor(Math.random()*6),exhibitionTimer=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
@@ -795,6 +795,7 @@ function turnUI(){if(!current)return;
  const tokenText=seat=>current.players==='ai'?current.personaAt(seat).initial:seat===1&&current.players==='cpu'?current.persona.initial:String(seat+1);
  $('oneCard').querySelector('.player-token').textContent=countdown!==null&&current.turn===0?String(countdown):tokenText(0);$('twoCard').querySelector('.player-token').textContent=countdown!==null&&current.turn===1?String(countdown):tokenText(1);
  $('oneCard').classList.toggle('playing',current.turn===0);$('twoCard').classList.toggle('playing',current.turn===1);
+ if(turnPulseFor!==current.turn){const was=turnPulseFor;turnPulseFor=current.turn;if(was!==null&&!current.over){const t=$(current.turn===0?'oneCard':'twoCard').querySelector('.player-token');if(t){t.classList.remove('turn-pulse');void t.offsetWidth;t.classList.add('turn-pulse');}}}
  $('replayButton').hidden=!current.lastShot||current.kind==='drill'||current.sim.moving||active!=='game';
  $('replayButton').classList.toggle('on',Boolean(replay));
  syncShotModes();
@@ -896,7 +897,7 @@ function finishRackFlock(){
  for(const ball of current?.sim.balls||[]){const pose=final.find(p=>p.id===ball.id);if(pose){ball.orientation=[...pose.orientation];ball.rotation=pose.rotation;}}
  rackFlock=null;
 }
-function resetMatch(alternate=false,{force=false,state=null}={}){
+function resetMatch(alternate=false,{force=false,state=null}={}){turnPulseFor=null;
  if(!current)return;
  if(current.players==='online'&&!force){tableToast('USE REMATCH, OR LEAVE THE TABLE','hint',2600);return;}clearTimeout(exhibitionTimer);
  // Circuit: a win moves on to the next opponent, a loss replays the same round.
@@ -1528,6 +1529,13 @@ window.addEventListener('keyup',e=>{
 });
 // The first touch, click or key anywhere unlocks audio so the room's music starts straight away.
 for(const type of ['pointerdown','keydown'])window.addEventListener(type,()=>audio.unlock(),{once:true,capture:true});
+// Every interface press answers back: a soft tick and, where allowed, a hair of haptic.
+window.addEventListener('pointerdown',event=>{
+ const el=event.target.closest?.('button:not(:disabled),.switch input,.modes button,.room-switch button');
+ if(!el||el.closest('#gameCanvas,.power-track'))return;
+ audio.uiTick(el.matches('.sheet-done,.primary,.shoot')?'confirm':'soft');
+ if(motion)navigator.vibrate?.(3);
+},{capture:true,passive:true});
 window.addEventListener('blur',cancelKeyPull);
 window.addEventListener('pagehide',()=>audio.suspend());
  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelKeyPull();audio.suspend();}else audio.resume();});

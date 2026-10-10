@@ -1,0 +1,94 @@
+/* Finishing layer: the small things. Hover, press and focus feel, quiet
+   entrances, tab and tray motion, and a few clipped labels. Loaded last. */
+:root{--fin-ease:cubic-bezier(.2,.8,.2,1);--fin-spring:cubic-bezier(.2,1.3,.3,1)}
+::selection{background:#e6c98b55;color:#fff}
+html,body{overscroll-behavior:none}
+#app{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#app input,#app textarea{-webkit-user-select:text;user-select:text}
+button{touch-action:manipulation}
+
+/* Lobby: title and the one big action */
+.actions{grid-template-columns:minmax(0,1fr) 70px}
+.primary>span:first-child{min-width:0}
+.primary strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.primary small{white-space:nowrap}
+.primary{overflow:hidden;transition:border-color .2s,background .3s,transform .12s var(--fin-ease),box-shadow .25s}
+.primary::after{content:'';position:absolute;inset:0;pointer-events:none;transform:translateX(-120%);
+ background:linear-gradient(100deg,transparent 35%,#ffe9b82e 50%,transparent 65%);transition:transform .7s var(--fin-ease)}
+.primary .arrow{transition:transform .25s var(--fin-spring)}
+.secondary{transition:background .2s,border-color .2s,transform .12s var(--fin-ease)}
+@media(hover:hover){
+ .primary:hover{border-color:#efcc84;box-shadow:0 0 28px #e9c07a24}
+ .primary:hover::after{transform:translateX(120%)}
+ .primary:hover .arrow{transform:translateX(5px)}
+ .secondary:hover{background:#ffffff12;border-color:#f2deb066}
+ .match-selection:hover .change-label{letter-spacing:.2em}
+ .room-switch button:hover:not(:disabled){background:#1c3022;border-color:#e6cd9a88}
+ .modes button:not(.active):hover{color:#d9d0be}
+}
+.primary:active:not(:disabled),.secondary:active:not(:disabled){transform:scale(.985)}
+.change-label{transition:letter-spacing .25s var(--fin-ease)}
+.room-switch button{transition:background .18s,border-color .18s,transform .12s var(--fin-ease)}
+.room-switch button:active:not(:disabled){transform:scale(.9)}
+.modes button{transition:color .2s}
+.modes .active::after{transform-origin:left;animation:tab-in .3s var(--fin-ease) both}
+@keyframes tab-in{from{transform:scaleX(0)}to{transform:none}}
+.art{overflow:hidden;white-space:normal;line-height:1.25;letter-spacing:.02em;padding:42px 2px 0;font-size:6px}
+.badge-art{padding-top:20px}
+
+/* Match HUD: the active player settles into place instead of snapping */
+#gameScreen .player-token{transition:transform .35s var(--fin-spring),filter .3s,box-shadow .3s}
+#gameScreen .opponent-card.playing .player-token{transform:scale(1.07)}
+#gameScreen .ball-slot{transition:opacity .35s,filter .35s,transform .2s}
+#gameScreen .player-info strong,#gameScreen .player-info small{transition:color .25s,opacity .25s}
+#gameScreen .mode-chip,#gameScreen .choice-actions button{transition:background .15s,transform .12s var(--fin-ease),border-color .15s}
+#gameScreen .mode-chip:active,#gameScreen .choice-actions button:active{transform:scale(.95)}
+#gameScreen .cueball-button{transition:transform .15s var(--fin-spring),box-shadow .2s}
+#gameScreen .cueball-button:active:not(:disabled){transform:scale(.94)}
+#gameScreen .shot-rail .pull-handle{cursor:grab}
+#gameScreen .shot-rail .power-track.held .pull-handle,#gameScreen .shot-rail .power-track.charging .pull-handle{cursor:grabbing}
+#gameScreen .table-toast,#gameScreen .turn-recap{will-change:opacity,transform}
+
+/* Sheets: rows arrive in a quiet cascade; interactive rows answer the pointer */
+.club-sheet .sheet-body>*{animation:fin-rise .34s var(--fin-ease) both}
+.club-sheet .sheet-body>*:nth-child(2){animation-delay:.04s}
+.club-sheet .sheet-body>*:nth-child(3){animation-delay:.08s}
+.club-sheet .sheet-body>*:nth-child(4){animation-delay:.12s}
+.club-sheet .sheet-body>*:nth-child(n+5){animation-delay:.16s}
+@keyframes fin-rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.set-row{transition:background .18s}
+@media(hover:hover){.set-row:hover{background:linear-gradient(90deg,#ffffff07,transparent 80%)}}
+.seg button:active{transform:scale(.95)}
+.sheet-done,.btn-quiet,.seg button{touch-action:manipulation}
+.switch input:active+i{width:25px}
+.switch input:checked:active+i{transform:translateX(15px)}
+.switch i{transition:transform .22s var(--fin-spring),width .12s,background .2s}
+.club-sheet ::-webkit-scrollbar{width:6px;height:6px}
+.club-sheet ::-webkit-scrollbar-thumb{background:#e6c98b44;border-radius:6px}
+
+/* Banners and toasts leave as gracefully as they arrive */
+#gameScreen .table-toast{transition:opacity .2s}
+
+@media(prefers-reduced-motion:reduce){
+ .club-sheet .sheet-body>*,.modes .active::after{animation:none}
+ .primary::after,.primary .arrow,.switch i,#gameScreen .player-token{transition:none}
+ #gameScreen .opponent-card.playing .player-token{transform:none}
+}
+.primary strong{font-size:clamp(15px,1.35vw,18px);letter-spacing:-.01em}
+.primary .arrow{font-size:28px;margin-left:8px}
+
+/* A turn handing over rings the new player's badge once */
+#gameScreen .player-token.turn-pulse{animation:turn-pulse .7s var(--fin-ease) both}
+@keyframes turn-pulse{0%{box-shadow:0 0 0 0 #f1d9a1cc,0 3px 10px #0008}100%{box-shadow:0 0 0 14px #f1d9a100,0 3px 10px #0008}}
+@media(prefers-reduced-motion:reduce){#gameScreen .player-token.turn-pulse{animation:none}}
+
+/* The result card reveals in order: kicker, verdict, evidence, then the choices */
+#gameScreen .match-result:not([hidden])>*{animation:fin-rise .4s var(--fin-ease) both}
+#gameScreen .match-result:not([hidden])>*:nth-child(2){animation-delay:.07s}
+#gameScreen .match-result:not([hidden])>*:nth-child(3){animation-delay:.14s}
+#gameScreen .match-result:not([hidden])>*:nth-child(4){animation-delay:.21s}
+#gameScreen .match-result:not([hidden])>*:nth-child(n+5){animation-delay:.3s}
+#gameScreen .match-result-actions button{transition:transform .12s var(--fin-ease),filter .15s,background .15s}
+#gameScreen .match-result-actions button:active{transform:scale(.96)}
+@media(hover:hover){#gameScreen .match-result-actions button:hover{filter:brightness(1.1)}}
+@media(prefers-reduced-motion:reduce){#gameScreen .match-result:not([hidden])>*{animation:none}}
