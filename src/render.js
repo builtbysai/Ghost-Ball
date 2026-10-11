@@ -9,21 +9,11 @@ import {cueById} from './cue-catalog.js';
 const TAU=Math.PI*2;
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const halls=[
- {name:'The Parlor',felt:'#315d4a',feltLight:'#56816c',rail:'#54351f',wood:'#a46d3d',wall:'#102017',aura:'#254536',year:'1893',detail:'Walnut rails · sage baize · leather pockets',
-  motif:'<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 8 40 38H8Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="24" r="3.2" fill="currentColor"/><circle cx="19" cy="31" r="3.2" fill="currentColor"/><circle cx="29" cy="31" r="3.2" fill="currentColor"/></svg>',
-  frameNote:'House rack · eight ball'},
- {name:'The Observatory',felt:'#176a8e',feltLight:'#3a98b2',rail:'#3c3029',wood:'#725b46',wall:'#111924',aura:'#224565',year:'1911',detail:'Smoked oak · ocean cloth · silver sights',
-  motif:'<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6v36M6 24h36" stroke="currentColor" stroke-width="1.4"/><path d="M24 12l3.5 8.5L36 24l-8.5 3.5L24 36l-3.5-8.5L12 24l8.5-3.5Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="38" cy="10" r="1.6" fill="currentColor"/><circle cx="10" cy="38" r="1.6" fill="currentColor"/></svg>',
-  frameNote:'Meridian star chart'},
- {name:'The Foundry',felt:'#3e6651',feltLight:'#6e8f70',rail:'#302b29',wood:'#665748',wall:'#1d1b17',aura:'#3b4940',year:'1927',detail:'Dark ash · copper trim · olive baize',
-  motif:'<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="10" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="24" cy="24" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 8v6M24 34v6M8 24h6M34 24h6M12.7 12.7l4.2 4.2M31.1 31.1l4.2 4.2M35.3 12.7l-4.2 4.2M16.9 31.1l-4.2 4.2" stroke="currentColor" stroke-width="2.4"/></svg>',
-  frameNote:'Furnace gear · est. 1927'},
- {name:'The Wintergarden',felt:'#306c65',feltLight:'#5d9f91',rail:'#8b7960',wood:'#dbc49e',wall:'#172c27',aura:'#31594e',year:'1938',detail:'Pale oak · bottle-green cloth · round brass sights',
-  motif:'<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6C14 16 12 30 24 42 36 30 34 16 24 6Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M24 12v26M24 20l-6-3M24 20l6-3M24 28l-7-3M24 28l7-3" stroke="currentColor" stroke-width="1.4"/></svg>',
-  frameNote:'Glasshouse botanical'},
- {name:'The Afterhours',felt:'#654354',feltLight:'#936b7b',rail:'#211c24',wood:'#4a373f',wall:'#19121d',aura:'#453040',year:'1964',detail:'Black lacquer · mulberry baize · twin silver inlays',
-  motif:'<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M32 8a16 16 0 1 0 8 29A18 18 0 0 1 32 8Z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="34" cy="14" r="1.8" fill="currentColor"/><path d="M14 34h12l-2 6H16Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
-  frameNote:'Last call · moonlight'},
+ {name:'The Parlor',felt:'#315d4a',feltLight:'#56816c',rail:'#54351f',wood:'#a46d3d',wall:'#102017',aura:'#254536',year:'1893',detail:'Walnut rails · sage baize · leather pockets'},
+ {name:'The Observatory',felt:'#176a8e',feltLight:'#3a98b2',rail:'#3c3029',wood:'#725b46',wall:'#111924',aura:'#224565',year:'1911',detail:'Smoked oak · ocean cloth · silver sights'},
+ {name:'The Foundry',felt:'#3e6651',feltLight:'#6e8f70',rail:'#302b29',wood:'#665748',wall:'#1d1b17',aura:'#3b4940',year:'1927',detail:'Dark ash · copper trim · olive baize'},
+ {name:'The Wintergarden',felt:'#306c65',feltLight:'#5d9f91',rail:'#8b7960',wood:'#dbc49e',wall:'#172c27',aura:'#31594e',year:'1938',detail:'Pale oak · bottle-green cloth · round brass sights'},
+ {name:'The Afterhours',felt:'#654354',feltLight:'#936b7b',rail:'#211c24',wood:'#4a373f',wall:'#19121d',aura:'#453040',year:'1964',detail:'Black lacquer · mulberry baize · twin silver inlays'},
 ];
 export {halls};
 function polygon(g,vertices){g.beginPath();g.moveTo(...vertices[0]);for(let i=1;i<vertices.length;i++)g.lineTo(...vertices[i]);g.closePath();}
