@@ -329,7 +329,10 @@ function applyRoom(){const h=halls[room];audio.music.setHall(room);ambient.setHa
   if(progressAccess.writable&&!writeLocalProgress(progress))progressAccess.writable=false;
  }
   document.documentElement.style.setProperty('--hall',h.felt);document.documentElement.style.setProperty('--room-aura',h.aura);setText('roomEyebrow',`ROOM 0${room+1} · ESTABLISHED ${h.year}`);
-  setText('roomPlaque',String(h.year));setText('roomArt',h.name.toUpperCase());$('roomEyebrow').dataset.short=`ROOM 0${room+1} · ${h.year}`;setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
+  setText('roomPlaque',String(h.year));$('roomPlaque').dataset.year=String(h.year);
+  $('roomPlaque').innerHTML='<span class="art-name">'+String(h.year)+'</span><svg viewBox="0 0 24 24" aria-hidden="true" style="width:34%"><path d="M12 3l2.2 7.1L22 12l-7.8 1.9L12 21l-2.2-7.1L2 12l7.8-1.9Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+  const artEl=$('roomArt');artEl.innerHTML=(h.motif||'')+'<span class="art-name">'+h.name.toUpperCase()+'</span>'+(h.frameNote?'<span class="art-note">'+h.frameNote+'</span>':'');
+  $('roomEyebrow').dataset.short=`ROOM 0${room+1} · ${h.year}`;setText('roomName',h.name);setText('roomDescription',h.detail);setText('roomCount',`0${room+1} / 0${halls.length}`);
   setText('playText',mode==='practice'?`Practice at ${h.name}`:mode==='circuit'?`Take on ${personaFor(circuitOpponent()).name}`:`Break at ${h.name}`);
   renderRoomMastery();
   if(current)setText('roundLabel',h.name.toUpperCase());
