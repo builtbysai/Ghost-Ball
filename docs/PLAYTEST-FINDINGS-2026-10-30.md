@@ -98,7 +98,74 @@ Watch exhibition · Skill drills (10 listed) · Daily Rack · Clubhouse menu ·
 How to play (Controls/Rules tabs) · Preferences (Controls/Display/Sound) ·
 Pause dialog · Online Beta dialog (host/join, six-letter code).
 
-## Verdict
+## UI / design audit (2026-10-30, Hans's direction: full overhaul)
+
+Hans's verdict: the current UI and menus look horrible and need a full
+overhaul. Screen-by-screen audit below (13 screens/dialogs visited). Note: the
+audit agent could not save screenshot PNGs (no screenshot-to-file tooling in
+its environment), so critiques are descriptive, no image attachments.
+
+### Per-screen notes
+
+- **Lobby:** strongest screen. Deep-green wallpaper, walnut floor/rails, brass
+  lamp, framed portraits, live AI exhibition as ambient decoration. Serif
+  wordmark ("GHOST BALL" with 8-ball O), tracked small caps. Weak: lower half
+  is lopsided — big empty floor bottom-left, mode panel floats bottom-right;
+  that panel (tabs + cards + WATCH pill) is the most generic-game-UI corner;
+  wall portraits illegible at scale.
+- **Table selector:** tasteful. Eyebrow, big serif room name, one-line
+  materials copy; each room re-themes (Observatory goes midnight-blue). Mastery
+  box text cramped; stepper arrows generic.
+- **New Match dialog:** best dialog. Consistent shell (dark green card, serif
+  title, gold pill Done). Segmented pills everywhere, but styled as a system
+  (dark track, gold active). Excellent opponent microcopy.
+- **Match HUD:** good density, themed power rail. Worst offenders live here:
+  pause/mute are flat generic gray rounded squares clashing with the
+  wood-and-brass theme; the FINE AIM −/wheel/+ stack looks like a default
+  widget; spin button is a murky gray circle.
+- **Pause dialog:** consistent, nothing to fault.
+- **Clubhouse menu:** standard settings-list pattern, but executed in the
+  game's type system. Clean.
+- **Skill drills:** most generic screen. Uniform dark cards, ragged row heights
+  from uneven copy lengths, dimmed lobby doing all the atmosphere work.
+- **Daily Rack:** consistent with match HUD.
+- **Online Beta:** clean, honest copy. The big "Host a table" button is the
+  flattest, most saturated, most stock-looking button in the game — clashes
+  with the muted brass used elsewhere.
+- **How to play:** dense but readable, kbd chips, well-written copy. One of the
+  best screens.
+- **Preferences:** hairline rules, gold small-caps labels, segmented pills.
+  iOS-style toggles are the most off-the-shelf element in the dialogs. "My
+  Club" pill in the footer is a strange home for it.
+- **Watch exhibition:** disabled-state communication handled well (dimmed
+  controls, banner). Spectate-only reads at a glance.
+- **Circuit tab:** consistent with the lobby panel, no new issues.
+
+### Ranked worst elements (overhaul targets)
+
+1. Match HUD pause/mute buttons — generic gray squares, biggest clash with the
+   art direction.
+2. Skill drills card grid — most generic screen, ragged rows.
+3. Fine-aim wheel panel — default-widget look, least designed HUD element.
+4. Lobby lower-half composition — dead floor space, floating panel.
+5. "Host a table" button — flat saturated gold, clashes with muted brass.
+6. iOS-style toggles in Preferences — off-the-shelf.
+7. Illegible mini room portraits on the lobby wall.
+
+### Visual bug (new)
+
+After quitting a match back to the lobby, the canvas briefly keeps rendering
+the old match table behind the lobby UI before the lobby scene takes over.
+
+### Identity note
+
+The game has a real point of view (Victorian members' billiard hall:
+deep-green, walnut, brass, serif + tracked small caps, voiced microcopy) and
+mostly avoids generic AI-game clichés (no glassmorphism, no purple gradients,
+no emoji icons, no filler copy). The overhaul should keep the identity and the
+type system, and replace the scattered default-shelf components (pause/mute,
+fine-aim wheel, toggles, Host button), the drills grid, and the lobby
+composition.
 
 A polished, complete-feeling pool game with strictly enforced, well-explained
 casual 8-ball rules. The dead Mastery button is the most user-visible defect.
