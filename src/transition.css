@@ -10,7 +10,9 @@
  transition:opacity .42s ease,transform .65s cubic-bezier(.2,.8,.2,1);}
 #app .masthead,#app .room-details,#app .lobby-panel{transition:opacity .28s ease,transform .45s ease;}
 .game-screen.entering{background:transparent;pointer-events:none;}
-.game-screen.entering::before{
+/* Quitting: fade the match screen out while the table flies back to the lobby,
+   so the old table never lingers behind the lobby UI. */
+.game-screen.leaving{transition:opacity .35s ease;opacity:0;pointer-events:none;}.game-screen.entering::before{
  content:'';position:absolute;inset:0;pointer-events:none;
  background:radial-gradient(ellipse 85% 75% at 50% 52%,#25456b 0%,#15263e 68%,#0e172a 100%);
  animation:room-to-table 1.3s ease-in-out both;
