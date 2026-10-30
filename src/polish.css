@@ -140,6 +140,7 @@
 /* Room mastery reads permanent authentic records, never disables room choices. */
 #app .room-mastery[hidden]{display:none!important}
 #app .room-mastery{display:flex;flex-direction:column;gap:3px;max-width:min(240px,100%);
+ pointer-events:auto; /* parent .room-details sets pointer-events:none */
  margin:8px 0 0;padding:6px 9px;border-left:2px solid #dcbd7d;
  background:linear-gradient(90deg,#2e402bc4,#12231922);
  font:800 clamp(8px,.85vw,10px)/1.2 system-ui;letter-spacing:.09em;color:#f2dbab;
