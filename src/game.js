@@ -392,6 +392,9 @@ export class Game {
      this.onTurn({type:'win',winner:this.winner,legal:result.legal,reason:result.reason});
    }else{
      this.turn=result.turn;this.ballInHand=result.ballInHand;this.foul=result.foul;
+     // Ball in hand always starts the incoming player on a fresh clock, so the
+     // HUD shows the full allowance during placement instead of leftover time.
+     this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';
      // WPA 1.4/3.6: a scratch on the break leaves ball in hand behind the head string only.
      this.kitchen=Boolean(result.ballInHand&&wasBreak&&shot.pots.includes(0));
      if(result.type==='foul'){
@@ -442,6 +445,7 @@ export class Game {
      this.onTurn({type:'win',winner,legal:true,reason:'race-won'});return;
    }
    this.turn=result.turn;this.ballInHand=result.ballInHand;this.foul=result.foul;this.kitchen=false;
+   this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';
    this.notify(result.foul?'Foul. A ball goes back on the table. Opponent has ball in hand.':result.type==='retain'?`Player ${this.turn+1} keeps shooting.`:`Player ${this.turn+1} to shoot.`);
    this.onTurn({type:result.foul?'foul':'turn',turn:this.turn,shooter,potted:result.credit[shooter]||[],
      theirs:result.credit[1-shooter]||[],spotted:result.spot,returned,points:[...this.points],target:this.target,
@@ -471,6 +475,7 @@ export class Game {
    let before=null;
    if(this.sim.balls.filter(b=>b.id>0&&!b.pocketed).length<=1){before=this.sim.snapshot().balls;reRackStraight(this.sim.balls);}
    this.turn=result.turn;this.ballInHand=result.ballInHand;this.foul=result.foul;this.kitchen=false;
+   this.shotRemaining=this.shotClockSeconds;this.shotClockKey='';
    this.notify(result.foul?`Foul. ${result.points} point${result.points===-1?'':'s'}. Opponent has ball in hand.`:
      result.type==='retain'?`Player ${this.turn+1} keeps shooting.`:`Player ${this.turn+1} to shoot.`);
    const counted=new Set(result.counted);
