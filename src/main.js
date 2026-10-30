@@ -825,7 +825,7 @@ function begin(kind,drillId=null){
  const exhibit=kind==='exhibition';if(exhibit)kind='match';
  if(kind==='drill'&&!skillDrillById(drillId))return;
  if(kind==='drill')room=skillDrillById(drillId).room;
- lastScoreSignature='';newlyEarnedCueCount=0;newlyEarnedCueNames=[];matchElapsed=0;lastClockSecond=-1;previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();calledPocket=null;placeGesture=null;$('flightLayer').replaceChildren();hide('clubMenu');hide('challengeSheet');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
+ lastScoreSignature='';newlyEarnedCueCount=0;newlyEarnedCueNames=[];matchElapsed=0;lastClockSecond=-1;setText('matchTime','00:00');previousShotAngles=[0,0];clearTableToast();clearTurnBanner();cancelKeyPull();calledPocket=null;placeGesture=null;$('flightLayer').replaceChildren();hide('clubMenu');hide('challengeSheet');hide('setupSheet');hide('settingsSheet');hide('backdrop');placement=null;
  angle=kind==='drill'?skillDrillById(drillId).referenceAngle:0;spin={x:0,y:0};power=.50;shotMotion=null;pullProgress=0;tensionLevel=0;syncAim();setPower(50);setText('powerValue','PULL ↓');syncSpin();powerControl?.reset();
  calledPocket=null;
  const net=onlineBoot;onlineBoot=null;
@@ -1316,6 +1316,8 @@ const endQuickSpin=e=>{
 };
 $('spinButton').addEventListener('pointerup',endQuickSpin);
 $('spinButton').addEventListener('pointercancel',endQuickSpin);
+// All controls are bound: drop the boot veil so first-load clicks land.
+$('bootVeil')?.remove();
 function closeSpin(){hide('spinShade');hide('spinSheet');$('gameCanvas').focus({preventScroll:true});}
 $('spinDone').onclick=closeSpin;$('spinShade').onclick=closeSpin;
 $('spinReset').onclick=()=>{spin={x:0,y:0};syncSpin();};
