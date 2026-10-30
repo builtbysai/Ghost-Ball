@@ -2,7 +2,8 @@
 .online-note{margin:0;color:var(--muted,#b9c2cf);font-size:.9rem;line-height:1.45}
 .online-actions{display:flex;gap:10px;flex-wrap:wrap}
 .online-actions button,.online-join-row button{min-height:44px;padding:0 18px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:inherit;font:inherit;font-weight:600}
-.online-actions .primary-action{background:#e7b94d;color:#17120a;border-color:transparent}
+.online-actions .primary-action{background:linear-gradient(#f4deac,#d8b46d);color:#1b2a22;border:1px solid #f4dfae;font-weight:800;box-shadow:0 3px 0 #8d6f38,0 12px 24px #0006}
+.online-actions .primary-action:active{transform:translateY(2px);box-shadow:0 1px 0 #8d6f38,0 6px 14px #0006}
 .online-join label{display:block;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;opacity:.7;margin-bottom:6px}
 .online-join-row{display:flex;gap:10px}
 .online-join-row input{flex:1;min-height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:inherit;font:inherit;font-size:1.15rem;letter-spacing:.3em;text-transform:uppercase;padding:0 14px}
@@ -46,8 +47,11 @@
 .online-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
 .online-card{min-width:0;overflow:hidden}
 .online-join-row{min-width:0}.online-join-row input{width:100%;flex:1 1 0}
-.online-card .primary-action{min-height:44px;border-radius:12px;border:0;background:#e7b94d;color:#17120a;font:700 14px system-ui;cursor:pointer}
-.online-card .primary-action:hover{filter:brightness(1.06)}
+.online-card .primary-action{min-height:44px;border-radius:12px;border:1px solid #f4dfae;
+ background:linear-gradient(#f4deac,#d8b46d);color:#1b2a22;font:800 14px system-ui;letter-spacing:.04em;cursor:pointer;
+ box-shadow:0 3px 0 #8d6f38,0 12px 24px #0006;transition:transform .12s,filter .12s}
+.online-card .primary-action:hover{filter:brightness(1.05)}
+.online-card .primary-action:active{transform:translateY(2px);box-shadow:0 1px 0 #8d6f38,0 6px 14px #0006}
 .online-card .online-clock .set-text b{white-space:nowrap}
 .online-join-row button{flex:none}
 
