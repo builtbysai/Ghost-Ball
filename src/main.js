@@ -3,6 +3,7 @@ import {Game} from './game.js';
 import {TableRenderer,halls} from './render.js';
 import {TABLE,POCKETS,Simulation} from './physics.js';
 import {Audio} from './audio.js';
+import {initHall} from './hall.js';
 import {bindPower,bindAimWheel,spinFromPoint,cueShaftHit,rearAimAngle,wrapAngle,aimStep,keyPullAmount,KEY_PULL_MIN_HOLD} from './touch-controls.js';
 import {TAP_SLOP,leadFor,tapAim,bearingTo,classifyPress,AIM_MODES} from './aim-gestures.js';
 import {planFlock,flockAt} from './rack-flock.js';
@@ -40,6 +41,7 @@ let lastScoreSignature='',pullProgress=0,tensionLevel=0,shotMotion=null;
 let previousShotAngles=[0,0],toastTimeout=null,turnPulseFor=null;
 let tableView='overhead',circuitRun=null,dailyDay=null,coach=0,exhibitionIndex=Math.floor(Math.random()*6),exhibitionTimer=null;
 let attract=new Game({kind:'attract'}),audio=new Audio();
+const hall=initHall({isEnabled:()=>audio.enabled});
 let ambient=new TableRenderer($('attractCanvas'),{view:'perspective'}),table=new TableRenderer($('gameCanvas'),{view:'flat'});
 function syncEquippedCue(){const cue=equippedCue(progress);ambient.setCue(cue.id);table.setCue(cue.id);}
 function saveProgress(next){if(next===progress)return;
@@ -334,8 +336,9 @@ function applyRoom(){const h=halls[room];audio.music.setHall(room);ambient.setHa
   renderRoomMastery();
   if(current)setText('roundLabel',h.name.toUpperCase());
 }
-function show(id){$(id).hidden=false;}function hide(id){$(id).hidden=true;}
-function openSetup(){$('rivals').closest('.setting').hidden=mode==='practice'||mode==='circuit';$('clockSetting').closest('.setting').hidden=mode==='practice';syncClock();$('gameType').closest('.setting').hidden=mode==='practice'||mode==='circuit';syncGameType();syncRules();show('backdrop');show('setupSheet');$('closeSetup').focus();}
+function show(id){$(id).hidden=false;try{hall.onShow(id);}catch{}}function hide(id){$(id).hidden=true;}
+function openSetup(){try{const r=halls[room]||halls[0];setText('setupRoomName',r.name);setText('setupRoomYear','EST. '+r.year+' · HOUSE TABLE');}catch{}
+$('rivals').closest('.setting').hidden=mode==='practice'||mode==='circuit';$('clockSetting').closest('.setting').hidden=mode==='practice';syncClock();$('gameType').closest('.setting').hidden=mode==='practice'||mode==='circuit';syncGameType();syncRules();show('backdrop');show('setupSheet');$('closeSetup').focus();}
 function closeSetup(){const wasOpen=!$('setupSheet').hidden;hide('setupSheet');if($('settingsSheet').hidden)hide('backdrop');if(wasOpen)$('openSetup').focus();}
 const SETUP_NOTES={eight:'8-ball, casual: no called shots. Call the 8: when you are down to the black, name its pocket first; any other pocket loses the rack.',
  nine:'9-ball: hit the lowest ball first, break hard (pot a ball or four to a cushion), pot the 9 to win. Three fouls in a row lose the rack.',
@@ -881,7 +884,7 @@ function pauseMatch(){
   `${opponent} · ${current?.ruleset==='nine'?'Casual 9-ball':current?.ruleset==='ten'?'Ten-ball, call the 10':current?.ruleset==='straight'?`Straight pool, race to ${current.target}`:current?.ruleset==='onepocket'?'One-pocket, first to 8':current?.official?'Official 8-ball':current?.callEight?'Call the 8':'Casual 8-ball'} · ${clock}`);
  $('rerack').hidden=current?.players==='online';show('pauseMenu');$('resumeMatch').focus();
 }
-function resumeMatch(){if(active!=='paused')return;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('gameCanvas').focus({preventScroll:true});turnUI();}
+function resumeMatch(){if(active!=='paused')return;quitArmed=false;hide('pauseMenu');hide('settingsSheet');hide('backdrop');active='game';$('gameCanvas').focus({preventScroll:true});turnUI();}
 const cloneBalls=balls=>balls.map(b=>({...b,orientation:[...(b.orientation||[1,0,0,0])]}));
 /** Re-racking: the old table's balls (and those in the return rail) flock back into the triangle. */
 function startRackFlock(before){
@@ -1228,7 +1231,12 @@ $('lockerFavorite').onclick=()=>{saveProgress(toggleFavorite(progress,lockerSele
 $('lockerGrid').onclick=event=>{const card=event.target.closest('[data-cue]');
  if(!card)return;lockerSelected=card.dataset.cue;renderLocker();card.focus();};
 $('pauseButton').onclick=pauseMatch;$('resumeMatch').onclick=resumeMatch;
-$('pauseSettings').onclick=openSettings;$('rerack').onclick=()=>{resetMatch();resumeMatch();};$('quitMatch').onclick=quitToLobby;
+$('pauseSettings').onclick=openSettings;$('rerack').onclick=()=>{resetMatch();resumeMatch();};let quitArmed=false;
+$('quitMatch').onclick=()=>{
+ if(!quitArmed){quitArmed=true;const lbl=$('quitMatch').querySelector('span');const orig=lbl?lbl.textContent:'';
+  if(lbl)lbl.textContent='Tap again to forfeit';
+  setTimeout(()=>{quitArmed=false;if(lbl)lbl.textContent=orig;},2600);return;}
+ quitArmed=false;quitToLobby();};
 $('safetyButton').onclick=()=>{if(!officialCalls()||!canAct())return;safetyArmed=!safetyArmed;if(safetyArmed)callManual=false;syncShotModes();};
 $('pushOutButton').onclick=()=>{if(!current?.pushOutAvailable||!canAct())return;pushOutArmed=!pushOutArmed;syncShotModes();};
 const answerChoice=(a)=>{const kind=current?.pendingChoice?.kind;if(!kind)return;const option=kind==='break'?(a?'accept':'rerack'):(a?'shoot':'pass');if(!current.choose(option))return;online?.session.sendAct({k:'choose',o:option});$('choicePrompt').hidden=true;turnUI();$('gameCanvas').focus({preventScroll:true});};
@@ -1268,7 +1276,7 @@ all('#gameType [data-game]').forEach(b=>b.onclick=()=>{gameType=b.dataset.game;s
 all('#ruleset [data-rules]').forEach(b=>b.onclick=()=>{rules=b.dataset.rules;savePreference('ghostball-rules',rules);syncRules();refreshMenu();});
 const rivalBlurb=()=>setText('rivalBlurb',rival==='local'?'Pass and play on one device.':`${personaFor(rival).style}. ${personaFor(rival).blurb}`);
 all('#rivals [data-rival]').forEach(b=>b.onclick=()=>{rival=b.dataset.rival;all('#rivals button').forEach(n=>n.classList.toggle('selected',n===b));rivalBlurb();refreshMenu();});
-$('playBtn').onclick=()=>begin(mode);$('watchBtn').onclick=()=>begin('exhibition');
+$('playBtn').onclick=()=>{try{hall.rack();}catch{}begin(mode);};$('watchBtn').onclick=()=>begin('exhibition');
 // A mouse click returns focus to the table so Space still shoots afterwards.
 $('aimLeft').onclick=e=>{nudgeAim(-1,e.shiftKey,true);if(e.detail)$('gameCanvas').focus({preventScroll:true});};
 $('aimRight').onclick=e=>{nudgeAim(1,e.shiftKey,true);if(e.detail)$('gameCanvas').focus({preventScroll:true});};

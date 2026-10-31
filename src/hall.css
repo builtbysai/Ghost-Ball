@@ -1,0 +1,262 @@
+/* ============================================================
+   HALL — the living billiard-hall design system (redesign lane)
+   World-congruence + tactile behavior + ruthless hierarchy.
+   Loaded last: wins over every sheet stylesheet.
+   ============================================================ */
+
+:root{
+  --walnut-0:#241a10; --walnut-1:#2e2114; --walnut-2:#3d2c19; --walnut-3:#4c3822;
+  --brass:#d9b877; --brass-hi:#f4dc9a; --brass-lo:#8a6a34;
+  --parchment:#ece2c8; --chalk:#f2ede0; --felt:#0e2a1e;
+  --oxblood:#a83a32; --ink:#171208;
+  --hall-ease:cubic-bezier(.18,1.32,.32,1);
+}
+
+/* ---------- 1. Living-hall backdrop: the world stays visible ---------- */
+.club-sheet{
+  background:
+    radial-gradient(85% 55% at 50% 12%, rgba(255,196,110,.13), rgba(255,196,110,0) 62%),
+    linear-gradient(rgba(3,8,5,.60), rgba(2,5,3,.80));
+  backdrop-filter:blur(3px) saturate(.92);
+  -webkit-backdrop-filter:blur(3px) saturate(.92);
+}
+#lockerSheet{background:
+    radial-gradient(85% 55% at 50% 12%, rgba(255,196,110,.13), rgba(255,196,110,0) 62%),
+    linear-gradient(rgba(3,8,5,.60), rgba(2,5,3,.80));}
+
+/* ---------- 2. Walnut plate: every sheet is hall furniture ---------- */
+.sheet-card{
+  position:relative;
+  background:
+    radial-gradient(130% 80% at 50% 0%, rgba(255,214,140,.10), rgba(255,214,140,0) 55%),
+    repeating-linear-gradient(93deg, rgba(0,0,0,.055) 0 2px, rgba(255,235,190,.014) 2px 5px, transparent 5px 11px),
+    linear-gradient(167deg, var(--walnut-3) 0%, var(--walnut-2) 26%, var(--walnut-1) 58%, var(--walnut-0) 100%);
+  border:1px solid rgba(217,184,119,.42);
+  border-radius:14px;
+  box-shadow:
+    0 34px 90px rgba(0,0,0,.68),
+    0 6px 22px rgba(0,0,0,.5),
+    inset 0 1px 0 rgba(255,228,165,.28),
+    inset 0 -3px 8px rgba(0,0,0,.5),
+    inset 0 0 0 4px rgba(20,12,5,.35);
+  color:var(--parchment);
+}
+/* brass corner rivets */
+.sheet-card::before{
+  content:"";position:absolute;inset:7px;pointer-events:none;border-radius:9px;
+  background:
+    radial-gradient(circle at 6px 6px, var(--brass-hi) 0 2.6px, var(--brass-lo) 3.4px, rgba(0,0,0,.55) 4.2px, transparent 5px),
+    radial-gradient(circle at calc(100% - 6px) 6px, var(--brass-hi) 0 2.6px, var(--brass-lo) 3.4px, rgba(0,0,0,.55) 4.2px, transparent 5px),
+    radial-gradient(circle at 6px calc(100% - 6px), var(--brass-hi) 0 2.6px, var(--brass-lo) 3.4px, rgba(0,0,0,.55) 4.2px, transparent 5px),
+    radial-gradient(circle at calc(100% - 6px) calc(100% - 6px), var(--brass-hi) 0 2.6px, var(--brass-lo) 3.4px, rgba(0,0,0,.55) 4.2px, transparent 5px);
+  background-repeat:no-repeat;
+}
+.sheet-head h2{color:var(--chalk);text-shadow:0 2px 10px rgba(0,0,0,.6);}
+.sheet-head .sheet-sub, .sheet-foot{color:#c9bda1;}
+.sheet-body{color:#ddd2b8;}
+
+/* ---------- 3. Entrance: plates settle with weight ---------- */
+@keyframes hall-plate-in{from{opacity:0;transform:translateY(30px) scale(.962);}to{opacity:1;transform:none;}}
+@keyframes hall-row-in{from{opacity:0;transform:translateX(-14px);}to{opacity:1;transform:none;}}
+.club-sheet:not([hidden]) .sheet-card{animation:hall-plate-in .52s var(--hall-ease);}
+.club-sheet:not([hidden]) .sheet-body>*{animation:hall-row-in .38s var(--hall-ease) both;}
+.club-sheet:not([hidden]) .sheet-body>*:nth-child(2){animation-delay:.05s;}
+.club-sheet:not([hidden]) .sheet-body>*:nth-child(3){animation-delay:.10s;}
+.club-sheet:not([hidden]) .sheet-body>*:nth-child(4){animation-delay:.15s;}
+.club-sheet:not([hidden]) .sheet-body>*:nth-child(5){animation-delay:.20s;}
+
+/* ---------- 4. Balatro grammar: hover lifts, press sinks ---------- */
+.sheet-done,.menu-primary,.sheet-x,.seg button,.menu-item,.challenge-row{
+  transition:transform .13s ease, filter .13s ease, box-shadow .13s ease, background-color .13s ease;
+}
+.sheet-done:hover,.menu-primary:hover,.seg button:hover{transform:translateY(-2px);filter:brightness(1.1);}
+.sheet-done:active,.menu-primary:active,.seg button:active{transform:translateY(1px) scale(.985);filter:brightness(.96);}
+.menu-item:hover{transform:translateX(3px);}
+.menu-item:hover .chev{transform:translateX(2px);}
+.chev{transition:transform .13s ease;}
+
+/* brass plaque buttons: light-catching */
+.sheet-done,.menu-primary{
+  background:linear-gradient(180deg,var(--brass-hi) 0%,var(--brass) 45%,#c39a52 100%);
+  border:1px solid #f7e3ab66;
+  box-shadow:0 3px 0 #6d5226, 0 8px 20px rgba(0,0,0,.45), inset 0 1px 0 #fff8;
+  color:#241a08;text-shadow:0 1px 0 #ffffff55;
+}
+.sheet-done:active,.menu-primary:active{box-shadow:0 1px 0 #6d5226, 0 3px 8px rgba(0,0,0,.4), inset 0 1px 0 #fff8;}
+
+/* ---------- 5. Type: chalk, tabular numerals, tracked small caps ---------- */
+.tnum{font-variant-numeric:tabular-nums;}
+.chalk{color:var(--chalk);text-shadow:0 0 2px rgba(242,237,224,.35), 0 1px 1px rgba(0,0,0,.5);}
+.eyebrow{font-size:9px;letter-spacing:.3em;font-weight:800;color:var(--brass);}
+
+/* ---------- 6. Destructive stays oxblood, alone ---------- */
+.menu-item.danger{color:#f0b0a6;}
+.menu-item.danger:hover{background:rgba(168,58,50,.14);}
+
+/* ---------- 7. Clubhouse: the hall's own fixture ---------- */
+.hall-nameplate{
+  display:flex;align-items:center;gap:12px;
+  border:1px solid rgba(217,184,119,.35);border-radius:10px;
+  padding:10px 14px;margin:2px 0 14px;
+  background:linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.18)),
+             linear-gradient(167deg,#3a2b18,#241a0e);
+  box-shadow:inset 0 1px 0 rgba(255,228,165,.18), 0 4px 14px rgba(0,0,0,.4);
+}
+.hall-nameplate .mono{
+  width:38px;height:38px;border-radius:50%;flex:0 0 auto;
+  display:grid;place-items:center;
+  font:700 16px Georgia,serif;color:#241a08;
+  background:radial-gradient(circle at 35% 30%, var(--brass-hi), var(--brass) 55%, var(--brass-lo));
+  box-shadow:0 2px 8px rgba(0,0,0,.5), inset 0 1px 1px #fff7;
+}
+.hall-nameplate b{display:block;font:normal 17px Georgia,serif;color:var(--chalk);letter-spacing:.03em;}
+.hall-nameplate small{display:block;font-size:9px;letter-spacing:.22em;color:var(--brass);font-weight:700;margin-top:3px;}
+.hall-nameplate .rec{margin-left:auto;text-align:right;font-size:11px;color:#cbbf9f;}
+.hall-nameplate .rec b{font-size:15px;color:var(--chalk);}
+
+/* lamp glow rises when the hall loads */
+@keyframes hall-lamp-rise{from{opacity:0;}to{opacity:1;}}
+.room-lamp{animation:hall-lamp-rise 1.6s ease both;}
+.light-beam{animation:hall-lamp-rise 2.2s ease both;}
+
+/* ---------- 8. Pause: the intermission sign ---------- */
+.pause-card{overflow:hidden;}
+.pause-sign h2{margin:5px 0 0;font-size:30px;letter-spacing:.14em;color:var(--chalk);text-shadow:0 2px 10px rgba(0,0,0,.6);}
+.pause-sign .eyebrow{display:block;}
+.pause-sign{
+  display:block;text-align:center;
+  border:1px solid rgba(217,184,119,.5);border-radius:8px;
+  background:linear-gradient(180deg,#171008,#0d0905);
+  padding:10px 8px;margin:0 0 12px;position:relative;
+  box-shadow:inset 0 2px 8px rgba(0,0,0,.7), 0 2px 6px rgba(0,0,0,.4);
+}
+.pause-sign::before,.pause-sign::after{ /* hanging chains */
+  content:"";position:absolute;top:-14px;width:2px;height:14px;
+  background:repeating-linear-gradient(180deg,var(--brass-lo) 0 3px,#3a2c14 3px 6px);
+}
+.pause-sign::before{left:26%;}.pause-sign::after{right:26%;}
+.pause-slate{
+  border-radius:8px;padding:10px 14px;margin:0 0 14px;
+  background:linear-gradient(180deg,#1c2422,#121817);
+  border:1px solid #3a443f;
+  box-shadow:inset 0 2px 10px rgba(0,0,0,.65);
+  font-size:13px;line-height:1.55;
+}
+.pause-slate .chalk{font-size:13px;}
+.pause-actions{gap:8px;}
+.pause-actions .danger{margin-top:10px;border-top:1px solid rgba(217,184,119,.22);border-radius:0 0 8px 8px;padding-top:14px;}
+.menu-primary{width:100%;justify-content:space-between;}
+
+/* ---------- 9. Setup: plaques with consequence previews ---------- */
+.seg{display:flex;background:rgba(0,0,0,.42);border:1px solid rgba(217,184,119,.25);border-radius:10px;padding:4px;gap:4px;
+  box-shadow:inset 0 2px 8px rgba(0,0,0,.55);}
+.seg button{
+  flex:1;border:0;border-radius:7px;background:transparent;color:#b7ab90;
+  font-size:11px;font-weight:800;letter-spacing:.06em;padding:10px 6px;cursor:pointer;
+}
+.seg button.selected{
+  background:linear-gradient(180deg,var(--brass-hi),var(--brass) 55%,#c39a52);
+  color:#241a08;box-shadow:0 2px 0 #6d5226, 0 4px 10px rgba(0,0,0,.4), inset 0 1px 0 #fff8;
+}
+.seg button:not(.selected):hover{color:var(--chalk);background:rgba(217,184,119,.10);}
+.set-group .setting{border-bottom:1px solid rgba(217,184,119,.14);padding-bottom:14px;margin-bottom:14px;}
+.set-text b{font:normal 16px Georgia,serif;color:var(--chalk);letter-spacing:.04em;}
+.set-text small{color:#a89a7c;}
+.rival-blurb,.setup-note-line{
+  border-left:2px solid var(--brass);padding:6px 0 6px 12px;margin:10px 2px 0;
+  color:#d8cba6;font-size:12.5px;font-style:italic;
+}
+.room-tier{
+  display:flex;align-items:center;gap:12px;border:1px solid rgba(217,184,119,.3);
+  border-radius:10px;padding:10px 14px;margin:0 0 14px;
+  background:linear-gradient(180deg, rgba(0,0,0,.3), rgba(0,0,0,.12));
+}
+.room-tier .pip{width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#9fe6a0,#2f7a3d 70%);box-shadow:0 0 8px #4caf5088;flex:0 0 auto;}
+.room-tier b{font:normal 15px Georgia,serif;color:var(--chalk);}
+.room-tier small{display:block;color:#a89a7c;font-size:10px;letter-spacing:.14em;margin-top:2px;}
+
+/* ---------- 10. Settings as the house-rules ledger ---------- */
+#settingsSheet .sheet-card{
+  background:
+    radial-gradient(130% 80% at 50% 0%, rgba(255,214,140,.08), rgba(255,214,140,0) 55%),
+    repeating-linear-gradient(0deg, transparent 0 26px, rgba(120,90,40,.10) 26px 27px),
+    linear-gradient(167deg,#4a3a24 0%, #3a2c1a 40%, #2b2013 100%);
+}
+#settingsSheet .set-text b{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);}
+.ledger-rule{border:0;border-top:1px solid rgba(120,90,40,.35);margin:12px 0;}
+
+/* walnut toggles keep their retheme; ensure contrast on ledger */
+#settingsSheet .sheet-body{color:#e2d5b4;}
+
+/* ---------- 11. Record book: ticking counters + wax seals ---------- */
+#recordSheet .sheet-card{
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(255,214,140,.07), transparent 55%),
+    linear-gradient(168deg,#43331d 0%, #34271380 45%, #241a0e 100%),
+    linear-gradient(167deg, var(--walnut-3), var(--walnut-1) 60%, var(--walnut-0));
+}
+.stat-tile,.crest-chip{transition:transform .13s ease, filter .13s ease;}
+.stat-tile:hover{transform:translateY(-2px);}
+.wax-seal{
+  display:inline-grid;place-items:center;min-width:30px;height:30px;padding:0 8px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #c05a4a, #8e2f2f 60%, #5e1d18);
+  color:#f6e3d8;font:700 11px Georgia,serif;
+  box-shadow:0 3px 8px rgba(0,0,0,.5), inset 0 1px 2px #ffffff44, inset 0 -2px 4px #0006;
+  transform:rotate(-6deg);
+}
+.crest-chip.earned{border-color:var(--brass);color:var(--chalk);}
+.crest-chip.earned .wax-seal{transform:rotate(-6deg) scale(1);}
+
+/* ---------- 12. Guide: the house manual ---------- */
+#guideSheet .sheet-card{
+  background:
+    radial-gradient(130% 80% at 50% 0%, rgba(255,214,140,.08), transparent 55%),
+    linear-gradient(170deg,#3f2f1c 0%, #2e2214 50%, #211809 100%);
+}
+.guide-tabs button{transition:transform .13s ease, filter .13s ease;}
+.guide-tabs button:hover{transform:translateY(-2px);}
+.guide-tabs button[aria-selected="true"]{
+  background:linear-gradient(180deg,var(--brass-hi),var(--brass) 60%,#c39a52);
+  color:#241a08;box-shadow:0 2px 0 #6d5226;
+}
+.guide-panel article{
+  background:rgba(236,226,200,.06);border:1px solid rgba(217,184,119,.22);border-radius:10px;
+}
+
+/* ---------- 13. Locker: the cue cabinet ---------- */
+#lockerSheet .locker-grid{display:grid;gap:12px;}
+.cue-card{
+  background:linear-gradient(180deg, rgba(0,0,0,.28), rgba(0,0,0,.10)),
+             linear-gradient(167deg,#3a2b18,#241a0e);
+  border:1px solid rgba(217,184,119,.3);border-radius:10px;
+  transition:transform .16s var(--hall-ease), box-shadow .16s ease, border-color .16s ease;
+}
+.cue-card:hover{transform:translateY(-4px);border-color:var(--brass);box-shadow:0 12px 26px rgba(0,0,0,.55), 0 0 0 1px rgba(217,184,119,.25);}
+.cue-card:active{transform:translateY(-1px) scale(.99);}
+.cue-card.equipped{border-color:var(--brass);box-shadow:0 0 0 1px var(--brass), 0 10px 24px rgba(0,0,0,.5);}
+.stat-tag{
+  display:inline-block;font-size:9px;letter-spacing:.16em;font-weight:800;color:var(--brass);
+  border:1px solid rgba(217,184,119,.4);border-radius:4px;padding:3px 7px;background:rgba(0,0,0,.35);
+}
+
+/* ---------- 14. Online: the members' chalkboard ---------- */
+#onlineSheet .sheet-card{
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(255,214,140,.06), transparent 55%),
+    linear-gradient(170deg,#20261f 0%, #161b17 60%, #0e1210 100%);
+  border-color:rgba(200,190,160,.25);
+}
+#onlineSheet .sheet-card::before{display:none;} /* no rivets on slate */
+.chalk-entry{
+  border-bottom:1px dashed rgba(220,210,180,.25);padding:10px 4px;
+  font-size:13px;color:#e8e2d0;
+  transition:background-color .13s ease, transform .13s ease;
+}
+.chalk-entry:hover{background:rgba(220,210,180,.05);transform:translateX(3px);}
+
+/* ---------- 15. Reduced motion: beauty never costs comfort ---------- */
+@media (prefers-reduced-motion:reduce){
+  .club-sheet:not([hidden]) .sheet-card,
+  .club-sheet:not([hidden]) .sheet-body>*{animation:none;}
+  .sheet-done:hover,.menu-primary:hover,.seg button:hover,.menu-item:hover,.cue-card:hover{transform:none;}
+}
